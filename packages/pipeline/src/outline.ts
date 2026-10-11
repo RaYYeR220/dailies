@@ -103,22 +103,25 @@ export function outlinesWithin(sessions: Session[], maxChars: number): SessionOu
   return full.map((o) => trimmedTo(o, lo));
 }
 
-/** The newest sessions with commits first, as whole-session beats, for when the editor could not produce any. */
+/**
+ * The newest sessions with commits first, as whole-session beats, for when the editor could not
+ * produce any. The title and summary are synthetic, not drawn from the session's own recorded
+ * text: a beat built here skips the editor entirely, and its title/summary go straight into the
+ * writer's prompt as trusted framing (script.ts's beatMaterial), so nothing the session recorded
+ * — a prompt included — belongs in them unmediated.
+ */
 export function fallbackBeats(sessions: Session[], max: number): Beat[] {
   const sorted = [...sessions].sort((a, b) => {
     const byCommit = (a.commits.length > 0 ? 0 : 1) - (b.commits.length > 0 ? 0 : 1);
     return byCommit !== 0 ? byCommit : b.startedAt.localeCompare(a.startedAt);
   });
-  return sorted.slice(0, max).map((s, n) => {
-    const prompt = s.entries.find((e) => e.kind === 'user')?.text ?? s.id;
-    return {
-      id: `beat_${n + 1}`,
-      kind: 'feature' as const,
-      title: oneLine(prompt, BEAT_TITLE_CHARS),
-      summary: oneLine(`Session ${s.id}: ${prompt}`, BEAT_SUMMARY_CHARS),
-      sessionIds: [s.id],
-      entryRanges: [{ sessionId: s.id, from: 0, to: Math.max(0, s.entries.length - 1) }],
-      commits: s.commits,
-    };
-  });
+  return sorted.slice(0, max).map((s, n) => ({
+    id: `beat_${n + 1}`,
+    kind: 'feature' as const,
+    title: oneLine(`Session ${s.id}`, BEAT_TITLE_CHARS),
+    summary: oneLine(`Automatic fallback beat covering the recorded session ${s.id} end to end.`, BEAT_SUMMARY_CHARS),
+    sessionIds: [s.id],
+    entryRanges: [{ sessionId: s.id, from: 0, to: Math.max(0, s.entries.length - 1) }],
+    commits: s.commits,
+  }));
 }
