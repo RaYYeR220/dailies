@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "791b5b5dd2ac",
+  "strategy": "manual-commit",
+  "branch": "task/13-readback",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "scripts/neatlogs-actuals.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/79/1b5b5dd2ac/0/metadata.json",
+      "transcript": "/79/1b5b5dd2ac/0/full.jsonl",
+      "compact_transcript": "/79/1b5b5dd2ac/0/transcript.jsonl",
+      "content_hash": "/79/1b5b5dd2ac/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 28,
+    "cache_creation_tokens": 8287,
+    "cache_read_tokens": 1851877,
+    "output_tokens": 6651,
+    "api_call_count": 14
+  }
+}
