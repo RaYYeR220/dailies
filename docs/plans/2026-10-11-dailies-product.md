@@ -210,6 +210,39 @@ it('recallRepo returns skipped with the reason when the client throws, and when 
 
 ---
 
+### Task 15: Container and deployment files
+
+Depends on Task 11.
+
+**Files:** `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `deploy/Caddyfile`, `deploy/README.md`, `apps/web/src/app/api/health/route.ts`, `apps/web/src/server/heartbeat.ts`, `apps/web/test/health.test.ts`; in `apps/web/src/worker.ts` only the heartbeat call.
+
+**Interfaces:**
+- Consumes: the `start` and `worker` scripts of `@dailies/web`; `openDb`.
+- Produces:
+```ts
+// apps/web/src/server/heartbeat.ts
+export function beat(dataDir: string, now?: Date): void               // writes <dataDir>/worker.heartbeat (ISO time), atomically
+export function heartbeatAgeSec(dataDir: string, now?: Date): number | null   // null when the file is absent
+```
+`GET /api/health` returns `200 { ok: true, db: true, workerAgeSec }` when the database opens and the heartbeat is younger than 60 s; `503` with the same shape and `ok: false` otherwise. `workerLoop` calls `beat` on every poll and after every stage event.
+
+Container:
+
+- **Image.** `node:24-bookworm-slim`. System packages: `git`, `ffmpeg`, `ca-certificates`, `fonts-liberation`, and the shared libraries Chrome Headless Shell needs on Debian (`libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libgbm1 libasound2 libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libpango-1.0-0 libcairo2 libcups2`). pnpm through corepack at the version in the lockfile. `pnpm install --frozen-lockfile`, then `pnpm --filter @dailies/web build`, then `npx remotion browser ensure` from `packages/reel` so the browser is baked into the image. Runs as a non-root user. `DAILIES_DATA_DIR=/data`.
+- **Compose.** Three services from that one image and one named volume mounted at `/data`: `web` (`pnpm --filter @dailies/web start`, port 3000, healthcheck on `/api/health`), `worker` (`pnpm --filter @dailies/web worker`, `shm_size: 1gb` for the browser), `caddy` (`caddy:2`, ports 80 and 443, its own volumes for certificates). Secrets come from an `env_file: .env` on the host; the compose file contains none.
+- **Caddy.** The site address is the environment variable `DAILIES_SITE_ADDRESS` (default `:80`). One `reverse_proxy web:3000` with `flush_interval -1` so server-sent events are not buffered.
+- **`.dockerignore`.** `node_modules`, `.git`, `.env*`, `.dailies`, `**/.next`, `docs`.
+- **`deploy/README.md`.** The exact commands to bring it up on a fresh Debian or Ubuntu host with Docker installed: clone, create `.env` from `.env.example`, `docker compose up -d --build`, check `/api/health`, read logs, update to a new commit. Nothing provider-specific.
+
+- [ ] **Step 1: Write failing tests** for `beat` / `heartbeatAgeSec` (absent file, fresh, stale) and the health route (200 when fresh, 503 when stale or absent).
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement** the heartbeat, the route and the worker call.
+- [ ] **Step 4: Run.** Expected: PASS.
+- [ ] **Step 5: Write** the Dockerfile, compose file, Caddyfile, `.dockerignore` and `deploy/README.md`. Validate with `docker compose config`. If Docker is available, `docker build .` once and report the image size and build time; if the build is too slow to finish, say how far it got.
+- [ ] **Step 6: Commit.**
+
+---
+
 ### Task 14: Web interface
 
 Depends on Task 11 and on the chosen visual direction. Its steps are written once that direction is fixed; the routes it renders are listed in spec section 7 and the data comes only from the Task 11 API.
