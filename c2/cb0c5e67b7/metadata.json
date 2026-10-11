@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "c2cb0c5e67b7",
+  "strategy": "manual-commit",
+  "branch": "task/11-web",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/src/app/api/runs/[id]/events/route.ts",
+    "apps/web/src/server/events-stream.ts",
+    "apps/web/test/events.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/c2/cb0c5e67b7/0/metadata.json",
+      "transcript": "/c2/cb0c5e67b7/0/full.jsonl",
+      "compact_transcript": "/c2/cb0c5e67b7/0/transcript.jsonl",
+      "content_hash": "/c2/cb0c5e67b7/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 20,
+    "cache_creation_tokens": 23518,
+    "cache_read_tokens": 2122324,
+    "output_tokens": 19846,
+    "api_call_count": 10
+  }
+}
