@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { unrecognisedTails } from '../src/tails';
+import { unrecognisedTails } from '../src/index';
 import { session } from './helpers';
 
 describe('unrecognisedTails', () => {

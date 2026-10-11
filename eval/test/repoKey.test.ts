@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { repoKey } from '../src/repoKey';
+import { repoKey } from '../src/index';
 
 describe('repoKey', () => {
   it('is stable and 8 hex characters', () => {

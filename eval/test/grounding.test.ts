@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runGroundingBenchmark } from '../src/grounding';
+import { runGroundingBenchmark } from '../src/index';
 
 describe('runGroundingBenchmark', () => {
   it('rejects 20 of 20 fabricated lines and accepts 20 of 20 genuine ones', () => {

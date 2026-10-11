@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildScorecard } from '../src/scorecard';
-import { repoKey } from '../src/repoKey';
-import type { MutationCase } from '../src/mutation';
+import { buildScorecard } from '../src/index';
+import { repoKey } from '../src/index';
+import type { MutationCase } from '../src/index';
 
 describe('buildScorecard', () => {
   it('lists non-flipping cases by repoKey and never contains a repository URL', () => {

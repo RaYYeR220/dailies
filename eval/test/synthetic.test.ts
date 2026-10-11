@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { collectRuns } from '@dailies/verify';
-import { syntheticClaim } from '../src/synthetic';
+import { syntheticClaim } from '../src/index';
 import { session } from './helpers';
 
 describe('syntheticClaim', () => {

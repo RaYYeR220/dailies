@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { collectRuns, verifyClaim } from '@dailies/verify';
-import { mutateRun, syntheticClaim } from '../src/synthetic';
-import { runMutationBenchmark } from '../src/mutation';
+import { mutateRun, syntheticClaim } from '../src/index';
+import { runMutationBenchmark } from '../src/index';
 import { session } from './helpers';
 
 describe('mutateRun', () => {
