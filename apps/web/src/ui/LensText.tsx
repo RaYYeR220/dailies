@@ -21,7 +21,7 @@ export function LensText({ focus, above, below, mark = 'ring', face = 'code', se
   const size = Math.max(28, Math.min(face === 'disp' ? 92 : 76, 392 / (Math.max(focus.length, 3) * advance)));
   const half = (focus.length * advance * size) / 2;
   const row = size * 1.62;
-  const weight = Math.max(4.5, size * 0.11);
+  const weight = Math.max(8, size * 0.11);
   const stroke = { fill: 'none', stroke: '#ffd60a', strokeWidth: weight, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, filter: 'url(#pencil)' };
   const drawn = draw ? { pathLength: 1, className: 'lens-draw' } : {};
   return (

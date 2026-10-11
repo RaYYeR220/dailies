@@ -94,8 +94,7 @@ export function OwnerDialog({ runId, action, onClose, onApproved, onChanges }: O
       return;
     }
     dialog.current?.showModal();
-    // `approve` and the callbacks are stable enough for this: the effect is keyed on the action alone.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Keyed on the action alone: this runs when the person asks for something, not when a callback changes identity.
   }, [action]);
 
   function close() {

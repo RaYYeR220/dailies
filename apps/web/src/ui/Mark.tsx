@@ -73,8 +73,9 @@ export interface PenciledProps {
 export function Penciled({ mark, seed = 5, weight = 3.2, draw = false, roomy = false, label, children }: PenciledProps) {
   const d =
     mark === 'cross'
-      ? crossPath(150, 50, 286, 78, seed)
-      : ringPath(150, 50, 138, 40, { seed, wobble: 0.03, tilt: -0.015, start: Math.PI * 0.9, ...(mark === 'dashed' ? { turns: 1, drift: 0 } : { turns: 1.07, drift: -0.05 }) });
+      ? crossPath(150, 50, 292, 84, seed)
+      : // The ring fills its box; how far it stands off the phrase is set by the box, in CSS.
+        ringPath(150, 50, 145, 43, { seed, wobble: 0.03, tilt: -0.015, start: Math.PI * 0.9, ...(mark === 'dashed' ? { turns: 1, drift: 0 } : { turns: 1.07, drift: -0.05 }) });
   return (
     <span className={`${styles.penciled} ${draw ? styles.draw : ''} ${roomy ? styles.roomy : ''} ${mark === 'cross' ? styles.crossed : ''}`}>
       {children}

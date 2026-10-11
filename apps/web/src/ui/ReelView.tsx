@@ -10,7 +10,7 @@ import { Meter } from './Meter';
 import { evidenceHref, formatCost } from './model';
 import { OwnerDialog, type OwnerAction } from './OwnerDialog';
 import { ReelPlayer, type ReelPlayerHandle } from './ReelPlayer';
-import { AUDIO_OFFSET_SEC, claimCounts, flagRows, focusOf, narrationLines, resolveSource, sceneSpans, type Source } from './reel-model';
+import { AUDIO_OFFSET_SEC, claimCounts, flagRows, lensOf, narrationLines, resolveSource, sceneSpans } from './reel-model';
 import { SourceFrames } from './SourceFrames';
 import { TopBar } from './TopBar';
 import type { ReelData } from './types';
@@ -19,14 +19,6 @@ import pill from './pill.module.css';
 import styles from './ReelView.module.css';
 
 const UNSETTLED_SHOWN = 4;
-
-/** The source that goes under the glass: the one that quotes a span, else the first. */
-function lensOf(sources: Source[]): { focus: string; face: 'code' | 'disp' } | null {
-  const source = sources.find((s) => s.kind !== 'stat' && s.quote) ?? sources[0];
-  if (!source) return null;
-  const counted = source.kind === 'stat' || (source.kind === 'entry' && source.role === 'command' && !source.quote);
-  return { focus: focusOf(source), face: counted ? 'disp' : 'code' };
-}
 
 export function ReelView({ data }: { data: ReelData }) {
   const { run, storyboard, claims, timings, media } = data;
@@ -51,6 +43,7 @@ export function ReelView({ data }: { data: ReelData }) {
   const [action, setAction] = useState<OwnerAction | null>(null);
   const [outcome, setOutcome] = useState<{ text: string; follow: boolean } | null>(null);
   const [allUnsettled, setAllUnsettled] = useState(false);
+  const [justApproved, setJustApproved] = useState(false);
 
   // Playback moved to another line: the glass follows it. A pause between lines keeps the last one.
   const onLine = useCallback((id: string | null) => {
@@ -95,15 +88,18 @@ export function ReelView({ data }: { data: ReelData }) {
   const approved = reel.status === 'approved';
   const canApprove = runStatus === 'needs_approval' && !approved;
 
-  const state = approved
-    ? `Approved ${reel.approvedAt ? shortDate(reel.approvedAt) : ''}`.trim()
-    : runStatus === 'needs_approval'
-      ? 'Waiting for your review'
-      : runStatus === 'running'
-        ? 'Cutting again'
-        : runStatus === 'blocked'
-          ? 'Blocked before approval'
-          : 'The run failed';
+  const state =
+    runStatus === 'running'
+      ? 'Cutting again'
+      : approved
+        ? justApproved
+          ? 'Approved just now'
+          : `Approved ${reel.approvedAt ? shortDate(reel.approvedAt) : ''}`.trim()
+        : runStatus === 'needs_approval'
+          ? 'Waiting for your review'
+          : runStatus === 'blocked'
+            ? 'Blocked before approval'
+            : 'The run failed';
 
   const settled = flags.filter((f) => f.verdict !== 'unverifiable');
   const unsettled = flags.filter((f) => f.verdict === 'unverifiable');
@@ -129,7 +125,7 @@ export function ReelView({ data }: { data: ReelData }) {
               onLine={onLine}
               lensFocus={lens}
             />
-            <p className={styles.now} aria-live="off">
+            <p className={styles.now}>
               {activeLine ? (
                 <>
                   <span className={styles.nowTime}>{activeLine.startSec !== null ? clock(activeLine.startSec) : ''}</span>
@@ -171,7 +167,9 @@ export function ReelView({ data }: { data: ReelData }) {
                       <span className={styles.t}>{line.startSec !== null ? clock(line.startSec) : `${i + 1}`}</span>
                       <span className={styles.x}>{line.text}</span>
                       <span className={styles.n}>{own.length} {own.length === 1 ? 'source' : 'sources'}</span>
-                      <Mark kind={line.mark} size={26} seed={3 + i} className={styles.rowMark} />
+                      {/* The mark gives way to the loupe when the row opens, so its meaning is also written out. */}
+                      <Mark kind={line.mark} size={26} seed={3 + i} label={null} className={styles.rowMark} />
+                      <span className="sr">{MARK_WORDS[line.mark]}</span>
                     </button>
                     <div id={`src-${line.id}`} className={`${film.film} ${styles.ev}`} hidden={!isOpen}>
                       {isOpen ? (
@@ -284,6 +282,7 @@ export function ReelView({ data }: { data: ReelData }) {
         onClose={() => setAction(null)}
         onApproved={(approvedAt) => {
           setReel({ runId: run.id, status: 'approved', approvedAt });
+          setJustApproved(true);
           setOutcome({ text: 'Approved. The reel is in the gallery.', follow: false });
         }}
         onChanges={(recut, withToken) => {

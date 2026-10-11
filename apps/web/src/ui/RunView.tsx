@@ -158,7 +158,8 @@ export function RunView({ initial }: { initial: { run: RunInfo; stages: StageInf
       <TopBar
         repo={repoName(run.repoUrl)}
         window={windowLabel(run.since, run.until)}
-        state={runClock ? `${STATE_WORD.running}, ${runClock}` : STATE_WORD[run.status]}
+        state={STATE_WORD[run.status]}
+        clock={runClock}
         live={running}
       />
 

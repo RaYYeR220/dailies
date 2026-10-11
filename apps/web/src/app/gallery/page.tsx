@@ -37,8 +37,7 @@ export default async function Gallery() {
                   <Link className={styles.frame} href={`/reel/${reel.runId}`}>
                     <span className={styles.film}>
                       <span className={styles.edge} aria-hidden="true">{String(reels.length - i).padStart(2, '0')}</span>
-                      {/* A plain img: the poster is served by the media route, sized by the frame, and decorative next to the caption. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {/* A plain img: the poster comes from the media route, and the caption beside it says what it is. */}
                       <img src={`/media/${reel.runId}/poster.png`} alt="" loading="lazy" width={640} height={360} />
                     </span>
                     <span className={styles.cap}>

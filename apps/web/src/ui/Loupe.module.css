@@ -1,11 +1,12 @@
-.loupe {
+/* Inside :where(): whoever places a loupe decides its position and size, whatever order the styles load in. */
+:where(.loupe) {
   position: relative;
   display: block;
   aspect-ratio: 1;
   pointer-events: none;
 }
 
-.loupe svg {
+:where(.loupe) svg {
   display: block;
   width: 100%;
   height: 100%;

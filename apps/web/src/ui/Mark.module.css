@@ -1,4 +1,4 @@
-.mark {
+:where(.mark) {
   flex: none;
   display: inline-block;
   vertical-align: middle;
@@ -12,10 +12,10 @@
 
 .penciled > svg {
   position: absolute;
-  left: -0.5em;
-  top: -0.3em;
-  width: calc(100% + 1em);
-  height: calc(100% + 0.6em);
+  left: -0.64em;
+  top: -0.34em;
+  width: calc(100% + 1.28em);
+  height: calc(100% + 0.68em);
   overflow: visible;
   pointer-events: none;
 }

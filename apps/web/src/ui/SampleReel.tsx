@@ -8,7 +8,10 @@ import styles from './SampleReel.module.css';
  * any other reel. When that run cannot be shown, the section is left out rather than shown broken.
  */
 export async function SampleReel({ runId }: { runId: string }) {
-  const reel = await fetchReel(runId).catch(() => null);
+  const reel = await fetchReel(runId).catch((err: unknown) => {
+    console.warn(`featured run ${runId} could not be read, so the landing shows no sample reel:`, err);
+    return null;
+  });
   if (!reel?.storyboard || !reel.media.video) return null;
 
   return (

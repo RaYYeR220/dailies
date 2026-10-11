@@ -1,5 +1,9 @@
-/* Pills are what a person does. The yellow one is the single action of the page. */
-.btn {
+/*
+  Pills are what a person does. The yellow one is the single action of the page.
+  The base rules sit inside :where(), so they carry no specificity: a component that restyles a pill
+  wins whatever order the stylesheets happen to load in.
+*/
+:where(.btn) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -16,7 +20,7 @@
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
-.btn:hover {
+:where(.btn:hover) {
   border-color: rgba(238, 243, 241, 0.65);
 }
 
@@ -59,7 +63,7 @@
 }
 
 /* A field and its action in one pill. */
-.field {
+:where(.field) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -69,11 +73,11 @@
   background: rgba(7, 10, 9, 0.62);
 }
 
-.field:focus-within {
+:where(.field:focus-within) {
   border-color: var(--white);
 }
 
-.field input {
+:where(.field) input {
   flex: 1;
   min-width: 0;
   padding: 0 0 0 20px;
@@ -85,6 +89,6 @@
   letter-spacing: -0.02em;
 }
 
-.field input::placeholder {
+:where(.field) input::placeholder {
   color: var(--glass-400);
 }

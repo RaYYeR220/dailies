@@ -110,6 +110,7 @@
 }
 
 .frame {
+  container-type: inline-size;
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
@@ -156,6 +157,15 @@
   margin-right: 4px;
 }
 
+/* A scene too short to hold its label is a plain frame: lit when it plays, and nothing cut off inside it. */
+@container (max-width: 46px) {
+  .kind,
+  .glyph,
+  .tally {
+    display: none;
+  }
+}
+
 /* The loupe rides the strip at the playhead, and stays on the strip at both ends. */
 .head {
   --d: 108px;
@@ -197,6 +207,10 @@
   font-size: 13.5px;
   font-weight: 500;
   color: var(--glass-200);
+}
+
+.ctl:hover {
+  border-color: rgba(238, 243, 241, 0.5);
 }
 
 .ctl[aria-pressed='true'] {
@@ -244,11 +258,11 @@
     gap: 6px;
   }
   .ctl {
-    padding: 8px 11px;
-    font-size: 13px;
+    padding: 8px 9px;
+    font-size: 12.5px;
   }
   .clock {
-    font-size: 11.5px;
+    font-size: 11px;
   }
   .still {
     grid-template-columns: minmax(0, 1fr);

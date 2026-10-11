@@ -132,27 +132,44 @@ export function decisive(output: string): string | null {
   return passed ? `${passed[1]} passed` : null;
 }
 
-const FOCUS_MAX = 24;
+// A loupe on a narration row is under 200 px across; more than this many characters cannot be read in it.
+const FOCUS_MAX = 14;
 
 function opening(text: string): string {
   const flat = text.replace(/\s+/g, ' ').trim();
   if (flat.length <= FOCUS_MAX) return flat;
   const cut = flat.slice(0, FOCUS_MAX - 1);
   const space = cut.lastIndexOf(' ');
-  return `${(space > 8 ? cut.slice(0, space) : cut).replace(/[\s,;:]+$/, '')}…`;
+  return `${(space > 5 ? cut.slice(0, space) : cut).replace(/[\s,;:]+$/, '')}…`;
 }
+
+/** The count a command source comes down to, read from the quoted span first and then from the whole output. */
+const counted = (source: Source): string | null =>
+  source.kind === 'entry' && source.role === 'command' ? decisive(source.quote ?? '') ?? decisive(source.body ?? '') : null;
 
 /** The few words of a source that sit under the glass. */
 export function focusOf(source: Source): string {
   if (source.kind === 'stat') return source.value ?? source.label;
+  const count = counted(source);
+  if (count) return count;
   if (source.quote) return opening(source.quote);
   if (source.kind === 'diff') {
     const added = source.hunk?.split('\n').find((l) => l.startsWith('+') && l.slice(1).trim().length > 0);
     return added ? opening(added.slice(1)) : opening(source.path.split('/').at(-1) ?? source.path);
   }
-  if (source.role === 'command' && source.body) return decisive(source.body) ?? opening(source.command ?? source.body);
+  if (source.role === 'command' && source.command) return opening(source.command);
   if (source.body) return opening(source.body);
   return opening(source.where.split(' · ').at(-1) ?? source.where);
+}
+
+/**
+ * What goes under the glass for a line: the source that quotes a span, else the first one. A count or a
+ * value is set in the display face, anything quoted from the record in the code face.
+ */
+export function lensOf(sources: Source[]): { focus: string; face: 'code' | 'disp' } | null {
+  const source = sources.find((s) => s.kind !== 'stat' && s.quote) ?? sources[0];
+  if (!source) return null;
+  return { focus: focusOf(source), face: source.kind === 'stat' || counted(source) ? 'disp' : 'code' };
 }
 
 export interface FlagRow { id: string; verdict: Verdict; mark: Mark; quote: string; reality: string | null; where: string }

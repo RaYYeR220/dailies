@@ -5,6 +5,7 @@ import {
   entryLabel,
   flagRows,
   focusOf,
+  lensOf,
   narrationLines,
   resolveSource,
   sceneSpans,
@@ -154,15 +155,38 @@ describe('focusOf', () => {
     expect(focusOf(resolveSource({ type: 'stat', key: 'commits.count' }, ctx))).toBe('9');
   });
 
-  it('cuts a long passage to its opening words with an ellipsis', () => {
+  it('reads the count out of a quoted span of command output', () => {
+    expect(focusOf(resolveSource({ type: 'entry', entryId: 's3:204', quote: '2 failed | 12 passed' }, ctx))).toBe('2 failed');
+  });
+
+  it('cuts a long passage to its opening words with an ellipsis, short enough to read in a small lens', () => {
     const focus = focusOf(resolveSource({ type: 'entry', entryId: 's1:1' }, ctx));
-    expect(focus).toBe('Add retry with backoff…');
-    expect(focus.length).toBeLessThanOrEqual(24);
+    expect(focus).toBe('Add retry…');
+    expect(focus.length).toBeLessThanOrEqual(14);
   });
 
   it('falls back to the reference when there is nothing to read', () => {
     expect(focusOf(resolveSource({ type: 'entry', entryId: 's9:3' }, ctx))).toBe('entry 3');
     expect(focusOf(resolveSource({ type: 'diff', sha: 'abc1234', path: 'docs/README.md' }, ctx))).toBe('README.md');
+  });
+});
+
+describe('lensOf', () => {
+  const ctx = { storyboard: storyboard(), claims: claims() };
+  const sources = (lineId: string) =>
+    storyboard().scenes.flatMap((s) => s.lines).find((l) => l.id === lineId)!.evidence.map((ref) => resolveSource(ref, ctx));
+
+  it('prefers the source that quotes a span, in the code face', () => {
+    expect(lensOf(sources('l4'))).toEqual({ focus: 'attempt < 4', face: 'code' });
+  });
+
+  it('sets a count or a value in the display face', () => {
+    expect(lensOf(sources('l2'))).toEqual({ focus: '2 failed', face: 'disp' });
+    expect(lensOf(sources('l5'))).toEqual({ focus: '4', face: 'disp' });
+  });
+
+  it('is null for a line with nothing behind it', () => {
+    expect(lensOf([])).toBeNull();
   });
 });
 
