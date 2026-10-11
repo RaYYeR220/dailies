@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "609dfefdf553",
+  "strategy": "manual-commit",
+  "branch": "task/5-voice",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/voice/src/align.ts",
+    "packages/voice/src/gemini.ts",
+    "packages/voice/src/index.ts",
+    "packages/voice/src/silence.ts",
+    "packages/voice/src/wav.ts",
+    "packages/voice/test/align.test.ts",
+    "packages/voice/test/gemini.test.ts",
+    "packages/voice/test/index.test.ts",
+    "packages/voice/test/silence.test.ts",
+    "packages/voice/test/wav.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/60/9dfefdf553/0/metadata.json",
+      "transcript": "/60/9dfefdf553/0/full.jsonl",
+      "compact_transcript": "/60/9dfefdf553/0/transcript.jsonl",
+      "content_hash": "/60/9dfefdf553/0/content_hash.txt",
+      "prompt": "/60/9dfefdf553/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 60,
+    "cache_creation_tokens": 122938,
+    "cache_read_tokens": 3406574,
+    "output_tokens": 54734,
+    "api_call_count": 30
+  }
+}
