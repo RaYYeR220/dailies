@@ -6,7 +6,8 @@ import { DEFAULT_BUDGET, type Beat, type Budget, type Claim, type Entry, type In
 import type { TtsProvider } from '@dailies/voice';
 import { createRun, getRun, openDb } from '../../src/index';
 import type { Database, StageContext, StageName } from '../../src/index';
-import type { StageDeps } from '../../src/stages/index';
+import type { ScriptArtifact, StageDeps } from '../../src/stages/index';
+import { scriptStage } from '../../src/stages/script';
 
 export const SHA_A = 'a'.repeat(40);
 export const SHA_B = 'b'.repeat(40);
@@ -235,4 +236,14 @@ export function harness(o: {
 
   const deps: StageDeps = { db, client, meter, tts: o.tts ?? null, voice: 'Charon' };
   return { db, dataDir, runId, deps, meter, calls, artifacts, events, ctx };
+}
+
+/** The script stage's own artifact for `twoSessions`, so later stages are tested on what it really produces. */
+export async function scriptArtifact(o: { reply?: unknown; claims?: Claim[]; ingest?: IngestArtifact } = {}): Promise<ScriptArtifact> {
+  const verify = threeClaims();
+  const h = harness({
+    artifacts: { ingest: o.ingest ?? twoSessions(), edit: twoBeats(), verify: o.claims ? { ...verify, claims: o.claims } : verify },
+    reply: () => json(o.reply ?? writerReply()),
+  });
+  return (await scriptStage(h.deps).run(h.ctx())).artifact;
 }

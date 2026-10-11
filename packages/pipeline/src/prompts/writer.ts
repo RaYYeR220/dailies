@@ -102,3 +102,31 @@ Code adds a flag scene for each of these after the validation scene of its sessi
 
   return { system, user };
 }
+
+export function rewritePrompt(i: { line: string; reasons: string[]; evidence: string[] }): { system: string; user: string } {
+  const system = `You are the writer for Dailies, which turns recorded coding-agent sessions into a short narrated video and says only what the record supports. One of your narration lines failed the grounding check that runs before anything is voiced. Rewrite that one line so that it passes: it has to say only what its evidence shows.
+
+You get the line, the reasons it failed, and the references it cited, each with the text it resolves to. A reference marked as not resolving points at nothing in the record and cannot be used.
+
+Usually the fix is to say less. A smaller statement that the evidence fully supports is worth more than a fuller one that gets cut. If a reason is about style, keep the meaning and fix the wording.
+
+${STYLE}
+
+${CITING}
+Cite only references from the list you are given. Leave "evidence" out to keep the line's references as they are.
+
+${RECORDING}
+
+Reply with JSON only, no commentary and no code fence: { "text": "...", "evidence": [ ... ] }`;
+
+  const user = `The line: ${JSON.stringify(i.line)}
+
+Why it failed:
+${i.reasons.map((reason) => `- ${reason}`).join('\n')}
+
+The references it cited:
+
+${i.evidence.join('\n\n')}`;
+
+  return { system, user };
+}
