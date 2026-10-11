@@ -1,0 +1,5 @@
+{$DAILIES_SITE_ADDRESS::80} {
+	reverse_proxy web:3000 {
+		flush_interval -1
+	}
+}
