@@ -106,18 +106,19 @@ describe('dashesDrawn', () => {
 describe('ringAround', () => {
   const inside = (ring: { width: number; height: number }, x: number, y: number) => (x / (ring.width / 2)) ** 2 + (y / (ring.height / 2)) ** 2;
 
-  it('clears every corner of every line by the padding', () => {
+  it('clears both ends of the letters of every line by the padding', () => {
     const widths = [300, 520, 560, 480, 260];
-    const ring = ringAround(widths, 50, { x: 20, y: 30 });
-    expect(ring.height).toBe(5 * 50 + 60);
+    const ring = ringAround(widths, 50, 36, { x: 20, y: 30 });
+    expect(ring.height).toBe(5 * 50 - 14 + 60);
     widths.forEach((w, i) => {
-      for (const y of [-125 + i * 50, -125 + (i + 1) * 50]) expect(inside(ring, w / 2 + 20, y)).toBeLessThanOrEqual(1 + 1e-9);
+      const centre = -125 + (i + 0.5) * 50;
+      for (const y of [centre - 18, centre + 18]) expect(inside(ring, w / 2 + 20, y)).toBeLessThanOrEqual(1 + 1e-9);
     });
   });
-  it('hugs a single line', () => {
-    const ring = ringAround([400], 80, { x: 30, y: 24 });
-    expect(ring.height).toBe(128);
-    expect(ring.width).toBeGreaterThan(460);
-    expect(ring.width).toBeLessThan(700);
+  it('hugs a single line the way a hand rings a word', () => {
+    const ring = ringAround([400], 92, 60, { x: 28, y: 34 });
+    expect(ring.height).toBe(60 + 68);
+    expect(ring.width).toBeGreaterThan(456);
+    expect(ring.width).toBeLessThan(540);
   });
 });

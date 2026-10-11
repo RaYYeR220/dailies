@@ -56,7 +56,7 @@ export const theme = {
   /** Type sizes in px at 1920x1080. A range is fitted to the text it holds. */
   size: {
     display: {
-      repo: { max: 112, min: 72 },      // the repo name under the glass
+      repo: { max: 132, min: 72 },      // the repo name under the glass
       hero: { max: 150, min: 72 },      // the repo name on the end card
       window: { max: 124, min: 72 },    // the window label beside the lens
       quote: { max: 84, min: 72 },      // a prompt or a claim short enough for display
@@ -69,7 +69,7 @@ export const theme = {
     },
     text: {
       quote: { max: 60, min: 40 },      // a prompt or a claim too long for display
-      reality: { max: 64, min: 40 },
+      reality: { max: 56, min: 40 },
       value: { max: 64, min: 40 },      // a stat or a result too long for display
       figure: 52,                       // the label of the stat under the glass
       label: 40,
@@ -77,7 +77,7 @@ export const theme = {
       tally: 44,
       caption: 40,
     },
-    code: { command: 32, patch: 30, ref: 30 },
+    code: { output: { max: 44, min: 30 }, command: 32, patch: 30, ref: 30 },
   },
   weight: { light: 300, regular: 400, medium: 500, semi: 600, heavy: 800 },
   leading: { solid: 1, display: 1.1, tight: 1.22, quote: 1.24, text: 1.3, code: 1.3, patch: 2 },
@@ -111,13 +111,16 @@ export const theme = {
     glint: { x: -118, y: -178, long: 62, short: 13, turn: -38 },
     engrave: { radius: 290.5, size: 9.5, opacity: 0.62, text: 'DAILIES OPTICAL     4× ILLUMINATED LOUPE     No 0212' },
     rim: 44,                 // clear margin between text and the edge of the glass, in screen px
-    shadow: [
-      { x: 16, y: 28, blur: 36, spread: 4, opacity: 0.4 },
-      { x: 8, y: 16, blur: 16, spread: -4, opacity: 0.6 },
-    ],
+    // The shadow on the lightbox: a disc of `radius`, moved by `x`, `y`, dense under the skirt and gone at its own edge.
+    shadow: {
+      radius: 404,
+      x: 12,
+      y: 24,
+      paint: `radial-gradient(closest-side, ${fade(color.film.base, 0.66)} 0%, ${fade(color.film.base, 0.62)} 80%, ${fade(color.film.base, 0.36)} 90%, ${fade(color.film.base, 0)} 100%)`,
+    },
     base: '#17201d',
     veil: 0.1,
-    transit: 0.3,            // how far the glass dims while the lens is between frames
+    passing: { magnify: 2.4, gain: 1.6 },   // the film seen going by under the glass during a glide: how enlarged, how soon in full
     focusBlur: 16,           // px of blur on content the lens has not landed on yet
     parallax: 1.35,          // how much faster than the film the content under the glass passes
     greek: { bar: 0.036, opacity: 0.14 },
@@ -149,7 +152,7 @@ export const theme = {
     title: { x: 600, y: 690, scale: 1.4, turn: 0, unit: 300 },
     prompt: { x: 960, y: 540, scale: 2.25, turn: -90, unit: 1100 },
     // `at` is how far into its frame the lens rests, in perforations: a little past the middle, which leaves the step before it in the clear.
-    terminal: { x: 1548, y: 520, scale: 1.25, turn: 0, unit: 600, at: 4.4 },
+    terminal: { x: 1548, y: 520, scale: 1.25, turn: 0, unit: 600, at: 4.4, alone: { x: 960, scale: 1.5 } },   // `alone`: a single step, with no step before it to keep clear
     diff: { x: 980, y: 540, scale: 2.75, turn: -90, unit: 1500 },
     stats: { y: 540, turn: 0, scale: [1.3, 1.15, 1.15, 1.05, 1, 0.95], bleed: [0, -40, -40, -40, 20, 90], maxPitch: 420, gap: 8 },
     // The lens grows by up to `grow` for a long record, away from the quote. `pill` is the centre of the verdict pill:
@@ -169,7 +172,7 @@ export const theme = {
     /** The lens glide and the film advance between scenes: a spring following a short ramp, so it leaves softly. */
     glide: { config: { damping: 11.5, stiffness: 50, mass: 1 }, rampFrames: 6, leadSec: 0.35, followSec: 0.75 },
     travel: 1500,            // px of film that pass under the lens between two scenes
-    whip: 0.22,              // motion blur of the film, as a share of its speed in px per frame
+    shutter: 0.6,            // motion blur of the film: the share of a frame's travel its perforations and frames smear over
     driftPerSec: 7,          // px the picture drifts along the strip while a scene plays
     stepSec: 0.6,            // the strip advancing one frame inside a scene
     drawSec: 0.5,            // one pencil mark

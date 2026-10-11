@@ -1,5 +1,5 @@
 import React from 'react';
-import { theme } from '../theme';
+import { fade, theme } from '../theme';
 import { WIDTH } from './config';
 import type { Framing, Take } from './lens';
 import { FACE, faceStyle } from './measure';
@@ -9,10 +9,23 @@ import { useScene } from './ui';
 const { color, film } = theme;
 
 const paint = (id: string) => `url(#${id})`;
-const SLACK = 240;   // px of film drawn past each side of the frame, for the tilt and for motion blur
 
-/** The base of the strip with its two rows of perforations and the light on its edges. It runs on past both sides of the frame. */
-const Band: React.FC<{ view: Framing; lensX: number; id: string }> = ({ view, lensX, id }) => {
+/** The film's colours: as it lies on the lightbox, or lit from below as it is under the glass. */
+const PALETTE = {
+  unlit: { base: color.film.base, frame: color.film.frame, perf: color.film.perf },
+  lit: { base: color.film.base, frame: color.film.lit, perf: color.film.lit },
+} as const;
+type Light = keyof typeof PALETTE;
+const SLACK = 240;   // px of film drawn past each side of the frame, for the tilt and for motion blur
+const SMEAR_FROM = 1.5;   // px of travel below which the film is drawn still
+
+/**
+ * The base of the strip with its two rows of perforations and the light on its edges. It runs on past both sides
+ * of the frame. `smear` is how far the film travels while the shutter is open, in px: each perforation is drawn
+ * drawn out over that length and thinned to match, which is what motion blur does to it, at no cost of a filter.
+ */
+const Band: React.FC<{ view: Framing; lensX: number; id: string; smear: number; light: Light }> = ({ view, lensX, id, smear, light }) => {
+  const tone = PALETTE[light];
   const perf = view.unit / film.perforations;
   const height = view.unit * film.height;
   const left = lensX + SLACK;
@@ -20,16 +33,37 @@ const Band: React.FC<{ view: Framing; lensX: number; id: string }> = ({ view, le
   const hole = { width: view.unit * film.perf.width, height: view.unit * film.perf.height, inset: view.unit * film.perf.inset, radius: view.unit * film.perf.radius };
   // Perforations sit at whole numbers of the film's own count, so they travel with it and stay in step across a glide.
   const phase = (((-view.takes[0]!.focus % 1) + 1) % 1) * perf;
+  const rows = [hole.inset, height - hole.inset - hole.height];
+  const moving = smear > SMEAR_FROM;
+  // A hole `w` wide drawn out over `d`: a ramp up, a plateau and a ramp down, `w + d` long in all and `w / d` strong at most.
+  const ramp = Math.min(hole.width, smear) / (hole.width + smear);
+  const strength = Math.min(1, hole.width / Math.max(smear, 1));
+  const count = Math.ceil(width / perf) + 2;
   return (
     <svg width={width} height={height} style={{ position: 'absolute', left: -left, top: -height / 2 }}>
       <defs>
         <pattern id={id} patternUnits="userSpaceOnUse" x={left + phase} y={0} width={perf} height={height}>
-          <rect x={(perf - hole.width) / 2} y={hole.inset} width={hole.width} height={hole.height} rx={hole.radius} fill={color.film.perf} />
-          <rect x={(perf - hole.width) / 2} y={height - hole.inset - hole.height} width={hole.width} height={hole.height} rx={hole.radius} fill={color.film.perf} />
+          {rows.map((y) => (
+            <rect key={y} x={(perf - hole.width) / 2} y={y} width={hole.width} height={hole.height} rx={hole.radius} fill={tone.perf} />
+          ))}
         </pattern>
+        <linearGradient id={`${id}-smear`}>
+          <stop offset={0} stopColor={tone.perf} stopOpacity={0} />
+          <stop offset={ramp} stopColor={tone.perf} stopOpacity={strength} />
+          <stop offset={1 - ramp} stopColor={tone.perf} stopOpacity={strength} />
+          <stop offset={1} stopColor={tone.perf} stopOpacity={0} />
+        </linearGradient>
       </defs>
-      <rect width={width} height={height} fill={color.film.base} />
-      <rect width={width} height={height} fill={paint(id)} />
+      <rect width={width} height={height} fill={tone.base} />
+      {moving ? (
+        rows.flatMap((y) =>
+          Array.from({ length: count }, (_, i) => (
+            <rect key={`${y}-${i}`} x={left + phase + (i - 1 - Math.floor(left / perf)) * perf + (perf - hole.width - smear) / 2} y={y} width={hole.width + smear} height={hole.height} rx={hole.radius} fill={paint(`${id}-smear`)} />
+          )),
+        )
+      ) : (
+        <rect width={width} height={height} fill={paint(id)} />
+      )}
       <path d={`M0,${film.edgeWidth / 2}H${width}M0,${height - film.edgeWidth / 2}H${width}`} stroke={film.edge} strokeWidth={film.edgeWidth} />
     </svg>
   );
@@ -56,10 +90,14 @@ const Greek: React.FC<{ k: number; unit: number; width: number }> = ({ k, unit, 
 const PRINT_EVERY = 4;   // frames between two runs of the edge print
 
 /** The picture frames of one scene's stretch of film, and the print along its edge. Frames the scene puts content on are left empty; the rest are greeked. */
-const Frames: React.FC<{ take: Take; unit: number; lensX: number }> = ({ take, unit, lensX }) => {
+const Frames: React.FC<{ take: Take; unit: number; lensX: number; smear: number; light: Light }> = ({ take, unit, lensX, smear, light }) => {
   const { shot } = take;
+  const tone = PALETTE[light].frame;
   const strip = stripOf(shot.unit, shot.half);
   const scale = unit / shot.unit;
+  // In motion a frame is drawn out like a perforation: longer by the smear, its two ends fading over that length.
+  const drawn = smear > SMEAR_FROM ? Math.min(smear / scale, strip.frame.width) : 0;
+  const body = drawn > 0 ? `linear-gradient(90deg, ${fade(tone, 0)}, ${tone} ${drawn}px, ${tone} calc(100% - ${drawn}px), ${fade(tone, 0)})` : tone;
   const moved = (shot.at - take.focus) * strip.perf;
   const frames = framesWithin(strip, shot.at, (-lensX - SLACK) / scale - moved, (WIDTH - lensX + SLACK) / scale - moved);
   const [first, last] = shot.frames;
@@ -71,8 +109,8 @@ const Frames: React.FC<{ take: Take; unit: number; lensX: number }> = ({ take, u
         const box = frameBox(strip, shot.at, k);
         return (
           <React.Fragment key={k}>
-            <div style={{ position: 'absolute', ...box, borderRadius: strip.frame.radius, background: color.film.frame, opacity: take.frames }}>
-              {k < first || k > last ? <Greek k={k} unit={shot.unit} width={box.width} /> : null}
+            <div style={{ position: 'absolute', ...box, left: box.left - drawn / 2, width: box.width + drawn, borderRadius: strip.frame.radius, background: body, opacity: take.frames }}>
+              {(k < first || k > last) && drawn === 0 ? <Greek k={k} unit={shot.unit} width={box.width} /> : null}
             </div>
             {print >= film.print.minSize ? (
               <>
@@ -98,16 +136,17 @@ const Frames: React.FC<{ take: Take; unit: number; lensX: number }> = ({ take, u
 /**
  * The film as the camera sees it, drawn around the point under the lens (which is this element's origin).
  * Each take is one scene's stretch of the strip, moved and scaled by the camera; `children(take)` puts that
- * scene's content on it, in the px of the scene at rest.
+ * scene's content on it, in the px of the scene at rest. `smear` is how far the film moves in one exposure, in px.
+ * `light` is `lit` for the film as it shows under the glass.
  */
-export const Strip: React.FC<{ view: Framing; lensX: number; id: string; filter?: string; children?: (take: Take) => React.ReactNode }> = ({ view, lensX, id, filter, children }) => (
-  <div style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, transform: `rotate(${film.tilt}deg)`, filter }}>
-    <Band view={view} lensX={lensX} id={id} />
+export const Strip: React.FC<{ view: Framing; lensX: number; id: string; smear?: number; light?: Light; children?: (take: Take) => React.ReactNode }> = ({ view, lensX, id, smear = 0, light = 'unlit', children }) => (
+  <div style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, transform: `rotate(${film.tilt}deg)` }}>
+    <Band view={view} lensX={lensX} id={id} smear={smear} light={light} />
     {view.takes.map((take) => {
       const perf = view.unit / film.perforations;
       return (
         <div key={take.index} style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, transformOrigin: '0 0', transform: `translateX(${(take.shot.at - take.focus) * perf}px) scale(${view.unit / take.shot.unit})` }}>
-          <Frames take={take} unit={view.unit} lensX={lensX} />
+          <Frames take={take} unit={view.unit} lensX={lensX} smear={smear} light={light} />
           {children ? <div style={{ opacity: take.presence }}>{children(take)}</div> : null}
         </div>
       );

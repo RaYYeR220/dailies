@@ -15,7 +15,7 @@ export const PencilDefs: React.FC = () => (
       {HANDS.map((hand) => {
         const { wobble, wax } = pencil[hand];
         return (
-          <filter key={hand} id={filterId(hand)} x="-25%" y="-35%" width="150%" height="170%">
+          <filter key={hand} id={filterId(hand)} x="-12%" y="-20%" width="124%" height="140%">
             <feTurbulence type="fractalNoise" baseFrequency={wobble.frequency} numOctaves={wobble.octaves} seed={wobble.seed} result="wobble" />
             <feDisplacementMap in="SourceGraphic" in2="wobble" scale={wobble.scale} xChannelSelector="R" yChannelSelector="G" result="stroke" />
             {wax ? (

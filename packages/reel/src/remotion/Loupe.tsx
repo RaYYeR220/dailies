@@ -1,5 +1,5 @@
 import React from 'react';
-import { fade, theme } from '../theme';
+import { theme } from '../theme';
 import type { LensRest } from './lens';
 import { FACE } from './measure';
 
@@ -20,14 +20,15 @@ const disc = (lens: LensRest, r: number): React.CSSProperties => {
  * The loupe: the one lens of the reel. From the lightbox up it is a shadow, a clear skirt that refracts the film
  * under it (`skirt`), the glass with what is seen through it (`children`, drawn about the centre of the lens and
  * tilted with the film), the highlights on the glass, the knurled barrel and its engraved rim.
- * `transit` 0..1 dims the glass while the lens is between two frames.
+ * `transit` 0..1 is how far the lens is from having a frame to show: in between, `passing` (the film itself,
+ * enlarged and lit) is what goes by under the glass.
  */
-export const Loupe: React.FC<{ lens: LensRest; transit?: number; skirt?: React.ReactNode; children?: React.ReactNode }> = ({ lens, transit = 0, skirt, children }) => {
+export const Loupe: React.FC<{ lens: LensRest; transit?: number; skirt?: React.ReactNode; passing?: React.ReactNode; children?: React.ReactNode }> = ({ lens, transit = 0, skirt, passing, children }) => {
   const { glass, barrel, engrave, glint } = loupe;
   const s = lens.scale;
   return (
     <>
-      <div style={{ ...disc(lens, loupe.skirt.outer), boxShadow: loupe.shadow.map((d) => `${d.x * s}px ${d.y * s}px ${d.blur * s}px ${d.spread * s}px ${fade(dark, d.opacity)}`).join(', ') }} />
+      <div style={{ ...disc({ ...lens, x: lens.x + loupe.shadow.x * s, y: lens.y + loupe.shadow.y * s }, loupe.shadow.radius), background: loupe.shadow.paint }} />
 
       <div style={{ ...disc(lens, loupe.skirt.outer), overflow: 'hidden', background: loupe.base }}>
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 0, height: 0, transform: `scale(${loupe.skirt.refraction}) translate(${loupe.skirt.shift.x * s}px, ${loupe.skirt.shift.y * s}px)` }}>{skirt}</div>
@@ -35,8 +36,8 @@ export const Loupe: React.FC<{ lens: LensRest; transit?: number; skirt?: React.R
       </div>
 
       <div style={{ ...disc(lens, glass + 2), overflow: 'hidden', background: color.film.lit }}>
+        {transit > 0 ? <div style={{ position: 'absolute', left: '50%', top: '50%', width: 0, height: 0, opacity: Math.min(1, transit * loupe.passing.gain) }}>{passing}</div> : null}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 0, height: 0, transform: `rotate(${film.tilt}deg)` }}>{children}</div>
-        <div style={{ position: 'absolute', inset: 0, background: dark, opacity: transit * loupe.transit }} />
       </div>
 
       <svg width={2 * BOX * s} height={2 * BOX * s} viewBox={`${-BOX} ${-BOX} ${2 * BOX} ${2 * BOX}`} style={{ position: 'absolute', left: lens.x - BOX * s, top: lens.y - BOX * s }}>

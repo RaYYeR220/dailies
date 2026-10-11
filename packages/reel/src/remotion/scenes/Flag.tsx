@@ -17,8 +17,10 @@ const WORD = { contradicted: 'CONTRADICTED', stale: 'STALE' } as const;
 const CROSS = { width: 0.94, height: 0.7 };
 const RING = { x: 56, y: 40 };
 const RING_RIM = 40;   // extra margin the reality keeps from the rim, so its ring stays on the glass
-const RECORD_RING = { x: 22, y: 30 };   // how far the ring round the whole record stands off its lines
+const RECORD_RING = { x: 22, y: 34 };   // how far the ring round the whole record stands off its lines
 const RING_EDGE = 14;  // the closest a ring comes to the edge of the glass
+const COUNT_RING = { x: 28, y: 32 };    // how far the ring round a closing count stands off it
+const COUNT_GAP = space.xl + space.xs;  // between what leads up to the count and the count, with room for that ring
 
 /** When the three beats of the scene land: the pencil over the quote, the pill, the ring around the record. */
 function useCues(scene: SceneOf<'flag'>) {
@@ -88,16 +90,16 @@ export const Flag: SceneParts<'flag'> = {
     const split = closingCount(reality);
     if (split) {
       // A record that ends on a count: the count is set large and ringed, what leads up to it sits above.
-      const count = fitRoles(split.count, [ROLES.result[0]!], linesRoom(room, size.text.reality.min * leading.text + space.md, 0), { maxLines: 1 });
-      const lead = fitRoles(split.lead, ROLES.reality, linesRoom(room, 0, space.md + heightOf(count) + RING.y));
+      const count = fitRoles(split.count, [ROLES.result[0]!], linesRoom(room, size.text.reality.min * leading.text + COUNT_GAP, 0), { maxLines: 1 });
+      const lead = fitRoles(split.lead, ROLES.reality, linesRoom(room, 0, COUNT_GAP + heightOf(count)), { fewest: true });
       if (!count.cut && !lead.cut) {
         const [w, h] = [widthOf(count, count.role.face), heightOf(count)];
         return (
           <GlassBlock at={room}>
-            <Lines fitted={lead} face={lead.role.face} leading={lead.role.type.leading} align="center" style={{ marginBottom: space.md, opacity: dim.strong }} />
+            <Lines fitted={lead} face={lead.role.face} leading={lead.role.type.leading} align="center" style={{ marginBottom: COUNT_GAP, opacity: dim.strong }} />
             <div style={{ position: 'relative' }}>
               <Lines fitted={count} face={count.role.face} leading={count.role.type.leading} align="center" />
-              <Mark kind="ring" x={w / 2} y={h / 2} width={w + RING.x} height={h + RING.y} seed={7} progress={drawn} />
+              <Mark kind="ring" x={w / 2} y={h / 2} {...ringOf(count, count.role.face, count.role.type.leading, COUNT_RING)} seed={7} progress={drawn} />
             </div>
           </GlassBlock>
         );

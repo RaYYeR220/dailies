@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { AbsoluteFill, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Audio } from '@remotion/media';
 import type { LineTiming, Scene, Storyboard } from '@dailies/core';
-import { HEIGHT, NARRATION_FILE, WIDTH, type ReelProps } from './config';
+import { HEIGHT, NARRATION_FILE, type ReelProps } from './config';
 import { theme } from '../theme';
 import { buildTimeline, lineAt } from '../timeline';
 import { lineSpans, stepAt } from './cues';
@@ -24,8 +24,7 @@ import { Title } from './scenes/Title';
 
 const { color, size, leading, radius, space, layout, motion, film, loupe } = theme;
 
-const WHIP = 'whip';             // id of the motion-blur filter of the film
-const BLUR_FROM = 0.75;          // px of blur below which the filter is not worth applying
+const BLUR_FROM = 0.75;          // px of blur below which content under the glass is left sharp
 const OVER_PARALLAX = 0.25;      // how much of the film's travel the titles lying over it follow
 const MAX_DRIFT = 40;            // px the picture may drift from where a scene rests
 
@@ -94,7 +93,7 @@ export const Reel: React.FC<ReelProps> = ({ storyboard, timings, audio, settled 
   const before = framing(path, shots, frame - 1, focusAt(frame - 1));
   const perf = view.unit / film.perforations;
   const speed = Math.max(0, ...view.takes.map((take) => Math.abs(take.focus - (before.takes.find((t) => t.index === take.index)?.focus ?? take.focus)) * perf));
-  const blur = speed * motion.whip;
+  const smear = speed * motion.shutter;
 
   const clock = (take: Take): Clock => {
     const scene = storyboard.scenes[take.index]!;
@@ -115,16 +114,9 @@ export const Reel: React.FC<ReelProps> = ({ storyboard, timings, audio, settled 
   return (
     <AbsoluteFill style={{ background: theme.backdrop(lens), color: color.white, overflow: 'hidden' }}>
       <PencilDefs />
-      <svg width={0} height={0} style={{ position: 'absolute' }}>
-        <defs>
-          <filter id={WHIP} filterUnits="userSpaceOnUse" x={-2 * WIDTH} y={-HEIGHT} width={4 * WIDTH} height={2 * HEIGHT}>
-            <feGaussianBlur stdDeviation={`${blur} 0`} />
-          </filter>
-        </defs>
-      </svg>
 
       <div style={{ position: 'absolute', left: lens.x, top: lens.y, width: 0, height: 0 }}>
-        <Strip view={view} lensX={lens.x} id="perforations" filter={blur > BLUR_FROM ? `url(#${WHIP})` : undefined}>
+        <Strip view={view} lensX={lens.x} id="perforations" smear={smear}>
           {(take) => {
             const layer = drawn.find((d) => d.take.index === take.index)!;
             return <SceneContext.Provider value={layer.clock}>{layer.parts.film}</SceneContext.Provider>;
@@ -133,7 +125,12 @@ export const Reel: React.FC<ReelProps> = ({ storyboard, timings, audio, settled 
       </div>
       <AbsoluteFill style={{ background: theme.spill(lens) }} />
 
-      <Loupe lens={lens} transit={1 - Math.max(...view.takes.map((take) => take.presence))} skirt={<Strip view={view} lensX={lens.x} id="perforations-skirt" />}>
+      <Loupe
+        lens={lens}
+        transit={1 - Math.max(...view.takes.map((take) => take.presence))}
+        skirt={<Strip view={view} lensX={lens.x} id="perforations-skirt" smear={smear} />}
+        passing={<Strip view={{ ...view, unit: view.unit * loupe.passing.magnify }} lensX={lens.x} id="perforations-glass" smear={smear * loupe.passing.magnify} light="lit" />}
+      >
         {drawn.map(({ take, clock: value, parts }) => {
           // What is under the glass grows with the lens, passes faster than the film does, and comes into focus as the lens lands.
           const passed = (take.shot.at - take.focus) * stripOf(take.shot.unit, take.shot.half).perf * loupe.parallax;

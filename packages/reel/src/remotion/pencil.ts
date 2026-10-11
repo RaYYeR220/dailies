@@ -130,18 +130,20 @@ export function endMarks(counts: { verified: number; flagged: number; unverified
 }
 
 /**
- * The box of a ring that goes round a block of centred lines `widths` px wide and `lineHeight` px tall each,
- * standing `pad` px off them. An ellipse as tall as the block plus its padding is made wide enough to clear
- * the corners of every line, so the pencil never runs through the text it selects.
+ * The box of a ring that goes round a block of centred lines `widths` px wide, set `lineHeight` px apart, standing
+ * `pad` px off them. `ink` is how tall the letters of a line are: the pencil has to clear the ends of the letters,
+ * not the corners of the line boxes, or a ring round a single word comes out far wider than a hand would draw it.
+ * The ellipse is as tall as the inked block plus its padding, and wide enough to clear both ends of every line.
  */
-export function ringAround(widths: number[], lineHeight: number, pad: { x: number; y: number }): { width: number; height: number } {
+export function ringAround(widths: number[], lineHeight: number, ink: number, pad: { x: number; y: number }): { width: number; height: number } {
   const half = (widths.length * lineHeight) / 2;
-  const b = half + pad.y;
+  const b = half - (lineHeight - ink) / 2 + pad.y;
   let a = 0;
   widths.forEach((width, i) => {
-    // The corner of this line that lies furthest from the middle of the block.
-    const y = Math.max(Math.abs(-half + i * lineHeight), Math.abs(-half + (i + 1) * lineHeight));
-    a = Math.max(a, (width / 2 + pad.x) / Math.sqrt(1 - (y / b) ** 2));
+    const centre = -half + (i + 0.5) * lineHeight;
+    // The inked corner of this line that lies furthest from the middle of the block.
+    const y = Math.abs(centre) + ink / 2;
+    a = Math.max(a, (width / 2 + pad.x) / Math.sqrt(1 - Math.min(0.96, y / b) ** 2));
   });
   return { width: 2 * a, height: 2 * b };
 }

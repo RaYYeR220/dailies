@@ -72,7 +72,13 @@ export function shotOf(scene: Scene, captions = false): Shot {
   switch (scene.type) {
     case 'title': return { lens: { x: shot.title.x, y: shot.title.y, scale: shot.title.scale, turn: shot.title.turn }, unit: shot.title.unit, half: false, at: centre, frames: NONE };
     case 'prompt': return { lens: { x: shot.prompt.x, y: shot.prompt.y - lift, scale: shot.prompt.scale, turn: shot.prompt.turn }, unit: shot.prompt.unit, half: false, at: centre, frames: [0, 0] };
-    case 'terminal': return { lens: { x: shot.terminal.x, y: shot.terminal.y - lift, scale: shot.terminal.scale, turn: shot.terminal.turn }, unit: shot.terminal.unit, half: false, at: shot.terminal.at, frames: [0, Math.min(MAX_STEPS, scene.steps.length) - 1] };
+    case 'terminal': {
+      const steps = Math.min(MAX_STEPS, scene.steps.length);
+      const frames = [0, steps - 1] as const;
+      // A single step has the frame to itself: the lens sits in the middle of it, and larger.
+      if (steps <= 1) return { lens: { x: shot.terminal.alone.x, y: shot.terminal.y - lift, scale: shot.terminal.alone.scale, turn: shot.terminal.turn }, unit: shot.terminal.unit, half: false, at: centre, frames };
+      return { lens: { x: shot.terminal.x, y: shot.terminal.y - lift, scale: shot.terminal.scale, turn: shot.terminal.turn }, unit: shot.terminal.unit, half: false, at: shot.terminal.at, frames };
+    }
     case 'diff': return { lens: { x: shot.diff.x, y: shot.diff.y - lift, scale: shot.diff.scale, turn: shot.diff.turn }, unit: shot.diff.unit, half: false, at: centre, frames: [0, 0] };
     case 'stats': {
       const s = statsShot(scene.items.length);

@@ -178,7 +178,7 @@ export const ROLES = {
   prompt: [{ face: FACE.light, type: { ...size.display.quote, leading: leading.quote } }, { face: FACE.body, type: { ...size.text.quote, leading: leading.text } }],
   claim: [{ face: FACE.semi, type: { ...size.display.quote, leading: leading.quote } }, { face: FACE.text, type: { ...size.text.quote, leading: leading.tight } }],
   result: [{ face: FACE.heavy, type: { ...size.display.result, leading: leading.display } }, { face: FACE.text, type: { ...size.text.value, leading: leading.text } }],
-  output: [{ face: FACE.codeStrong, type: { max: size.code.command, min: size.code.ref, leading: leading.code } }],
+  output: [{ face: FACE.codeStrong, type: { ...size.code.output, leading: leading.code } }],
   figure: [{ face: FACE.figure, type: { ...size.display.figure, leading: leading.display } }, { face: FACE.text, type: { ...size.text.value, leading: leading.text } }],
   value: [{ face: FACE.heavy, type: { ...size.display.value, leading: leading.display } }, { face: FACE.text, type: { ...size.text.value, leading: leading.text } }],
   reality: [{ face: FACE.text, type: { ...size.text.reality, leading: leading.tight } }],
@@ -194,6 +194,8 @@ export function fitRef(entryId: string, width: number): string {
   return forms.find((form) => em(form) * size.code.ref <= width) ?? clampWidth(forms[1]!, width / size.code.ref, em);
 }
 
-/** The box of a pencil ring round a fitted, centred text, standing `pad` px off it. */
+const INK = 0.72;   // the height of a line's letters, as a share of its size
+
+/** The box of a pencil ring round a fitted, centred text, standing `pad` px off its letters. */
 export const ringOf = (fitted: Fitted, face: Face, leading: number, pad: { x: number; y: number }) =>
-  ringAround(fitted.lines.map((line) => emOf(face)(line) * fitted.size), fitted.size * leading, pad);
+  ringAround(fitted.lines.map((line) => emOf(face)(line) * fitted.size), fitted.size * leading, fitted.size * INK, pad);

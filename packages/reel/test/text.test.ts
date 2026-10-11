@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Scene, Storyboard } from '@dailies/core';
-import { BREAKS, LIMITS, boxRoom, clampEnd, clampStart, countUp, decisive, estimateEm, fitText, parseHunk, sourceRef, splitLast, tailLines, textUnits, windowRows, wrap, type Em } from '../src/remotion/text';
+import { BREAKS, LIMITS, boxRoom, clampEnd, clampStart, clampWidth, closingCount, commonIndent, countUp, cutToWidth, decisive, estimateEm, fitText, parseHunk, sourceRef, splitLast, tailLines, textUnits, windowRows, wrap, type Em } from '../src/remotion/text';
 import { fixtureStoryboard, stressStoryboard } from './fixture';
 
 describe('clampEnd', () => {
@@ -184,6 +184,23 @@ describe('fitText', () => {
     const room = boxRoom(1600, 300);
     expect(fitText('д'.repeat(8).concat(' ').repeat(30), quote, room, estimate).size).toBeLessThan(fitText('d'.repeat(8).concat(' ').repeat(30), quote, room, estimate).size);
   });
+  it('sets a smaller size before it breaks a word in two', () => {
+    // At 100 px the figure is wider than its frame; breaking it would fit two lines there, and must not happen.
+    const fitted = fitText('128', type, boxRoom(120, 400), em, { maxLines: 2 });
+    expect(fitted).toEqual({ size: 78, lines: ['128'], cut: false });   // 1.5 em at 78 px, just inside 120 px
+  });
+  it('breaks a word only when it does not fit at the smallest size either', () => {
+    const fitted = fitText('1234567890', type, boxRoom(120, 400), em, { maxLines: 3 });
+    expect(fitted.size).toBe(40);
+    expect(fitted.lines.join('')).toBe('1234567890');
+    expect(fitted.lines.length).toBeGreaterThan(1);
+  });
+  it('takes as few lines as it can, at a smaller size, when asked to', () => {
+    const big = fitText('Last 7 days', type, boxRoom(400, 400), em);
+    expect(big).toMatchObject({ size: 100 });
+    expect(big.lines.length).toBeGreaterThan(1);
+    expect(fitText('Last 7 days', type, boxRoom(400, 400), em, { fewest: true })).toMatchObject({ lines: ['Last 7 days'], cut: false });
+  });
   it('returns no lines when there is no room at all', () => {
     expect(fitText('retry', type, () => null, em)).toEqual({ size: 40, lines: [], cut: true });
   });
@@ -218,7 +235,51 @@ describe('decisive', () => {
   });
 });
 
+describe('cutToWidth and clampWidth', () => {
+  it('shortens a line until it fits with its ellipsis', () => {
+    expect(cutToWidth('pnpm vitest run', 5, em)).toBe('pnpm vite…');
+    expect(em(cutToWidth('pnpm vitest run', 5, em))).toBeLessThanOrEqual(5);
+  });
+  it('drops the space left hanging before the ellipsis', () => {
+    expect(cutToWidth('pnpm vitest run', 3, em)).toBe('pnpm…');
+  });
+  it('leaves a line that fits as it is', () => {
+    expect(clampWidth('pnpm test', 4.5, em)).toBe('pnpm test');
+    expect(clampWidth('pnpm test', 4, em)).toBe('pnpm te…');
+  });
+});
+
+describe('closingCount', () => {
+  it('splits a sentence that ends on a count', () => {
+    expect(closingCount('Last test run before this message: 2 failed.')).toEqual({ lead: 'Last test run before this message:', count: '2 failed.' });
+    expect(closingCount('The run after the edit reported 14 passed')).toEqual({ lead: 'The run after the edit reported', count: '14 passed' });
+  });
+  it('takes the last count when there are several', () => {
+    expect(closingCount('Of 14 tests, 12 passed and 2 failed.')).toEqual({ lead: 'Of 14 tests, 12 passed and', count: '2 failed.' });
+  });
+  it('leaves alone a sentence that goes on after its count, or has none', () => {
+    expect(closingCount('2 failed before the message was written.')).toBeNull();
+    expect(closingCount('The last test run before that message had failed.')).toBeNull();
+    expect(closingCount('2 failed.')).toBeNull();
+  });
+});
+
+describe('commonIndent', () => {
+  it('counts the whitespace every line starts with', () => {
+    expect(commonIndent(['    a', '      b', '    c'])).toBe(4);
+    expect(commonIndent(['a', '  b'])).toBe(0);
+  });
+  it('ignores blank lines', () => {
+    expect(commonIndent(['  a', '', '   ', '  b'])).toBe(2);
+    expect(commonIndent([])).toBe(0);
+  });
+});
+
 describe('sourceRef', () => {
+  it('leaves out the word session where there is little room', () => {
+    expect(sourceRef('s2:31', true)).toBe('s2 · entry 31');
+    expect(sourceRef('0f3a9c21-7b54-4e19-a1c3-5d2e8f6b9a70:212', true)).toBe('0f3a9c21… · entry 212');
+  });
   it('names the session and the entry of an entry id', () => {
     expect(sourceRef('s2:31')).toBe('session s2 · entry 31');
   });
