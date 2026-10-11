@@ -85,4 +85,16 @@ describe('ingest stage, what it passes on', () => {
     expect(JSON.stringify(artifact)).not.toContain(TOKEN);
     expect(artifact.sessions).toHaveLength(2);
   });
+
+  it('ingest keeps a token out of the clone directory it reports, when the URL has a one-part path', async () => {
+    const url = `https://${TOKEN}@example.com/solo.git`;
+    // ingest names the clone after the last two parts of the URL, and here the first of them is the authority
+    scripted.artifact = { ...twoSessions(), repo: { url, dir: `/data/repos/${TOKEN}@example.com__solo`, headSha: 'abc' } };
+    const h = harness({ repoUrl: url });
+
+    const { artifact } = await ingestStage().run(h.ctx());
+
+    expect(artifact.repo).toEqual({ url: 'https://example.com/solo.git', dir: '/data/repos/[REDACTED]@example.com__solo', headSha: 'abc' });
+    expect(JSON.stringify(artifact)).not.toContain(TOKEN);
+  });
 });

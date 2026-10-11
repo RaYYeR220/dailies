@@ -65,7 +65,8 @@ export function ingestStage(): Stage<IngestArtifact> {
       }
       const artifact: IngestArtifact = {
         ...found,
-        repo: { ...found.repo, url: scrub(found.repo.url, credentials) },
+        // `dir` too: ingest names the clone after the URL, and a one-part path puts the userinfo into that name.
+        repo: { ...found.repo, url: scrub(found.repo.url, credentials), dir: scrub(found.repo.dir, credentials) },
         skipped: found.skipped.map((skip) => ({ ...skip, reason: scrubbedError(skip.reason, credentials) })),
       };
 
