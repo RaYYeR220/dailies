@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "b82bede39a66",
+  "strategy": "manual-commit",
+  "branch": "task/16-loupe-reel",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/reel/src/remotion/scenes/End.tsx",
+    "packages/reel/src/remotion/scenes/Title.tsx",
+    "packages/reel/src/remotion/ui.tsx",
+    "packages/reel/test/fit.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b8/2bede39a66/0/metadata.json",
+      "transcript": "/b8/2bede39a66/0/full.jsonl",
+      "compact_transcript": "/b8/2bede39a66/0/transcript.jsonl",
+      "content_hash": "/b8/2bede39a66/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 15879,
+    "cache_read_tokens": 5183708,
+    "output_tokens": 9017,
+    "api_call_count": 8
+  }
+}
