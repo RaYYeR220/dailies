@@ -24,10 +24,13 @@ export interface NarrationLine {
 
 /**
  * Every narration line in storyboard order. Once timings exist, a line without one is left out: the
- * grounding stage dropped it, so it is not in the cut.
+ * grounding stage dropped it, so it is not in the cut. Timings that name none of the storyboard's lines
+ * belong to some other cut, and are ignored rather than allowed to empty the page.
  */
 export function narrationLines(sb: Storyboard, timings: LineTiming[] | null, audioOffsetSec: number): NarrationLine[] {
-  const timed = timings && timings.length > 0 ? new Map(timings.map((t) => [t.lineId, t])) : null;
+  const ids = new Set(sb.scenes.flatMap((scene) => scene.lines.map((line) => line.id)));
+  const matching = timings?.filter((t) => ids.has(t.lineId)) ?? [];
+  const timed = matching.length > 0 ? new Map(matching.map((t) => [t.lineId, t])) : null;
   return sb.scenes.flatMap((scene) => {
     const mark: Mark = scene.type === 'flag' ? markFor(scene.verdict) : 'ring';
     return scene.lines.flatMap((line) => {

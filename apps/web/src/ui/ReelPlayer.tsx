@@ -80,6 +80,15 @@ export const ReelPlayer = forwardRef<ReelPlayerHandle, ReelPlayerProps>(function
   const duration = mediaDuration ?? planned ?? 0;
   const activeLine = lines.find((l) => l.id === activeLineId) ?? null;
 
+  // The video starts loading from the server's HTML, so its metadata or its error may already have
+  // arrived before these handlers were attached. Read what the element knows by now.
+  useEffect(() => {
+    const v = el.current;
+    if (!v) return;
+    if (v.error) setBroken(true);
+    else if (v.readyState >= 1 && Number.isFinite(v.duration)) setMediaDuration(v.duration);
+  }, []);
+
   // The renderer writes SubRip; fetch it once and hand the track a WebVTT blob.
   useEffect(() => {
     if (!subtitles || !hasVideo) return;
@@ -165,7 +174,7 @@ export const ReelPlayer = forwardRef<ReelPlayerHandle, ReelPlayerProps>(function
               playsInline
               muted={muted}
               onClick={toggle}
-              onLoadedMetadata={(e) => setMediaDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : null)}
+              onDurationChange={(e) => setMediaDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : null)}
               onTimeUpdate={(e) => {
                 setTime(e.currentTarget.currentTime);
                 report(e.currentTarget.currentTime);

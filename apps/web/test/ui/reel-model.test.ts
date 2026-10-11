@@ -39,6 +39,13 @@ describe('narrationLines', () => {
     expect(lines.map((l) => l.id)).toEqual(['l1', 'l2', 'l4', 'l5', 'l6', 'l7']);
   });
 
+  it('ignores timings that name none of its lines, rather than showing an empty reel', () => {
+    const lines = narrationLines(storyboard(), [{ lineId: 'other-1', startSec: 0, endSec: 2 }], OFFSET);
+    expect(lines).toHaveLength(7);
+    expect(lines.every((l) => l.startSec === null)).toBe(true);
+    expect(sceneSpans(storyboard(), [{ lineId: 'other-1', startSec: 0, endSec: 2 }], OFFSET)).toBeNull();
+  });
+
   it('keeps every line, untimed, when the voice stage has not reported', () => {
     const lines = narrationLines(storyboard(), null, OFFSET);
     expect(lines).toHaveLength(7);
