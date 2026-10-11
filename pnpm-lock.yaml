@@ -80,6 +80,9 @@ importers:
       better-sqlite3:
         specifier: latest
         version: 13.0.3
+      zod:
+        specifier: latest
+        version: 4.6.5
     devDependencies:
       '@types/better-sqlite3':
         specifier: latest
