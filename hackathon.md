@@ -65,6 +65,10 @@ Fix: the checkpoint data and links were removed locally and the commits recreate
 
 107 tests pass on `main` at 23:50.
 
+**00:00 – 00:20, 12 October.** Ingest merged (one session, three passes: the first implementation, then two rounds of hardening against untrusted repository content). Review stage merged. 198 tests on `main`.
+
+First look at real data, run by hand: ingesting 12 sessions of a public repository with 89 checkpoints gave 7,868 transcript entries, 3,227 tool calls and 140 test runs, of which the parser read 88 as passing, 22 as failing and 30 as unknown. It also took 248 seconds, which is far too slow; a task to batch the git reads is running with that number as its baseline.
+
 Things the sessions caught in their own review passes:
 - The runner could mark a stage done and then lose the run's final status if the process died between the two writes. Both writes are now one transaction.
 - The budget meter treated a model missing from the price table as free. It now assumes the most expensive known price.
@@ -74,6 +78,11 @@ Things the sessions caught in their own review passes:
 **Run by hand from the main checkout (no checkpoint):**
 - The agent runtime's live test against the gateway: structured output and a tool-calling loop both work; the budget meter recorded a non-zero cost.
 - The read-back client against the live neatlogs endpoint. The session had guessed two tool names (`trace_context`, `analytics`); the real ones are `get_trace_context` and `get_project_analytics`. Fixed in commit `26af87f`, together with scoping the history search to reel runs.
+
+## Shared while building
+
+- First post, 11 October: https://x.com/BazydloMis57623/status/2109392014827802719
+- Upstream report from this build: [entireio/cli#2728](https://github.com/entireio/cli/issues/2728), a short `sk-` key written as a bare value in a prompt is not redacted in checkpoint transcripts. Reproduced with made-up values on CLI 0.11.4.
 
 ## Demo
 
