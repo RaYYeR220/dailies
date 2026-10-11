@@ -715,8 +715,6 @@ Behaviour:
 - **Rendering.** `bundle({ entryPoint: <src/remotion/index.ts>, publicDir: <outDir>/public })` with the narration copied to `public/narration.wav`; `selectComposition({ id: 'Reel', inputProps })`; `renderMedia({ codec: 'h264', outputLocation: <outDir>/reel.mp4 })`. The poster is `renderStill` at the middle of the title scene. `renderReel` writes `reel.mp4`, `reel.srt` and `poster.png` into `outDir` and returns absolute paths. `renderStills` writes one PNG per scene at that scene's middle frame, named `NN-<type>.png` in scene order; the review stage uses them. Its signature carries no audio flag, so stills are always drawn as the captions cut: that is the tighter layout and shows every piece of text a frame can carry.
 - **Composition.** `Reel.tsx` maps each timeline scene to a `<Sequence>` and switches on `scene.type`. Audio is one `<Audio src={staticFile('narration.wav')}>` inside a `<Sequence from={audioStartFrame}>`, omitted when there is no audio. In captions mode the current line's text is drawn as a caption bar.
 - **Scenes.** One component per scene type in `src/remotion/scenes/`. All colours, type sizes, radii and font families come from `theme.ts`; no scene hard-codes a visual value, so the art direction can change in one file. Text is clamped to the limits the schema already enforces. Motion uses `interpolate` and `spring` only. Shared pieces sit beside the scenes: `text.ts` (pure clamping, fitting, diff and count-up helpers, unit-tested), `ui.tsx` (frame, motion helpers), `config.ts` (composition id and props, importable from Node).
-  - Two rules tie the theme to the review stage (Task 9), and `theme.test.ts` pins both. Every entrance has landed before the middle of its scene (`theme.motion.settleBy` below 0.5), because that is the frame `renderStills` hands the reviewer; a prompt still being typed there reads as cut-off text. The backdrop keeps a luma of at least 0.12, because the review runs `blackdetect` at its default pixel threshold of 0.10 and a darker background turns every sparse frame into a black segment, which blocks the run.
-  - Text is fitted by estimated glyph width, not character count, so a Cyrillic or CJK quote shrinks instead of overflowing. In captions mode every scene keeps a bottom inset free for a three-line caption bar.
   - `Title`: repo name, window label, session and commit counts.
   - `Prompt`: the quoted human prompt, typed on.
   - `Terminal`: commands and outputs revealed step by step, a pass or fail mark per step.
@@ -724,6 +722,8 @@ Behaviour:
   - `Stats`: up to six labelled values counting up.
   - `Flag`: the agent's quote, the verdict stamp, the recorded reality.
   - `End`: repo, verified and flagged counts.
+  - Two rules tie the theme to the review stage (Task 9), and `theme.test.ts` pins both. Every entrance has landed before the middle of its scene (`theme.motion.settleBy` below 0.5), because that is the frame `renderStills` hands the reviewer; a prompt still being typed there reads as cut-off text. The backdrop keeps a luma of at least 0.12, because the review runs `blackdetect` at its default pixel threshold of 0.10 and a darker background turns every sparse frame into a black segment, which blocks the run.
+  - Text is fitted by estimated glyph width, not character count, so a Cyrillic or CJK quote shrinks instead of overflowing. In captions mode every scene keeps a bottom inset free for a three-line caption bar.
 
 - [ ] **Step 1: Write failing tests** for the pure parts, with a `fixtureStoryboard()` helper holding one scene of each type:
 
