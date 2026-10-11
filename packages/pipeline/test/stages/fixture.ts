@@ -6,7 +6,8 @@ import { DEFAULT_BUDGET, type Beat, type Budget, type Claim, type Entry, type In
 import type { TtsProvider } from '@dailies/voice';
 import { createRun, getRun, openDb } from '../../src/index';
 import type { Database, StageContext, StageName } from '../../src/index';
-import type { ScriptArtifact, StageDeps } from '../../src/stages/index';
+import type { GroundArtifact, ScriptArtifact, StageDeps } from '../../src/stages/index';
+import { groundStage } from '../../src/stages/ground';
 import { scriptStage } from '../../src/stages/script';
 
 export const SHA_A = 'a'.repeat(40);
@@ -246,4 +247,10 @@ export async function scriptArtifact(o: { reply?: unknown; claims?: Claim[]; ing
     reply: () => json(o.reply ?? writerReply()),
   });
   return (await scriptStage(h.deps).run(h.ctx())).artifact;
+}
+
+/** The ground stage's own artifact for `twoSessions`, with a judge that finds every line entailed: 7 lines, 1 flag. */
+export async function groundArtifact(): Promise<GroundArtifact> {
+  const h = harness({ artifacts: { ingest: twoSessions(), script: await scriptArtifact() }, reply: () => json({ entailed: true }) });
+  return (await groundStage(h.deps).run(h.ctx())).artifact;
 }
