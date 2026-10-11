@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "bcdc33cec9ce",
+  "strategy": "manual-commit",
+  "branch": "task/14-web-ui",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/src/ui/format.ts",
+    "apps/web/src/ui/reel-model.ts",
+    "apps/web/src/ui/run-model.ts",
+    "apps/web/test/ui/fixtures.ts",
+    "apps/web/test/ui/format.test.ts",
+    "apps/web/test/ui/reel-model.test.ts",
+    "apps/web/test/ui/run-model.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/bc/dc33cec9ce/0/metadata.json",
+      "transcript": "/bc/dc33cec9ce/0/full.jsonl",
+      "compact_transcript": "/bc/dc33cec9ce/0/transcript.jsonl",
+      "content_hash": "/bc/dc33cec9ce/0/content_hash.txt",
+      "prompt": "/bc/dc33cec9ce/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 55,
+    "cache_creation_tokens": 193575,
+    "cache_read_tokens": 3451845,
+    "output_tokens": 61126,
+    "api_call_count": 26
+  }
+}
