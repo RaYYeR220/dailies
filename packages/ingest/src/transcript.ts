@@ -13,9 +13,8 @@ function stripAnsi(text: string): string {
 }
 
 function truncateToolOutput(text: string): string {
-  const stripped = stripAnsi(text);
-  if (stripped.length <= TOOL_OUTPUT_LIMIT) return stripped;
-  return `${stripped.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${stripped.slice(-TOOL_OUTPUT_TAIL)}`;
+  if (text.length <= TOOL_OUTPUT_LIMIT) return text;
+  return `${text.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${text.slice(-TOOL_OUTPUT_TAIL)}`;
 }
 
 interface ToolUseBlock {
@@ -89,14 +88,15 @@ export function parseTranscript(sessionId: string, jsonl: string): { entries: En
           const redactedCommand = command !== undefined ? redact(command) : null;
           if (redactedCommand) redactions += redactedCommand.hits;
 
-          const inputJson = JSON.stringify(input).slice(0, TOOL_INPUT_LIMIT);
+          const inputJson = JSON.stringify(input);
           const redactedInput = redact(inputJson);
           redactions += redactedInput.hits;
+          const text = redactedInput.text.slice(0, TOOL_INPUT_LIMIT);
 
           pushEntry({
             ts,
             kind: 'tool_call',
-            text: redactedInput.text,
+            text,
             toolName: toolUse.name,
             toolUseId: toolUse.id,
             ...(redactedCommand ? { command: redactedCommand.text } : {}),
@@ -104,13 +104,14 @@ export function parseTranscript(sessionId: string, jsonl: string): { entries: En
           });
 
           if (toolUse.result) {
-            const truncated = truncateToolOutput(toolUse.result.output ?? '');
-            const redactedOutput = redact(truncated);
+            const stripped = stripAnsi(toolUse.result.output ?? '');
+            const redactedOutput = redact(stripped);
             redactions += redactedOutput.hits;
+            const text = truncateToolOutput(redactedOutput.text);
             pushEntry({
               ts,
               kind: 'tool_result',
-              text: redactedOutput.text,
+              text,
               toolName: toolUse.name,
               toolUseId: toolUse.id,
               isError: toolUse.result.status !== 'success',

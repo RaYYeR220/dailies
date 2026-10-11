@@ -1,4 +1,4 @@
-import type { IngestArtifact, Session } from '@dailies/core';
+import { redact, type IngestArtifact, type Session } from '@dailies/core';
 import { listCheckpointRefs, readCheckpointSessions, type CheckpointRef } from './checkpoints';
 import { cloneOrUpdate, getDiff, git } from './git';
 import { mapCheckpointCommits } from './trailers';
@@ -79,7 +79,11 @@ export async function ingest(opts: {
   const diffs: Record<string, string> = {};
   for (const sha of commitShas) {
     const fileDiffs = await getDiff(repoDir, sha);
-    for (const [path, patch] of Object.entries(fileDiffs)) diffs[`${sha}:${path}`] = patch;
+    for (const [path, patch] of Object.entries(fileDiffs)) {
+      const redactedPatch = redact(patch);
+      redactions += redactedPatch.hits;
+      diffs[`${sha}:${path}`] = redactedPatch.text;
+    }
   }
 
   const headSha = await git(repoDir, ['rev-parse', 'HEAD']).then((s) => s.trim()).catch(() => '');

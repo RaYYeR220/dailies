@@ -149,6 +149,24 @@ describe('ingest', () => {
     expect(redactions).toBeGreaterThan(0);
   });
 
+  it('redacts a secret that straddles the truncation boundary, leaving no fragment', () => {
+    const secret = `sk-${'Q'.repeat(30)}`;
+    // a space (not a word char) on each side so \b in the provider_key rule can match "sk-";
+    // the secret sits across the old code's head/middle cut at character 3000.
+    const filler = `${'x'.repeat(2990)} ${secret} ${'x'.repeat(10_000)}`;
+    const { entries } = parseTranscript(
+      's1',
+      JSON.stringify({
+        type: 'assistant',
+        ts: '2026-10-10T07:00:00Z',
+        content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'pnpm test' }, result: { output: filler, status: 'success' } }],
+      }),
+    );
+    const resultEntry = entries.find((e) => e.kind === 'tool_result')!;
+    expect(resultEntry.text).not.toMatch(/Q{6,}/);
+    expect(resultEntry.text).not.toContain(secret);
+  });
+
   it('skips malformed lines and image blocks', () => {
     const { entries } = parseTranscript(
       's1',

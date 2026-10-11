@@ -61,9 +61,11 @@ export async function cloneOrUpdate(repoUrlOrPath: string, dataDir: string): Pro
 
 const MAX_DIFF_FILES = 40;
 const MAX_PATCH_CHARS = 6000;
+const SHA_RE = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
 
 /** Returns the patch text for every file changed by `sha`, keyed by path, each capped at 6000 characters. */
 export async function getDiff(repoDir: string, sha: string): Promise<Record<string, string>> {
+  if (!SHA_RE.test(sha)) return {};
   let out: string;
   try {
     out = await git(repoDir, ['diff-tree', '-p', '--no-color', '--no-commit-id', '--root', sha]);
