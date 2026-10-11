@@ -1,0 +1,13 @@
+Implement Task 1 ("Workspace and core contracts") from docs/plans/2026-10-11-dailies-core.md.
+
+Read first: the plan's header (Global Constraints, Review Focus, File Structure) and Task 1 in full, then sections 3 and 4 of docs/specs/2026-10-11-dailies-design.md for context.
+
+Work test-first, in the order the task lists its steps. The schema and helper code in the task is the contract every other package will be built against, so keep the exported names and shapes exactly as written. If you find a real mistake in it (something that does not type-check or contradicts the spec), fix it in the code AND in the plan file, and say so in your report.
+
+Besides @dailies/core, create the skeleton of the other seven packages with the dependencies listed in the task's table, run `pnpm install`, and commit the lockfile, so that later tasks never need to touch a package.json.
+
+Commit after each green test cycle. Finish by running `pnpm test` and `pnpm typecheck` at the repo root.
+
+End with a short report: what exists now, test counts, and every deviation from the plan with the reason.
+
+There is no `.env` and there are no API keys in this checkout, by design. Do not look for any.

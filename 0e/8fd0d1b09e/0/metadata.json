@@ -1,0 +1,147 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "0e8fd0d1b09e",
+  "session_id": "2c110d7d-b571-4082-8a69-6dc89eb71e8e",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T21:13:18.603227Z",
+  "branch": "task/1-core",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".gitignore",
+    ".nvmrc",
+    "package.json",
+    "packages/agent/package.json",
+    "packages/agent/src/index.ts",
+    "packages/agent/tsconfig.json",
+    "packages/cli/package.json",
+    "packages/cli/src/index.ts",
+    "packages/cli/tsconfig.json",
+    "packages/core/package.json",
+    "packages/core/src/budget.ts",
+    "packages/core/src/env.ts",
+    "packages/core/src/facts.ts",
+    "packages/core/src/ids.ts",
+    "packages/core/src/index.ts",
+    "packages/core/src/redact.ts",
+    "packages/core/src/schema.ts",
+    "packages/core/test/redact.test.ts",
+    "packages/core/test/schema.test.ts",
+    "packages/core/tsconfig.json",
+    "packages/ingest/package.json",
+    "packages/ingest/src/index.ts",
+    "packages/ingest/tsconfig.json",
+    "packages/pipeline/package.json",
+    "packages/pipeline/src/index.ts",
+    "packages/pipeline/tsconfig.json",
+    "packages/reel/package.json",
+    "packages/reel/src/index.ts",
+    "packages/reel/tsconfig.json",
+    "packages/verify/package.json",
+    "packages/verify/src/index.ts",
+    "packages/verify/tsconfig.json",
+    "packages/voice/package.json",
+    "packages/voice/src/index.ts",
+    "packages/voice/tsconfig.json",
+    "pnpm-workspace.yaml",
+    "tsconfig.base.json",
+    "tsconfig.json",
+    "vitest.config.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "3ee1a2e9e9f5",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 58,
+    "cache_creation_tokens": 142279,
+    "cache_read_tokens": 3226396,
+    "output_tokens": 40075,
+    "api_call_count": 29
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01JGVJuJZowuHd4NJKUrexNB",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:executing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "3ee1a2e9e9f5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 28,
+        "end": 29,
+        "entry_ids": [
+          "2ef43fef-4619-449f-bf1a-aa7f12eb0ece"
+        ],
+        "tool_use_id": "toolu_01JGVJuJZowuHd4NJKUrexNB"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01JGVJuJZowuHd4NJKUrexNB"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:executing-plans",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01K4VPa9GaWrEG89jy8vtwhc",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:test-driven-development"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "3ee1a2e9e9f5",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 29,
+        "end": 30,
+        "entry_ids": [
+          "28cf399d-1f9e-4052-8d80-77ce9491afa5"
+        ],
+        "tool_use_id": "toolu_01K4VPa9GaWrEG89jy8vtwhc"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01K4VPa9GaWrEG89jy8vtwhc"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:test-driven-development",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T21:13:18.578545Z",
+    "agent_lines": 424,
+    "agent_removed": 0,
+    "human_added": 3802,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 4226,
+    "total_lines_changed": 4226,
+    "agent_percentage": 10.03312825366777,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
