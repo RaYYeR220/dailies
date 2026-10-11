@@ -1,3 +1,4 @@
 [
-  { "url": "https://github.com/entireio/cli", "maxSessions": 20 }
+  { "url": "https://github.com/entireio/cli", "maxSessions": 20 },
+  { "url": "https://github.com/HighnessAtharva/firstrun", "maxSessions": 12 }
 ]
