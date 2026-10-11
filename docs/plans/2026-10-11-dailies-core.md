@@ -1061,3 +1061,44 @@ Defects and fixes:
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run every package's tests and the type check.** The mutation benchmark tests in `eval/` must still pass: the trusted-exit rule must not let a mutated failing result read as a pass.
 - [ ] **Step 5: Commit.**
+
+---
+
+### Task 8d: Rule precision, from reading real flags
+
+A pattern-based scan of public sessions (no model involved) produced the first real `contradicted` and `stale` verdicts. Reading the recorded runs behind them showed two cases where the rule was right by its letter and wrong in what it would tell a viewer.
+
+**Files:** `packages/verify/src/{results,rules}.ts` and tests; `packages/pipeline/src/stages/script.ts` and its test (flag wording only)
+
+**Interfaces:** unchanged.
+
+1. **An errored command is not a failed test run.** A claim "all offline tests pass" was marked contradicted because the last test command before it exited with an error. The output was a shell error, `No module named pytest`: the tests never ran. Saying "the last test run had failed" would be false. For the test class, `fail` now requires a recognised failing summary (a failed count above zero, a `FAIL` line, an assertion error). An error status with no recognisable test summary is `unknown`, and the claim is `unverifiable` with the reason `the last test command exited with an error before reporting results`.
+2. **Editing a data file does not make a test result stale.** "Tests now pass 12/12" was marked stale because a YAML file and an evidence note were written after the last passing run. Staleness now requires an edit to a code file: a path ending in one of `.ts .tsx .js .jsx .mjs .cjs .py .go .rs .java .kt .rb .php .c .cc .cpp .h .hpp .cs .swift .scala .sql .sh .vue .svelte`, and not under a directory named `docs`, `evidence` or `screenshots`.
+3. **Flag wording follows the verdict's reason.** The script stage's flag sentence for a contradicted test claim reads `The last test run before that message reported failures.` and is used only when the outcome was a recognised failure, which after item 1 is the only way to reach `contradicted` for test claims.
+
+- [ ] **Step 1: Write failing tests** from the two real cases: a test command whose result is an error status with the output `No module named pytest` gives `unknown` and the claim `unverifiable` with the new reason; the same command with `2 failed, 8 passed` gives `fail` and `contradicted`; a `Write` to `claims.yaml` or `evidence/run.md` after a passing run leaves the claim `verified`; an `Edit` to `src/desk.py` makes it `stale`; the flag sentence.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run every package's tests, including `eval/`.** The mutation benchmark must still flip every eligible case: its canonical failing text is a recognised summary.
+- [ ] **Step 5: Commit.**
+
+---
+
+### Task 17: Integration fixes found while running the whole thing
+
+Each item was observed, not anticipated.
+
+**Files:** `packages/reel/src/render.ts` and test; `packages/core/src/redact.ts` and test; `packages/pipeline/src/stages/index.ts`, `packages/pipeline/src/runner.ts` and tests; `packages/pipeline/src/stages/{edit,script}.ts` (memory only); `apps/web/src/app/api/reels/[id]/feedback/route.ts`, `apps/web/src/server/store.ts` and tests; `packages/core/src/budget.ts`
+
+1. **Rendering works only when the process starts in `packages/reel`.** From any other working directory Remotion times out waiting for the root component. The worker and the command-line tool start elsewhere. Pass the reel package's directory as the bundler's root explicitly, and set a 120-second timeout on composition selection and on rendering. Test: a render started with the working directory changed to the system temp directory succeeds.
+2. **Home directories on screen.** Recorded tool output contains paths such as `/Users/<name>/…`, `/home/<name>/…` and `C:\Users\<name>\…`, and they end up in terminal scenes. `redact` replaces the home prefix with `~` (counted separately from secret hits, so the gate's secret check is unaffected). Test with all three forms.
+3. **No spans per stage.** A run's trace shows model and tool calls but not the stages, and a run that ended `failed` showed as a successful trace. Wrap every stage in a `CHAIN` span named after the stage, inside which a thrown error marks the span as failed; record on the root span the final status, reason and cost.
+4. **Earlier runs are recalled but not used.** `recallRepo` exists and nothing calls it. Call it once at the start of the edit stage, log `memory: <n> earlier runs, <m> with failures` (or `memory: skipped, <reason>`), and append the notes to the editor's and the writer's prompts under a heading that marks them as history, not instructions.
+5. **A re-cut of an approved reel stays approved.** While the new cut is rendering, the old approval still stands. `recut` through the feedback route sets the reel back to draft.
+6. **The default budget is below a real run.** A real 12-session run costs about $0.60 after the editor fix. `DEFAULT_BUDGET.maxCostPerReelUsd` becomes 1.0 until the business plan sets it.
+
+- [ ] **Step 1: Write a failing test for each item.**
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run every package's tests, the web tests and the type check.**
+- [ ] **Step 5: Commit.**

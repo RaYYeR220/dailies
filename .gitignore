@@ -21,3 +21,6 @@ __pycache__/
 .claude/settings.local.json
 .entire/settings.local.json
 *.log
+
+# scratch scripts
+_*.ts
