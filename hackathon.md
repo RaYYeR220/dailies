@@ -79,6 +79,24 @@ Things the sessions caught in their own review passes:
 - The agent runtime's live test against the gateway: structured output and a tool-calling loop both work; the budget meter recorded a non-zero cost.
 - The read-back client against the live neatlogs endpoint. The session had guessed two tool names (`trace_context`, `analytics`); the real ones are `get_trace_context` and `get_project_analytics`. Fixed in commit `26af87f`, together with scoping the history search to reel runs.
 
+**00:20 – 01:10 — web API and worker, deployment files, evaluation.**
+
+- Web API and worker merged (40 tests). A container image builds on the server in 244 seconds. The first build failed on a step that pre-fetched the renderer's browser with a command that is not among the dependencies; the step was removed and the renderer now fetches its browser on first use.
+- Evaluation harness merged, and its first result was wrong in an instructive way.
+
+| Mutation benchmark on real public sessions | Version 1 | Version 2 |
+|---|---|---|
+| Test and build runs seen | 315 | 461 |
+| Outcome recognised by the parser | 255 (81.0%) | 365 (79.2%) |
+| Cases | 202 | 235 |
+| Verdict flipped when the recorded result was flipped | 140 (69.3%) | 235 (100%) |
+
+Version 1 mutated every recognised run. The verifier rests a claim on the last run before the agent's message, and real sessions often have several runs before one message, so mutating an earlier one cannot change the verdict. The session that built the harness traced the 31% to that and declined to adjust the harness after seeing the number. Version 2 creates a case only for the run the verdict actually rests on (130 runs excluded, with reasons counted), and adds a second repository. The plan had specified version 1; the mistake was in the plan. Both results are in `eval/results/`.
+
+The grounding benchmark: 20 of 20 fabricated narration lines rejected, 20 of 20 genuine lines accepted.
+
+Committed by hand after sessions ended early (two sessions started a long command in the background and stopped, which ends a headless session): the Docker files of the deployment task, and the benchmark run of version 2.
+
 ## Shared while building
 
 - First post, 11 October: https://x.com/BazydloMis57623/status/2109392014827802719
