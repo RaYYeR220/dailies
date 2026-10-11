@@ -65,7 +65,7 @@ Task 1 first, alone. Then Tasks 2–7 in parallel, each in its own worktree. The
 ### Task 1: Workspace and core contracts
 
 **Files:**
-- Create: `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `vitest.config.ts`, `.nvmrc`
+- Create: `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `tsconfig.json`, `vitest.config.ts`, `.nvmrc`
 - Create: `packages/core/**`
 - Create: `packages/{ingest,agent,verify,voice,reel,pipeline,cli}/{package.json,tsconfig.json,src/index.ts}` (index exports nothing yet)
 
@@ -102,11 +102,16 @@ Root `package.json`:
   "engines": { "node": ">=22" },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc --noEmit",
     "dailies": "tsx packages/cli/src/index.ts"
   }
 }
 ```
+
+Also create a root `tsconfig.json` (extends `tsconfig.base.json`, `include`s every package's `src` and `test`) so the
+typecheck script has a program to run: internal packages are consumed as source with no build step (Global
+Constraints), so there is no composite/project-reference graph to drive `tsc -b` — a single flat `tsc --noEmit` is
+both what the Global Constraints already say and what actually runs without a references graph.
 
 `tsconfig.base.json`:
 ```json
@@ -399,7 +404,9 @@ export function computeFacts(sessions: Session[]): Facts {
   };
 }
 ```
-`index.ts` re-exports all five modules. Add `.dailies/` to `.gitignore`.
+`index.ts` re-exports all six modules, `schema.ts` included — the test file above imports `Claim`, `Scene` and
+`Storyboard` straight from `../src/index`, so leaving `schema.ts` out of the re-export would break Step 2's own
+tests. Add `.dailies/` to `.gitignore`.
 
 - [ ] **Step 6: Run `pnpm --filter @dailies/core test` and `pnpm typecheck`.** Expected: PASS.
 - [ ] **Step 7: Commit** — `git add -A && git commit -m "workspace and core contracts"`.
