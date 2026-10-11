@@ -1,0 +1,80 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "bfae3f134ee5",
+  "session_id": "b869e032-2635-4f04-ad62-f461ba58fe85",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T21:41:11.186649Z",
+  "branch": "task/13-readback",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/agent/src/index.ts",
+    "packages/agent/src/neatlogs-mcp.ts",
+    "packages/agent/test/neatlogs-mcp.test.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "529d600acf51",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 100580,
+    "cache_read_tokens": 1820867,
+    "output_tokens": 44404,
+    "api_call_count": 21
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_016V9VitgFE8HL6sK74qCLNu",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:executing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "529d600acf51",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 31,
+        "end": 32,
+        "entry_ids": [
+          "ecc8dfcb-7ee1-443b-b275-483e02b4e52c"
+        ],
+        "tool_use_id": "toolu_016V9VitgFE8HL6sK74qCLNu"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_016V9VitgFE8HL6sK74qCLNu"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:executing-plans",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T21:41:11.170106Z",
+    "agent_lines": 336,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 336,
+    "total_lines_changed": 336,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
