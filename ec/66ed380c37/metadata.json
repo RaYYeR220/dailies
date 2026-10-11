@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "ec66ed380c37",
+  "strategy": "manual-commit",
+  "branch": "task/16-loupe-reel",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/design.md",
+    "packages/reel/src/remotion/Reel.tsx",
+    "packages/reel/src/remotion/scenes/Diff.tsx",
+    "packages/reel/src/remotion/scenes/End.tsx",
+    "packages/reel/src/remotion/scenes/Flag.tsx",
+    "packages/reel/src/remotion/scenes/Prompt.tsx",
+    "packages/reel/src/remotion/scenes/Stats.tsx",
+    "packages/reel/src/remotion/scenes/Terminal.tsx",
+    "packages/reel/src/remotion/scenes/Title.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ec/66ed380c37/0/metadata.json",
+      "transcript": "/ec/66ed380c37/0/full.jsonl",
+      "compact_transcript": "/ec/66ed380c37/0/transcript.jsonl",
+      "content_hash": "/ec/66ed380c37/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 20,
+    "cache_creation_tokens": 30973,
+    "cache_read_tokens": 6852137,
+    "output_tokens": 10554,
+    "api_call_count": 11
+  }
+}
