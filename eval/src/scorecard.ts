@@ -22,7 +22,8 @@ function sanitizeCell(text: string): string {
   return text
     .replace(/[\r\n]+/g, ' ')
     .replace(/[\u0000-\u001f]/g, '')
-    .replace(/\|/g, '\\|')
+    .replace(/\\/g, '\\\\') // escape pre-existing backslashes first, so a "\|" in the source can't
+    .replace(/\|/g, '\\|') // absorb the pipe's own escaping backslash and leave the pipe bare
     .replace(/`/g, "'");
 }
 

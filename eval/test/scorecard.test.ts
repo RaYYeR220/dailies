@@ -92,4 +92,31 @@ describe('buildScorecard', () => {
     expect(md).not.toContain('`output`');
     expect(md.split('\n').some((l) => l.trim() === 'with a newline')).toBe(false);
   });
+
+  it('escapes a pre-existing backslash before escaping a pipe, so the two cannot cancel out', () => {
+    // If `|` were escaped before `\`, a pre-existing "\|" would become "\\|" — markdown reads the
+    // first two backslashes as one escaped backslash, leaving the pipe unescaped and breaking the
+    // table out from under the cell it was meant to stay inside of. Splitting the row on raw `|`
+    // characters can't tell an escaped pipe from a bare one, so this asserts the exact escaped
+    // form markdown needs: "\\" (-> literal "\") immediately followed by "\|" (-> literal "|").
+    const cases: MutationCase[] = [
+      {
+        repo: 'https://github.com/acme/widgets',
+        sessionId: 's1',
+        command: 'echo a\\|b', // one backslash, then a pipe
+        original: 'pass',
+        verdictBefore: 'verified',
+        verdictAfter: 'verified',
+        flipped: false,
+      },
+    ];
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: { cases, recognised: 1, unknown: 0, flipRate: 0 },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      skipped: [],
+    });
+    const expectedCommand = `echo a${'\\'.repeat(3)}|b`;
+    expect(md).toContain(expectedCommand);
+  });
 });
