@@ -1,5 +1,5 @@
-import { runPipeline, unfinishedRuns } from '@dailies/pipeline';
-import type { Database, Stage } from '@dailies/pipeline';
+import { runPipeline, unfinishedRuns } from '@dailies/pipeline/runtime';
+import type { Database, Stage } from '@dailies/pipeline/runtime';
 import { beat } from './server/heartbeat';
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {

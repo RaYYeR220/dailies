@@ -1,8 +1,8 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadEnv } from '@dailies/core';
-import { openDb } from '@dailies/pipeline';
-import type { Database } from '@dailies/pipeline';
+import { openDb } from '@dailies/pipeline/runtime';
+import type { Database } from '@dailies/pipeline/runtime';
 import { ensureWebTables } from './store';
 
 let cached: { path: string; db: Database } | null = null;

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { loadEnv } from '@dailies/core';
-import { getRun } from '@dailies/pipeline';
+import { getRun } from '@dailies/pipeline/runtime';
 import { getDb } from '../../../../../server/db';
 import { approveReel, getReel } from '../../../../../server/store';
 import { hasValidOwnerToken } from '../../../../../server/owner-token';

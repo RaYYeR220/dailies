@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getRun } from '@dailies/pipeline';
+import { getRun } from '@dailies/pipeline/runtime';
 import { getDb } from '../../../../server/db';
 import { listStages } from '../../../../server/stages';
 

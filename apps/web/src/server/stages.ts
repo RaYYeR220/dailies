@@ -1,4 +1,4 @@
-import type { Database, StageName } from '@dailies/pipeline';
+import type { Database, StageName } from '@dailies/pipeline/runtime';
 
 export const STAGE_ORDER: StageName[] = [
   'ingest',

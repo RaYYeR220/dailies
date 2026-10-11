@@ -1,5 +1,5 @@
-import { getRun, listEvents } from '@dailies/pipeline';
-import type { Database } from '@dailies/pipeline';
+import { getRun, listEvents } from '@dailies/pipeline/runtime';
+import type { Database } from '@dailies/pipeline/runtime';
 
 const POLL_MS = 1000;
 

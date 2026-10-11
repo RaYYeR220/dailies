@@ -30,6 +30,7 @@ function stagesThrough(names: string[]): Stage[] {
     run: async () => {
       if (name === 'verify') return { artifact: [{ quote: 'tests pass', kind: 'tests_pass', verdict: 'verified' }] };
       if (name === 'script') return { artifact: { scenes: [{ kind: 'title', text: 'Daily reel' }] } };
+      if (name === 'ground') return { artifact: { storyboard: { scenes: [{ kind: 'title', text: 'Daily reel' }] }, dropped: [] } };
       return { artifact: {} };
     },
   }));

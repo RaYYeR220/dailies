@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { loadEnv, DEFAULT_BUDGET } from '@dailies/core';
-import { createRun } from '@dailies/pipeline';
+import { createRun } from '@dailies/pipeline/runtime';
 import { getDb } from '../../../server/db';
 import { allowRun } from '../../../server/store';
 import { clientIp } from '../../../server/client-ip';

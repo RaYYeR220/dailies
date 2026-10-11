@@ -1,4 +1,4 @@
-import type { Database } from '@dailies/pipeline';
+import type { Database } from '@dailies/pipeline/runtime';
 
 export interface ReelRow {
   runId: string;

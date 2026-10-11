@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { NextResponse } from 'next/server';
-import { getRun } from '@dailies/pipeline';
+import { getRun } from '@dailies/pipeline/runtime';
 import { getDataDir, getDb } from '../../../../server/db';
 import { getReel } from '../../../../server/store';
 import { isStageDoneWeb } from '../../../../server/stages';
@@ -27,9 +27,10 @@ export async function GET(
 
   const dataDir = getDataDir();
   const reel = getReel(db, id) ?? { runId: id, status: 'draft' as const, approvedAt: null };
-  const storyboard = readStageArtifact(dataDir, id, 'script');
+  // The grounded storyboard is the one that was voiced and rendered; the script artifact is the draft before the gate.
+  const storyboard = readStageArtifact<{ storyboard: unknown }>(dataDir, id, 'ground')?.storyboard ?? null;
   const claims = readStageArtifact(dataDir, id, 'verify');
-  const voice = readStageArtifact<{ timings: unknown; voiceMode: unknown }>(dataDir, id, 'voice');
+  const voice = readStageArtifact<{ timings: unknown; mode: unknown }>(dataDir, id, 'voice');
   const gate = readStageArtifact(dataDir, id, 'gate');
 
   const media = Object.fromEntries(
@@ -45,7 +46,7 @@ export async function GET(
     storyboard,
     claims,
     timings: voice?.timings ?? null,
-    voiceMode: voice?.voiceMode ?? null,
+    voiceMode: voice?.mode ?? null,
     gate,
     media,
   });
