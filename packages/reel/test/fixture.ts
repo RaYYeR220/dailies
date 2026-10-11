@@ -2,13 +2,12 @@ import type { EvidenceRef, LineTiming, Storyboard } from '@dailies/core';
 
 const entry = (entryId: string): EvidenceRef[] => [{ type: 'entry', entryId }];
 
-const HUNK = `@@ -41,9 +41,14 @@ export class Queue {
+const HUNK = `@@ -41,8 +41,13 @@ export class Queue {
    async run(job: Job) {
      try {
        await this.handler(job);
--    } catch (err) {
+     } catch (err) {
 -      this.failed.push(job);
-+    } catch (err) {
 +      if (job.attempts < this.maxAttempts) {
 +        job.attempts += 1;
 +        await sleep(backoff(job.attempts));
@@ -53,7 +52,7 @@ export function fixtureStoryboard(): Storyboard {
         ],
       },
       {
-        id: 'sc_diff', type: 'diff', sha: '3f9c2ab71d0e4c55', path: 'src/queue.ts', hunk: HUNK, added: 7, removed: 2,
+        id: 'sc_diff', type: 'diff', sha: '3f9c2ab71d0e4c55', path: 'src/queue.ts', hunk: HUNK, added: 6, removed: 1,
         lines: [{ id: 'l4', text: 'The retry lives in the run method of the queue.', evidence: [{ type: 'diff', sha: '3f9c2ab71d0e4c55', path: 'src/queue.ts' }] }],
       },
       {
