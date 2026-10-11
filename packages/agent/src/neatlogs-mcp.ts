@@ -118,14 +118,20 @@ export function createNeatlogsMcp(o: { apiKey: string; url?: string; fetchImpl?:
     const text = await res.text();
     const dataLine = text.split('\n').find((l) => l.trimStart().startsWith('data:'));
     if (!dataLine) throw new NeatlogsUnavailableError('neatlogs: response had no data line');
-    const envelope = JSON.parse(dataLine.trimStart().slice('data:'.length).trim()) as {
-      error?: { message?: string };
-      result?: { content?: [{ text?: string }] };
-    };
+    let envelope: { error?: { message?: string }; result?: { content?: [{ text?: string }] } };
+    try {
+      envelope = JSON.parse(dataLine.trimStart().slice('data:'.length).trim());
+    } catch {
+      throw new NeatlogsUnavailableError('neatlogs: data line was not valid JSON');
+    }
     if (envelope.error) throw new NeatlogsUnavailableError(`neatlogs: ${envelope.error.message ?? 'JSON-RPC error'}`);
     const resultText = envelope.result?.content?.[0]?.text;
     if (resultText === undefined) throw new NeatlogsUnavailableError('neatlogs: malformed tool result');
-    return JSON.parse(resultText) as T;
+    try {
+      return JSON.parse(resultText) as T;
+    } catch {
+      throw new NeatlogsUnavailableError('neatlogs: tool result text was not valid JSON');
+    }
   }
 
   async function searchTraces(a: {

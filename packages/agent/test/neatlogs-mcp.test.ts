@@ -138,6 +138,30 @@ describe('createNeatlogsMcp', () => {
     await expect(rpcError.call('x', {})).rejects.toBeInstanceOf(NeatlogsUnavailableError);
   });
 
+  it('raises NeatlogsUnavailableError when the data line or the tool result text is not valid JSON', async () => {
+    function makeMcp(toolResponse: () => Response) {
+      const fetchImpl = vi.fn(async (...args: FetchArgs) => {
+        const [, init] = args;
+        const body = parsedBody(init);
+        if (body.method === 'initialize') return initResponse();
+        if (body.method === 'notifications/initialized') return initializedResponse();
+        return toolResponse();
+      });
+      return createNeatlogsMcp({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch });
+    }
+
+    const malformedDataLine = makeMcp(() => new Response('data: {not json\n\n', { status: 200 }));
+    await expect(malformedDataLine.call('x', {})).rejects.toBeInstanceOf(NeatlogsUnavailableError);
+
+    const malformedResultText = makeMcp(() =>
+      new Response(
+        sseBody({ jsonrpc: '2.0', id: 2, result: { content: [{ type: 'text', text: '{not json' }] } }),
+        { status: 200 },
+      ),
+    );
+    await expect(malformedResultText.call('x', {})).rejects.toBeInstanceOf(NeatlogsUnavailableError);
+  });
+
   it('retries once on 503 and then succeeds', async () => {
     vi.useFakeTimers();
     try {
