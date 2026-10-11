@@ -68,4 +68,26 @@ describe('ingest stage', () => {
     expect(stage.maxAttempts).toBeGreaterThanOrEqual(2);
     await expect(stage.run(h.ctx())).rejects.toThrow();
   });
+
+  it('ingest keeps credentials pasted into the repository URL out of the error it rethrows', async () => {
+    const token = `ghp_${'a1B2c3D4e5'.repeat(4)}`;
+    const h = harness({ repoUrl: `https://x-access-token:${token}@127.0.0.1:1/acme/unreachable.git` });
+
+    const error = await ingestStage().run(h.ctx()).then(() => null, (err: Error) => err);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error!.message).toContain('127.0.0.1:1/acme/unreachable.git');
+    expect(error!.message).not.toContain(token);
+    expect(error!.message).not.toContain('x-access-token');
+    expect(JSON.stringify(error, Object.getOwnPropertyNames(error))).not.toContain(token);
+  });
+
+  it('ingest keeps credentials out of the artifact as well', async () => {
+    const h = harness({ repoUrl: 'file://deploy:hunter2hunter2@fileserver/acme/nothing-here' });
+
+    const result = await ingestStage().run(h.ctx());
+
+    expect(result.final).toEqual(NO_SESSIONS);
+    expect(result.artifact.repo.url).toBe('file://fileserver/acme/nothing-here');
+  });
 });
