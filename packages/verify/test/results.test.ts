@@ -74,6 +74,22 @@ describe('parseOutcome', () => {
     ]);
     expect(collectRuns(sess)[0]!.outcome).toBe('pass');
   });
+
+  it('a backgrounded typecheck command is not trusted: its reported status is the shell starting the job, not the check', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm typecheck &' },
+      { kind: 'tool_result', toolUseId: 't1', text: '$ tsc --noEmit', isError: false },
+    ]);
+    expect(collectRuns(sess)[0]!.outcome).toBe('unknown');
+  });
+
+  it('an && chain is still trusted: every part must run to completion for the chain to report success', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm typecheck && echo done' },
+      { kind: 'tool_result', toolUseId: 't1', text: '$ tsc --noEmit\ndone', isError: false },
+    ]);
+    expect(collectRuns(sess)[0]!.outcome).toBe('pass');
+  });
 });
 
 describe('headlineFor', () => {

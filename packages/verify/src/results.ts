@@ -36,7 +36,14 @@ function parseTestOutcome(text: string): RunOutcome {
 
 // A pipe or a chained command reports the exit status of its last part, not the part that was
 // actually classified; `||` is two `|` characters, so testing for `|` alone already covers it.
+// A backgrounded command (`&`, not `&&`) reports the shell having started the job, never the
+// job's own outcome, so it is just as untrustworthy; `&&` is excluded first so a chain that
+// merely contains that token is not flagged by the lone-`&` check.
 const UNTRUSTED_EXIT = /[|;]/;
+
+function hasUntrustedExit(command: string): boolean {
+  return UNTRUSTED_EXIT.test(command) || command.replace(/&&/g, '').includes('&');
+}
 
 function parseTypecheckOutcome(text: string, exitTrusted: boolean): RunOutcome {
   if (/error TS\d+/.test(text)) return 'fail';
@@ -76,7 +83,7 @@ export function collectRuns(session: Session): ToolRun[] {
     const cls = classifyCommand(call.command);
     if (cls === 'other') continue;
     const result = session.entries.find((e) => e.kind === 'tool_result' && e.toolUseId === call.toolUseId);
-    const exitTrusted = !UNTRUSTED_EXIT.test(call.command);
+    const exitTrusted = !hasUntrustedExit(call.command);
     const outcome: RunOutcome = result ? parseOutcome(cls, result.text, result.isError ?? false, { exitTrusted }) : 'unknown';
     runs.push({
       callEntryId: call.id,
