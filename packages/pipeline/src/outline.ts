@@ -105,21 +105,23 @@ export function outlinesWithin(sessions: Session[], maxChars: number): SessionOu
 
 /**
  * The newest sessions with commits first, as whole-session beats, for when the editor could not
- * produce any. The title and summary are synthetic, not drawn from the session's own recorded
- * text: a beat built here skips the editor entirely, and its title/summary go straight into the
- * writer's prompt as trusted framing (script.ts's beatMaterial), so nothing the session recorded
- * — a prompt included — belongs in them unmediated.
+ * produce any. The title and summary are purely positional, not drawn from the session's own
+ * recorded text or even its id (both come from the repository, no more trustworthy than a
+ * transcript entry): a beat built here skips the editor entirely, and its title/summary go
+ * straight into the writer's prompt as trusted framing (script.ts's beatMaterial), so nothing the
+ * repository supplied belongs in them unmediated.
  */
 export function fallbackBeats(sessions: Session[], max: number): Beat[] {
   const sorted = [...sessions].sort((a, b) => {
     const byCommit = (a.commits.length > 0 ? 0 : 1) - (b.commits.length > 0 ? 0 : 1);
     return byCommit !== 0 ? byCommit : b.startedAt.localeCompare(a.startedAt);
   });
-  return sorted.slice(0, max).map((s, n) => ({
+  const kept = sorted.slice(0, max);
+  return kept.map((s, n) => ({
     id: `beat_${n + 1}`,
     kind: 'feature' as const,
-    title: oneLine(`Session ${s.id}`, BEAT_TITLE_CHARS),
-    summary: oneLine(`Automatic fallback beat covering the recorded session ${s.id} end to end.`, BEAT_SUMMARY_CHARS),
+    title: oneLine(`Session ${n + 1}`, BEAT_TITLE_CHARS),
+    summary: oneLine(`Automatic fallback beat covering recorded session ${n + 1} of ${kept.length} end to end.`, BEAT_SUMMARY_CHARS),
     sessionIds: [s.id],
     entryRanges: [{ sessionId: s.id, from: 0, to: Math.max(0, s.entries.length - 1) }],
     commits: s.commits,
