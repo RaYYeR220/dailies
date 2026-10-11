@@ -1,0 +1,15 @@
+Implement Task 14 ("Web interface") from docs/plans/2026-10-11-dailies-product.md.
+
+Read first: that plan's Task 14 and Task 11 in full; the Global Constraints of both plans; the route handlers already in apps/web/src/app/api (they are the only data source you may use); and docs/design.md if it exists yet. If the frontend-design skill is available, use it.
+
+The visual target is three static reference pages at /Users/yehor/Desktop/projects/neathack-internal/finalists/03-loupe/ : landing.html, reel.html and run.html, with screenshots landing-desktop.png, landing-mobile.png, reel-desktop.png, reel-mobile.png and run-desktop.png. Open them and study them before you write anything. Read only inside that directory. Rebuild them as real components on real data; do not copy the HTML wholesale. Known weak spots of the references that you should do better: the gate on the run page (four empty ring sockets) is the most generic piece, and the reel player shows a poster where the current line should drive what is shown.
+
+The landing is what a visitor sees first: one claim, one action, air. The run page and the reel page are working tools and may be dense, but they must be unmistakably the same world as the landing and the video.
+
+Work test-first for the helpers, then build the pages. Look at your own screenshots at both widths before you finish, and be honest about what is weaker than the reference.
+
+There is no `.env` and there are no API keys in this checkout, by design.
+
+Commit after each green cycle. Finish with the tests, `pnpm typecheck` and `pnpm --filter @dailies/web build`.
+
+End with a short report: what exists now, test counts, which page you consider weakest and why, and every deviation from the plan with the reason.
