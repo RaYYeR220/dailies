@@ -1,0 +1,472 @@
+.page {
+  width: min(1368px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 20px 0 44px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 540px);
+  gap: 34px 40px;
+  align-items: start;
+}
+
+.watch {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.narr {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 0;
+}
+
+.flags {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.h {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font: 600 15px/1.2 var(--disp);
+  letter-spacing: -0.005em;
+}
+
+.h span {
+  font: 400 12.5px/1.2 var(--mono);
+  letter-spacing: 0;
+  color: var(--glass-400);
+}
+
+.empty {
+  margin-top: 14px;
+  max-width: 34em;
+  font-size: 15.5px;
+  color: var(--glass-200);
+}
+
+/* The line being spoken, under the player. */
+.now {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  column-gap: 12px;
+  min-height: 3.1em;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
+  font: 500 17px/1.4 var(--txt);
+  text-wrap: pretty;
+}
+
+.nowTime {
+  padding-top: 4px;
+  font: 400 12.5px/1.3 var(--mono);
+  color: var(--glass-400);
+}
+
+.nowIdle {
+  grid-column: 1 / -1;
+  font-weight: 400;
+  font-size: 15.5px;
+  color: var(--glass-400);
+}
+
+/* ---------- narration ---------- */
+.rowsWrap {
+  position: relative;
+  margin-top: 14px;
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto 26px;
+  column-gap: 12px;
+  align-items: start;
+  width: 100%;
+  padding: 13px 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.t {
+  padding-top: 3px;
+  font: 400 12.5px/1.3 var(--mono);
+  color: var(--glass-400);
+}
+
+.x {
+  font: 400 16.5px/1.38 var(--txt);
+  color: var(--glass-200);
+  text-wrap: pretty;
+}
+
+.n {
+  padding-top: 4px;
+  font: 400 11.5px/1.3 var(--mono);
+  color: var(--glass-400);
+  white-space: nowrap;
+}
+
+.rowMark {
+  margin-top: -2px;
+}
+
+.summary:hover .x {
+  color: var(--white);
+}
+
+/* The open line makes room on its right for the loupe. */
+.open .summary {
+  grid-template-columns: 44px minmax(0, 1fr) 150px;
+  min-height: 100px;
+  padding-bottom: 16px;
+}
+
+.open .t {
+  color: var(--white);
+}
+
+.open .x {
+  font-weight: 600;
+  color: var(--white);
+}
+
+.open .n,
+.open .rowMark {
+  display: none;
+}
+
+.ev {
+  margin: 0 0 14px;
+  padding-left: 31px;
+  padding-right: 31px;
+}
+
+.ev[hidden] {
+  display: none;
+}
+
+.ev > div {
+  padding: 14px 15px 16px;
+}
+
+.open .ev > div:first-of-type {
+  padding-right: 132px;
+}
+
+.ev pre {
+  font-size: 12px;
+}
+
+.rewritten {
+  padding: 4px 132px 6px 2px;
+  font: 400 13.5px/1.4 var(--txt);
+  color: var(--glass-200);
+}
+
+/* One loupe for the whole list. It glides to whichever line is open. */
+.glass {
+  position: absolute;
+  top: 2px;
+  right: -22px;
+  z-index: 2;
+  width: 188px;
+  pointer-events: none;
+  transition: transform 0.45s cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+/* ---------- flags ---------- */
+.flagList {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flag {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  column-gap: 14px;
+  align-items: center;
+  padding: 18px 0;
+}
+
+.flag + .flag {
+  border-top: 1px solid var(--hair);
+}
+
+.said {
+  font: 600 21px/1.25 var(--txt);
+  overflow-wrap: anywhere;
+}
+
+.rec {
+  margin-top: 5px;
+  font: 400 15.5px/1.4 var(--txt);
+  color: var(--glass-200);
+}
+
+.side {
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+}
+
+.where {
+  font: 400 12px/1.2 var(--mono);
+  color: var(--glass-400);
+  white-space: nowrap;
+}
+
+.minor {
+  padding: 14px 0;
+}
+
+.minor > svg {
+  justify-self: center;
+}
+
+.minor .said {
+  font-size: 17px;
+}
+
+.minor .rec {
+  font-size: 14.5px;
+}
+
+/* The verdict as it is stamped in the video. */
+.verdict {
+  display: inline-block;
+  padding: 6.5px 11px 6px;
+  border-radius: var(--r-pill);
+  font: 800 10.5px/1 var(--disp);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.solid {
+  background: var(--pencil);
+  color: var(--lb-950);
+}
+
+.outline {
+  box-shadow: inset 0 0 0 1.5px var(--pencil);
+  color: var(--pencil);
+}
+
+.moreFlags {
+  margin-top: 10px;
+}
+
+.unreadable {
+  max-width: 40em;
+  padding: 48px 0;
+}
+
+.unreadable h2 {
+  font: 600 24px/1.2 var(--disp);
+  letter-spacing: -0.02em;
+}
+
+.unreadable p {
+  margin-top: 14px;
+  color: var(--glass-200);
+}
+
+/* ---------- the wide pill at the foot: facts on the left, what a person does on the right ---------- */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px 32px;
+  margin-top: 36px;
+  padding: 10px 10px 10px 38px;
+  border: 1px solid rgba(238, 243, 241, 0.2);
+  border-radius: 44px;
+  background: rgba(7, 10, 9, 0.62);
+}
+
+.facts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px clamp(24px, 3.6vw, 56px);
+  margin: 0;
+}
+
+.facts div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.facts dt {
+  font: 400 14px/1.2 var(--txt);
+  color: var(--glass-400);
+}
+
+.facts dd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0;
+  font: 600 16px/1.2 var(--txt);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.id {
+  font: 400 13.5px/1.2 var(--mono) !important;
+  color: var(--glass-200);
+}
+
+.id a {
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(238, 243, 241, 0.3);
+}
+
+.acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acts button {
+  padding: 17px 28px;
+  font-size: 17px;
+}
+
+.outcome {
+  flex: 1 1 100%;
+  margin: -4px 0 6px;
+  padding-right: 28px;
+  font-size: 14.5px;
+  color: var(--glass-200);
+}
+
+.outcome:empty {
+  display: none;
+}
+
+.outcome a {
+  color: var(--white);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+  .watch,
+  .narr,
+  .flags {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding-top: 12px;
+  }
+  .summary {
+    grid-template-columns: 38px minmax(0, 1fr) 22px;
+    column-gap: 10px;
+  }
+  .n {
+    display: none;
+  }
+  .x {
+    font-size: 16px;
+  }
+  .open .summary {
+    grid-template-columns: 38px minmax(0, 1fr) 104px;
+    min-height: 112px;
+  }
+  .glass {
+    top: 6px;
+    right: -20px;
+    width: 150px;
+  }
+  .ev {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+  .ev > div {
+    padding: 13px 12px 15px;
+  }
+  .open .ev > div:first-of-type {
+    padding-top: 42px;
+    padding-right: 12px;
+  }
+  .ev pre {
+    font-size: 11.5px;
+  }
+  .rewritten {
+    padding: 34px 2px 4px;
+  }
+  .now {
+    grid-template-columns: 38px minmax(0, 1fr);
+    column-gap: 10px;
+    font-size: 16px;
+  }
+  .flag {
+    grid-template-columns: 44px minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  .flag > svg {
+    width: 36px;
+    height: 36px;
+  }
+  .minor > svg {
+    width: 28px;
+    height: 28px;
+  }
+  .side {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-items: start;
+    gap: 12px;
+  }
+  .said {
+    font-size: 19px;
+  }
+  .bar {
+    margin-top: 26px;
+    padding: 20px 12px 12px 22px;
+    border-radius: 26px;
+  }
+  .facts {
+    gap: 10px 26px;
+  }
+  .acts {
+    width: calc(100% + 10px);
+    margin-left: -10px;
+  }
+  .acts button {
+    flex: 1 1 0;
+    padding: 16px 12px;
+    font-size: 16px;
+  }
+  .outcome {
+    padding-right: 10px;
+  }
+}

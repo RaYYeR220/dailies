@@ -1,0 +1,274 @@
+.player {
+  min-width: 0;
+}
+
+.screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r-player);
+  background: var(--lb-950);
+  box-shadow: 0 0 0 1px rgba(238, 243, 241, 0.1), 0 40px 90px -30px #000;
+}
+
+.screen video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--em-950);
+  cursor: pointer;
+}
+
+.screen video::cue {
+  font-family: var(--txt);
+  background: rgba(7, 10, 9, 0.82);
+  color: var(--white);
+}
+
+.play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(72px, 13%, 120px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.play:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.play svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* No video: the active line under the glass stands in for the picture. */
+.still {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 4%;
+  padding: 4% 6% 4% 2%;
+  background: radial-gradient(70% 90% at 26% 50%, var(--lb-850) 0%, var(--lb-950) 78%);
+}
+
+.stillLoupe {
+  width: 100%;
+  max-height: 100%;
+}
+
+.stillKind {
+  font: 400 12.5px/1.3 var(--mono);
+  color: var(--glass-400);
+}
+
+.stillLine {
+  margin-top: 10px;
+  font: 300 clamp(17px, 2vw, 27px) / 1.28 var(--disp);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.stillNote {
+  margin-top: 16px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--glass-400);
+}
+
+/* ---------- the reel as a strip of its own scenes ---------- */
+.scrub {
+  margin-top: 16px;
+}
+
+.stripWrap {
+  position: relative;
+}
+
+.strip {
+  display: flex;
+  gap: 5px;
+  margin: 0;
+  padding: 17px 6px;
+  list-style: none;
+  background:
+    var(--perf-h-sm) 0 3px / 14px 12px repeat-x,
+    var(--perf-h-sm) 0 calc(100% - 3px) / 14px 12px repeat-x,
+    var(--em-950);
+  box-shadow: inset 0 1px var(--edge), inset 0 -1px var(--edge);
+}
+
+.frame {
+  container-type: inline-size;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  height: 62px;
+  padding: 8px 9px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--em-800);
+  color: rgba(238, 243, 241, 0.5);
+}
+
+.frame.on {
+  background: var(--lit);
+  color: var(--white);
+}
+
+.kind {
+  overflow: hidden;
+  font: 400 10.5px/1.1 var(--mono);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.glyph,
+.tally {
+  overflow: hidden;
+  font: 600 13px/1.1 var(--disp);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tally {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tally svg + svg,
+.tally svg {
+  margin-right: 4px;
+}
+
+/* A scene too short to hold its label is a plain frame: lit when it plays, and nothing cut off inside it. */
+@container (max-width: 46px) {
+  .kind,
+  .glyph,
+  .tally {
+    display: none;
+  }
+}
+
+/* The loupe rides the strip at the playhead, and stays on the strip at both ends. */
+.head {
+  --d: 108px;
+  position: absolute;
+  top: 50%;
+  left: calc(var(--d) / 2 + (100% - var(--d)) * var(--at));
+  width: var(--d);
+  margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+  transition: left 0.25s linear;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55));
+}
+
+.range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.stripWrap:has(.range:focus-visible) {
+  outline: 2px solid var(--white);
+  outline-offset: 3px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-top: 14px;
+}
+
+.ctl {
+  padding: 9px 15px;
+  border-color: var(--edge);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--glass-200);
+}
+
+.ctl:hover {
+  border-color: rgba(238, 243, 241, 0.5);
+}
+
+.ctl[aria-pressed='true'] {
+  border-color: rgba(238, 243, 241, 0.5);
+  color: var(--white);
+}
+
+.clock {
+  font: 400 12.5px/1 var(--mono);
+  color: var(--glass-400);
+}
+
+.clock b {
+  font-weight: 500;
+  color: var(--white);
+}
+
+.spacer {
+  flex: 1;
+}
+
+@media (max-width: 560px) {
+  .screen {
+    border-radius: 14px;
+  }
+  .strip {
+    gap: 3px;
+    padding: 15px 4px;
+  }
+  .frame {
+    height: 44px;
+    padding: 6px 5px;
+  }
+  .kind {
+    display: none;
+  }
+  .glyph {
+    margin-top: auto;
+    font-size: 10.5px;
+  }
+  .head {
+    --d: 72px;
+  }
+  .controls {
+    gap: 6px;
+  }
+  .ctl {
+    padding: 8px 9px;
+    font-size: 12.5px;
+  }
+  .clock {
+    font-size: 11px;
+  }
+  .still {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px 18px;
+  }
+  .stillLoupe {
+    display: none;
+  }
+}

@@ -1,0 +1,108 @@
+.dialog {
+  width: min(520px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid rgba(238, 243, 241, 0.2);
+  border-radius: var(--r-player);
+  background: var(--lb-900);
+  color: var(--white);
+  box-shadow: 0 40px 90px -20px #000;
+}
+
+.dialog::backdrop {
+  background: rgba(7, 10, 9, 0.72);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.dialog form {
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+}
+
+.dialog h2 {
+  font: 600 20px/1.2 var(--disp);
+  letter-spacing: -0.015em;
+}
+
+.lede {
+  margin-top: -8px;
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: var(--glass-200);
+}
+
+.label {
+  display: grid;
+  gap: 7px;
+}
+
+.label span {
+  font: 600 14px/1.2 var(--txt);
+}
+
+.label small {
+  font: 400 13px/1.4 var(--txt);
+  color: var(--glass-400);
+}
+
+.label input,
+.label textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(238, 243, 241, 0.22);
+  border-radius: 10px;
+  background: var(--em-950);
+  color: var(--white);
+  font: 400 15.5px/1.45 var(--txt);
+  resize: vertical;
+}
+
+.label input {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.label input:focus-visible,
+.label textarea:focus-visible {
+  outline-offset: 0;
+  border-color: var(--white);
+}
+
+.label textarea::placeholder {
+  color: var(--glass-400);
+}
+
+.known {
+  font-size: 13.5px;
+  color: var(--glass-400);
+}
+
+.refusal {
+  min-height: 1.4em;
+  margin-top: -6px;
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--white);
+}
+
+.refusal:empty {
+  display: none;
+}
+
+.acts {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .dialog form {
+    padding: 22px 20px;
+  }
+  .acts button {
+    flex: 1 1 0;
+    padding-inline: 12px;
+  }
+}

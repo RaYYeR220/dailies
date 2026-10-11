@@ -1,0 +1,50 @@
+.form {
+  margin: 40px 0 0;
+  max-width: 470px;
+}
+
+.field:focus-within {
+  border-color: var(--pencil);
+}
+
+.go {
+  flex: none;
+  padding: 17px 28px;
+  border: 0;
+  font-size: 17px;
+}
+
+.form .go:disabled {
+  opacity: 0.7;
+}
+
+.note {
+  margin: 16px 0 0 26px;
+  min-height: 2.9em;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--glass-400);
+}
+
+.refused {
+  color: var(--white);
+}
+
+@media (max-width: 820px) {
+  .form {
+    margin-top: 22px;
+    max-width: none;
+  }
+  .field input {
+    padding-left: 16px;
+    font-size: 12.5px;
+  }
+  .go {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+  .note {
+    margin: 12px 0 0 22px;
+    font-size: 13.5px;
+  }
+}

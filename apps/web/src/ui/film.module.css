@@ -1,0 +1,168 @@
+/*
+  Film laid vertically: perforations down both edges, frames stacked. This is how evidence is shown.
+  The strip and its frames are wrapped in :where(), so a component can adjust them from its own stylesheet
+  without depending on the order the two load in.
+*/
+:where(.film) {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 12px 34px;
+  background-color: var(--em-950);
+  background-image: var(--perf-v), var(--perf-v);
+  background-repeat: repeat-y;
+  background-position: 3px 0, calc(100% - 3px) 0;
+  background-size: 26px 24px;
+  box-shadow: inset 1px 0 var(--edge), inset -1px 0 var(--edge);
+}
+
+/* Film laid flat: perforations along the top and the bottom, frames side by side. */
+:where(.strip) {
+  position: relative;
+  display: flex;
+  gap: 5px;
+  padding: 17px 6px;
+  background:
+    var(--perf-h-sm) 0 3px / 14px 12px repeat-x,
+    var(--perf-h-sm) 0 calc(100% - 3px) / 14px 12px repeat-x,
+    var(--em-950);
+  box-shadow: inset 0 1px var(--edge), inset 0 -1px var(--edge);
+}
+
+:where(.frame) {
+  min-width: 0;
+  padding: 15px 18px 17px;
+  border-radius: var(--r-frame);
+  background: var(--em-800);
+}
+
+:where(.lit) {
+  background: var(--lit);
+  box-shadow: 0 0 34px -6px rgba(238, 243, 241, 0.2);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 14px;
+  margin: 0 0 10px;
+}
+
+.head b {
+  font: 600 14px/1.3 var(--txt);
+  color: var(--white);
+}
+
+.head span {
+  font: 400 11.5px/1.4 var(--mono);
+  letter-spacing: 0.01em;
+  color: var(--on-lit-dim);
+}
+
+.entry {
+  margin: 0;
+  font: 400 13.5px/1.6 var(--mono);
+  font-stretch: 75%;
+  color: var(--white);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dim {
+  color: var(--on-lit-dim);
+}
+
+.quiet {
+  margin: 0;
+  font: 400 14px/1.45 var(--txt);
+  color: var(--on-lit-dim);
+}
+
+.hunk {
+  margin: 0;
+  font: 400 13px/1.76 var(--mono);
+  font-stretch: 75%;
+}
+
+.ln {
+  display: grid;
+  grid-template-columns: 1.9ch minmax(0, 1fr);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* A wrapped line hangs under its own code, not under the sign. */
+.ln > span:last-child {
+  padding-left: 4ch;
+  text-indent: -4ch;
+}
+
+.ln > span:last-child > span {
+  text-indent: 0;
+}
+
+.del {
+  color: rgba(238, 243, 241, 0.5);
+}
+
+.ctx {
+  color: rgba(238, 243, 241, 0.72);
+}
+
+.add {
+  color: var(--white);
+}
+
+.more {
+  margin: 8px 0 0;
+  font: 400 11.5px/1.4 var(--mono);
+  color: var(--on-lit-dim);
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+}
+
+.stat b {
+  font: 800 30px/1 var(--disp);
+  letter-spacing: -0.03em;
+}
+
+.stat span {
+  font: 400 15px/1.3 var(--txt);
+  color: var(--glass-200);
+}
+
+.commit {
+  display: inline-block;
+  margin-top: 12px;
+  font: 500 13.5px/1.3 var(--txt);
+  color: var(--white);
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(238, 243, 241, 0.4);
+}
+
+.commit:hover {
+  text-decoration-color: var(--white);
+}
+
+@media (max-width: 560px) {
+  :where(.film) {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+  :where(.frame) {
+    padding: 13px 12px 15px;
+  }
+  .hunk {
+    font-size: 11.5px;
+  }
+  .entry {
+    font-size: 12.5px;
+  }
+}

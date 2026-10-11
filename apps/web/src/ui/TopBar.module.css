@@ -1,0 +1,78 @@
+.top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  padding: 8px 0 26px;
+}
+
+.wordmark {
+  font: 600 19px/1 var(--disp);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.crumb {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.crumb h1 {
+  font: 600 19px/1.1 var(--disp);
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.win {
+  font: 400 13px/1.2 var(--mono);
+  color: var(--glass-400);
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 16px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  font: 500 14px/1 var(--txt);
+  color: var(--glass-200);
+  font-variant-numeric: tabular-nums;
+}
+
+.state i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--white);
+}
+
+.live {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (max-width: 560px) {
+  .top {
+    gap: 10px 16px;
+    padding-bottom: 18px;
+  }
+  .state {
+    order: 3;
+    padding: 8px 13px;
+    font-size: 13px;
+  }
+  .crumb {
+    flex-basis: 100%;
+    order: 4;
+  }
+}
