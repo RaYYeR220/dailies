@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "6f18e2cc7373",
+  "strategy": "manual-commit",
+  "branch": "task/11-web",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/next.config.ts",
+    "apps/web/package.json",
+    "apps/web/vitest.config.ts",
+    "package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/6f/18e2cc7373/0/metadata.json",
+      "transcript": "/6f/18e2cc7373/0/full.jsonl",
+      "compact_transcript": "/6f/18e2cc7373/0/transcript.jsonl",
+      "content_hash": "/6f/18e2cc7373/0/content_hash.txt",
+      "prompt": "/6f/18e2cc7373/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 92,
+    "cache_creation_tokens": 131926,
+    "cache_read_tokens": 4972022,
+    "output_tokens": 54733,
+    "api_call_count": 46
+  }
+}
