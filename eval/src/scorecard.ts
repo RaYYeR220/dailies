@@ -34,14 +34,27 @@ function scrubRepo(text: string, repo: string): string {
   return repo ? text.split(repo).join(repoKey(repo)) : text;
 }
 
+// Known enough, and inherently argument-free as bare program names, to publish as-is.
+const KNOWN_PROGRAMS = new Set([
+  'cd', 'ls', 'git', 'go', 'cargo', 'make', 'node', 'npm', 'pnpm', 'yarn', 'bun', 'npx', 'tsx',
+  'python', 'python3', 'perl', 'ruby', 'tsc', 'eslint', 'biome', 'ruff', 'flake8', 'mypy',
+  'pyright', 'pytest', 'jest', 'vitest', 'mocha', 'playwright', 'rspec', 'phpunit', 'dotnet',
+  'bash', 'sh', 'echo', 'grep', 'sed', 'awk', 'curl', 'docker', 'mise',
+]);
+
 // A recorded command is arbitrary agent-authored shell text: it can carry a bare
-// "github.com/owner/repo" module path (no scheme, so scrubRepo's exact-URL match misses it) or
-// an operator's local filesystem path with their username in it (seen verbatim in real data —
-// a recorded `cd /Users/<name>/...`). There is no bounded set of patterns to scrub for that, so
-// the command is never published raw: only its deterministic class and first (program-name)
-// token survive, which carries no path, slug or argument content.
+// "github.com/owner/repo" module path (no scheme, so scrubRepo's exact-URL match misses it), an
+// operator's local filesystem path with their username in it (seen verbatim in real data — a
+// recorded `cd /Users/<name>/...`), or a leading `VAR=value` shell assignment whose value could
+// be anything, including a secret under a name redact() doesn't recognise. There is no bounded
+// set of patterns to scrub for all of that, so the command is never published raw: only its
+// deterministic class, plus a program name taken strictly from a fixed allowlist (an unknown
+// binary becomes "other"), survives.
 export function safeCommand(command: string): string {
-  const programName = command.trim().split(/\s+/)[0] || '(empty)';
+  const withoutAssignments = command.trim().replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)+/, '');
+  const first = withoutAssignments.split(/\s+/)[0] ?? '';
+  const base = first.split('/').pop() || first;
+  const programName = KNOWN_PROGRAMS.has(base) ? base : 'other';
   return `${classifyCommand(command)}:${programName}`;
 }
 

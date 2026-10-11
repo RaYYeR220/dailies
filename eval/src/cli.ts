@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Session } from '@dailies/core';
-import { ingest } from '@dailies/ingest';
+import { ingest, NoCheckpointsError } from '@dailies/ingest';
 import { buildScorecard, safeCommand } from './scorecard';
 import { runGroundingBenchmark } from './grounding';
 import { runMutationBenchmark } from './mutation';
@@ -11,6 +11,14 @@ import { unrecognisedTails } from './tails';
 interface DatasetEntry {
   url: string;
   maxSessions: number;
+}
+
+// Not the raw error message: git's stderr on a clone/fetch failure can include a local
+// filesystem path, and a published result never carries freeform text about a failure whose
+// exact shape wasn't anticipated. A fixed code is all a committed artifact gets.
+function ingestFailureCode(err: unknown): string {
+  if (err instanceof NoCheckpointsError) return 'no-checkpoints';
+  return 'ingest-failed';
 }
 
 async function main(): Promise<void> {
@@ -36,12 +44,16 @@ async function main(): Promise<void> {
         allSessions.push(session);
       }
     } catch (err) {
-      skipped.push({ repo: entry.url, reason: err instanceof Error ? err.message : String(err) });
+      skipped.push({ repo: entry.url, reason: ingestFailureCode(err) });
+      console.error(`skipped ${entry.url}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   const mutation = runMutationBenchmark(sessionsByRepo);
   const grounding = runGroundingBenchmark();
+  // Printed for the operator below, but deliberately never written to eval/results: a tail is
+  // raw tool stdout from a real session, redacted only for the known secret patterns redact()
+  // recognises — not for the arbitrary local paths or repo identity it can otherwise carry.
   const tails = unrecognisedTails(allSessions);
 
   const date = new Date().toISOString().slice(0, 10);
@@ -64,7 +76,7 @@ async function main(): Promise<void> {
   await writeFile(resolve(resultsDir, `${date}-grounding.json`), `${JSON.stringify(grounding, null, 2)}\n`);
   await writeFile(
     resolve(resultsDir, `${date}-scorecard.md`),
-    buildScorecard({ date, mutation, grounding, skipped, tails }),
+    buildScorecard({ date, mutation, grounding, skipped }),
   );
 
   const total = mutation.recognised + mutation.unknown;
@@ -75,6 +87,10 @@ async function main(): Promise<void> {
   console.log(`grounding: ${grounding.rejected}/${grounding.fabricated} rejected, ${grounding.accepted}/${grounding.genuine} accepted`);
   if (sanitizedSkipped.length > 0) {
     console.log(`skipped ${sanitizedSkipped.length} repositor${sanitizedSkipped.length === 1 ? 'y' : 'ies'}`);
+  }
+  if (tails.length > 0) {
+    console.log('most common unrecognised output tails (not written to eval/results):');
+    for (const t of tails) console.log(`  (${t.count}x) ${t.tail}`);
   }
 }
 
