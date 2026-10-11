@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "bbd99f47767d",
+  "strategy": "manual-commit",
+  "branch": "task/3-agent",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/agent/src/loop.ts",
+    "packages/agent/src/router.ts",
+    "packages/agent/test/router.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/bb/d99f47767d/0/metadata.json",
+      "transcript": "/bb/d99f47767d/0/full.jsonl",
+      "compact_transcript": "/bb/d99f47767d/0/transcript.jsonl",
+      "content_hash": "/bb/d99f47767d/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 26,
+    "cache_creation_tokens": 20472,
+    "cache_read_tokens": 2615149,
+    "output_tokens": 14560,
+    "api_call_count": 13
+  }
+}
