@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "18bb3fdfb9ad",
+  "strategy": "manual-commit",
+  "branch": "task/12-eval",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "eval/src/mutation.ts",
+    "eval/test/mutation.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/18/bb3fdfb9ad/0/metadata.json",
+      "transcript": "/18/bb3fdfb9ad/0/full.jsonl",
+      "compact_transcript": "/18/bb3fdfb9ad/0/transcript.jsonl",
+      "content_hash": "/18/bb3fdfb9ad/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 12,
+    "cache_creation_tokens": 5381,
+    "cache_read_tokens": 1186564,
+    "output_tokens": 3754,
+    "api_call_count": 6
+  }
+}
