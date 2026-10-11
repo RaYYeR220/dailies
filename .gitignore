@@ -1,0 +1,22 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# deps / build
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.vercel/
+__pycache__/
+.venv/
+*.pyc
+
+# local tooling
+.DS_Store
+.remember/
+.claude/settings.local.json
+.entire/settings.local.json
+*.log
