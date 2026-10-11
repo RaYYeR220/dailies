@@ -12,7 +12,8 @@ const CLAMP = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 export const Prompt: React.FC<{ scene: SceneOf<'prompt'> }> = ({ scene }) => {
   const m = useMotion();
   const box = useContentBox();
-  const chars = Array.from(clampEnd(scene.quote.trim(), LIMITS.promptQuote));
+  // Line breaks are flattened: the size is fitted to continuous text, and a pasted list would outgrow its rows.
+  const chars = Array.from(clampEnd(scene.quote.replace(/\s+/g, ' ').trim(), LIMITS.promptQuote));
   const footer = size.label * leading.text + space.lg;
   const fontSize = fitSize(textUnits(chars.join('')), { width: box.width - space.lg - stroke.bar, height: box.height - footer }, { ...size.quote, advance: advance.display, leading: leading.quote });
 
@@ -23,7 +24,7 @@ export const Prompt: React.FC<{ scene: SceneOf<'prompt'> }> = ({ scene }) => {
   return (
     <Frame label="The prompt">
       <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-        <div style={{ borderLeft: `${stroke.bar}px solid ${color.accent}`, paddingLeft: space.lg, fontFamily: font.display, fontSize, lineHeight: leading.quote, letterSpacing: tracking.display, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
+        <div style={{ borderLeft: `${stroke.bar}px solid ${color.accent}`, paddingLeft: space.lg, fontFamily: font.display, fontSize, lineHeight: leading.quote, letterSpacing: tracking.display, overflowWrap: 'anywhere' }}>
           <span>{chars.slice(0, typed).join('')}</span>
           <span style={{ borderRight: `${stroke.hair}px solid ${color.accent}`, marginRight: -stroke.hair, opacity: cursor }} />
           <span style={{ opacity: 0 }}>{chars.slice(typed).join('')}</span>

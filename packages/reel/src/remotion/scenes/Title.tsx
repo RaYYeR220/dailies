@@ -1,29 +1,13 @@
 import React from 'react';
 import { theme } from '../../theme';
-import { clampEnd, fitSize, textUnits } from '../text';
-import { Frame, Label, Rise, Rule, useContentBox, useMotion, type SceneOf } from '../ui';
+import { clampEnd } from '../text';
+import { Count, Frame, Hero, Label, Rise, Rule, useMotion, type SceneOf } from '../ui';
 
-const { color, font, size, weight, leading, tracking, space, advance } = theme;
+const { color, space } = theme;
 
 // The schema puts no limit on these two, so the scene sets its own.
 const REPO_CHARS = 80;
 const WINDOW_CHARS = 60;
-
-export const Count: React.FC<{ value: number; unit: string; tone?: string }> = ({ value, unit, tone = color.text }) => (
-  <div style={{ display: 'flex', alignItems: 'baseline', gap: space.sm }}>
-    <div style={{ fontFamily: font.display, fontSize: size.count, lineHeight: leading.display, color: tone }}>{value.toLocaleString('en-US')}</div>
-    <Label>{unit}</Label>
-  </div>
-);
-
-/** The repo name as large as two lines of the content box allow. */
-export const Hero: React.FC<{ text: string }> = ({ text }) => {
-  const box = useContentBox(true);
-  const fontSize = fitSize(textUnits(text), { width: box.width, height: size.hero.max * leading.display * 2 }, { ...size.hero, advance: advance.display, leading: leading.display });
-  return (
-    <div style={{ fontFamily: font.display, fontSize, fontWeight: weight.regular, lineHeight: leading.display, letterSpacing: tracking.display, overflowWrap: 'anywhere' }}>{text}</div>
-  );
-};
 
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 

@@ -30,6 +30,11 @@ describe('theme', () => {
     expect(Math.min(...sizes)).toBeGreaterThanOrEqual(22);
   });
 
+  it('lands every entrance before the middle of a scene, where the review still is taken', () => {
+    expect(theme.motion.settleBy).toBeGreaterThan(0);
+    expect(theme.motion.settleBy).toBeLessThan(0.5);
+  });
+
   it('names a family for display, text and code', () => {
     for (const family of [theme.font.display, theme.font.text, theme.font.mono]) expect(family).toMatch(/\S/);
     expect(new Set([theme.font.display, theme.font.text, theme.font.mono]).size).toBe(3);

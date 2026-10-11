@@ -83,5 +83,3 @@ export const theme = {
     stampFrom: 1.7,      // scale the stamp drops in from
   },
 } as const;
-
-export type Theme = typeof theme;

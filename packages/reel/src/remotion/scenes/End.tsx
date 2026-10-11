@@ -1,8 +1,7 @@
 import React from 'react';
 import { theme } from '../../theme';
 import { clampEnd } from '../text';
-import { Frame, Label, Rise, Rule, useMotion, type SceneOf } from '../ui';
-import { Count, Hero } from './Title';
+import { Count, Frame, Hero, Label, Rise, Rule, useMotion, type SceneOf } from '../ui';
 
 const { color, space } = theme;
 

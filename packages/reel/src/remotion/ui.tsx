@@ -2,9 +2,9 @@ import React, { createContext, useContext } from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import type { Scene } from '@dailies/core';
 import { theme } from '../theme';
-import { clampStart } from './text';
+import { clampStart, fitSize, textUnits } from './text';
 
-const { color, font, size, weight, leading, tracking, space, stroke, layout, motion } = theme;
+const { color, font, size, weight, leading, tracking, space, stroke, layout, motion, advance } = theme;
 
 export type SceneOf<T extends Scene['type']> = Extract<Scene, { type: T }>;
 
@@ -77,6 +77,23 @@ export const Mark: React.FC<{ ok: boolean; progress?: number }> = ({ ok, progres
     />
   </svg>
 );
+
+/** A figure with its unit, as on the title and end cards. */
+export const Count: React.FC<{ value: number; unit: string; tone?: string }> = ({ value, unit, tone = color.text }) => (
+  <div style={{ display: 'flex', alignItems: 'baseline', gap: space.sm }}>
+    <div style={{ fontFamily: font.display, fontSize: size.count, lineHeight: leading.display, color: tone }}>{value.toLocaleString('en-US')}</div>
+    <Label>{unit}</Label>
+  </div>
+);
+
+/** The repo name on the title and end cards, as large as two lines of the content box allow. */
+export const Hero: React.FC<{ text: string }> = ({ text }) => {
+  const box = useContentBox(true);
+  const fontSize = fitSize(textUnits(text), { width: box.width, height: size.hero.max * leading.display * 2 }, { ...size.hero, advance: advance.display, leading: leading.display });
+  return (
+    <div style={{ fontFamily: font.display, fontSize, fontWeight: weight.regular, lineHeight: leading.display, letterSpacing: tracking.display, overflowWrap: 'anywhere' }}>{text}</div>
+  );
+};
 
 /**
  * The shared scene frame: an optional header naming the scene kind and the repo, and the content box under it.
