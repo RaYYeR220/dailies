@@ -5,7 +5,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm --filter @dailies/web typecheck",
     "dailies": "tsx packages/cli/src/index.ts"
   },
   "devDependencies": {
