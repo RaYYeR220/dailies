@@ -232,6 +232,29 @@ describe('buildReviewStage', () => {
     expect(result.reason!.length).toBeLessThan(2500);
   }, 20000);
 
+  it('still fails the gate when a high finding is pushed past the cap by a flood of low ones', async () => {
+    const stillPath = join(scratch(), 'still.png');
+    writeFileSync(stillPath, Buffer.from('fake-png-bytes'));
+    const videoPath = join(scratch(), 'clean.mp4');
+    await cleanClip(videoPath);
+
+    const lows = Array.from({ length: 59 }, (_, n) => ({ sceneId: 'sc_title', issue: `low ${n}`, severity: 'low' as const, fix: 'x' }));
+    const flood = [...lows, { sceneId: 'sc_title', issue: 'the actual problem', severity: 'high' as const, fix: 'x' }];
+    const client = createMockClient(() => ({ role: 'assistant', content: JSON.stringify(flood) }));
+    const stage = buildReviewStage({ client, renderStills: async () => [{ sceneId: 'sc_title', path: stillPath }] });
+
+    const ctx = makeCtx({
+      render: { videoPath, srtPath: 'x.srt', posterPath: 'x.png', durationSec: 75 },
+      ground: { storyboard: minimalStoryboard() },
+      voice: { audioPath: null, timings: [] },
+    });
+
+    const result = await stage.run(ctx);
+
+    expect(result.artifact.pass).toBe(false);
+    expect(result.loopBackTo).toBe('script');
+  }, 20000);
+
   it('passes when the vision check returns no findings and the deterministic checks are clean', async () => {
     const stillPath = join(scratch(), 'still.png');
     writeFileSync(stillPath, Buffer.from('fake-png-bytes'));
