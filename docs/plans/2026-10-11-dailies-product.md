@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS run_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, i
 
 Worker: `workerLoop` takes the oldest id from `unfinishedRuns(db)`, runs `runPipeline` for it to completion, then looks again; when there is none it waits `pollMs` (default 2000). Errors from one run are logged and do not stop the loop. `apps/web/src/worker-main.ts` wires the real stages (`buildStages` plus `reviewStage` from `@dailies/pipeline`, a router, a meter, the Gemini provider when keys exist), initialises tracing, and handles `SIGTERM` by aborting the loop after the current stage.
 
+Note: `buildStages` and `reviewStage` are produced by core Tasks 8 and 9, not by this task, and "Task order" above correctly marks Task 11 as independent of both. Until one of those lands in `@dailies/pipeline`, `worker-main.ts` cannot import either name and still type-check, so its `makeStages` is a placeholder that throws a clear message instead of wiring real stages; `workerLoop` itself (the part this task's tests cover) does not depend on them.
+
 Scripts in `apps/web/package.json`: `dev` (next dev), `build`, `start` (next start), `worker` (`tsx src/worker-main.ts`).
 
 Next.js config: `transpilePackages` for the `@dailies/*` packages the app imports; `serverExternalPackages: ['better-sqlite3']`. The database path is `<dataDir>/dailies.db`.
