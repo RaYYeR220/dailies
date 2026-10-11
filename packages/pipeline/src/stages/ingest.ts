@@ -1,6 +1,7 @@
 import { redact, type IngestArtifact } from '@dailies/core';
 import { ingest, NoCheckpointsError } from '@dailies/ingest';
 import type { Stage } from '../types';
+import type { StageDeps } from './index';
 
 const NO_SESSIONS = 'no agent sessions found in this window';
 
@@ -49,7 +50,7 @@ function scrubbedError(message: string, credentials: string[]): string {
   return scrub(`${head} … ${tail}`, credentials);
 }
 
-export function ingestStage(): Stage<IngestArtifact> {
+export function ingestStage(deps: Pick<StageDeps, 'maxSessions'> = {}): Stage<IngestArtifact> {
   return {
     name: 'ingest',
     maxAttempts: 2,
@@ -58,7 +59,7 @@ export function ingestStage(): Stage<IngestArtifact> {
       const credentials = credentialsOf(repoUrl);
       let found: IngestArtifact;
       try {
-        found = await ingest({ repoUrl, dataDir: ctx.dataDir, since, until });
+        found = await ingest({ repoUrl, dataDir: ctx.dataDir, since, until, maxSessions: deps.maxSessions, onProgress: ctx.log });
       } catch (err) {
         if (!(err instanceof NoCheckpointsError)) throw new Error(scrubbedError(err instanceof Error ? err.message : String(err), credentials));
         found = { repo: { url: repoUrl, dir: '', headSha: '' }, sessions: [], diffs: {}, skipped: [], enrichments: {}, redactions: 0 };
