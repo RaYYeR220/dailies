@@ -83,6 +83,14 @@ describe('parseOutcome', () => {
     expect(collectRuns(sess)[0]!.outcome).toBe('unknown');
   });
 
+  it('a newline-separated script is not trusted: a newline chains statements exactly as ; does', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm typecheck\necho done' },
+      { kind: 'tool_result', toolUseId: 't1', text: '$ tsc --noEmit\ndone', isError: false },
+    ]);
+    expect(collectRuns(sess)[0]!.outcome).toBe('unknown');
+  });
+
   it('an && chain is still trusted: every part must run to completion for the chain to report success', () => {
     const sess = session([
       { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm typecheck && echo done' },

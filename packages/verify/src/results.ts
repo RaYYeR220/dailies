@@ -34,12 +34,13 @@ function parseTestOutcome(text: string): RunOutcome {
   return 'unknown';
 }
 
-// A pipe or a chained command reports the exit status of its last part, not the part that was
-// actually classified; `||` is two `|` characters, so testing for `|` alone already covers it.
-// A backgrounded command (`&`, not `&&`) reports the shell having started the job, never the
-// job's own outcome, so it is just as untrustworthy; `&&` is excluded first so a chain that
-// merely contains that token is not flagged by the lone-`&` check.
-const UNTRUSTED_EXIT = /[|;]/;
+// A pipe, a `;`, or a newline (bash chains statements on one exactly as it does on the other)
+// reports the exit status of its last part, not the part that was actually classified; `||` is
+// two `|` characters, so testing for `|` alone already covers it. A backgrounded command (`&`,
+// not `&&`) reports the shell having started the job, never the job's own outcome, so it is just
+// as untrustworthy; `&&` is excluded first so a chain that merely contains that token is not
+// flagged by the lone-`&` check.
+const UNTRUSTED_EXIT = /[|;\n\r]/;
 
 function hasUntrustedExit(command: string): boolean {
   return UNTRUSTED_EXIT.test(command) || command.replace(/&&/g, '').includes('&');
