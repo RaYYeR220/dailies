@@ -1,0 +1,125 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "18ce11147c38",
+  "session_id": "b4c27fef-5919-4866-8c3a-b6a85a8e07e9",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T23:03:55.262745Z",
+  "branch": "task/14-web-ui",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [],
+  "agent": "Claude Code",
+  "model": "claude-opus-5-5",
+  "turn_id": "1063da66b71d",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 174,
+    "cache_creation_tokens": 400605,
+    "cache_read_tokens": 23550621,
+    "output_tokens": 215896,
+    "api_call_count": 88
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01PAsxeXpJRaoTHNSM1iRafJ",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "frontend-design:frontend-design"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "d47a5e003fe7",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 28,
+        "end": 29,
+        "entry_ids": [
+          "473faf4a-d41d-4541-8d9d-f1ec43fcdee8"
+        ],
+        "tool_use_id": "toolu_01PAsxeXpJRaoTHNSM1iRafJ"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01PAsxeXpJRaoTHNSM1iRafJ"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: frontend-design:frontend-design",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 5981,
+      "user_lines_removed": 15,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "apps/web/AGENTS.md": 9,
+        "apps/web/src/app/error.tsx": 18,
+        "apps/web/src/app/gallery/gallery.module.css": 110,
+        "apps/web/src/app/gallery/page.tsx": 57,
+        "apps/web/src/app/globals.css": 166,
+        "apps/web/src/app/landing.module.css": 439,
+        "apps/web/src/app/layout.tsx": 23,
+        "apps/web/src/app/not-found.tsx": 16,
+        "apps/web/src/app/page.tsx": 161,
+        "apps/web/src/app/r/[id]/page.tsx": 27,
+        "apps/web/src/app/reel/[id]/page.tsx": 27,
+        "apps/web/src/app/shell.module.css": 38,
+        "apps/web/src/ui/CopyCommand.module.css": 44,
+        "apps/web/src/ui/CopyCommand.tsx": 30,
+        "apps/web/src/ui/HeroScene.tsx": 152,
+        "apps/web/src/ui/LensText.tsx": 55,
+        "apps/web/src/ui/Loupe.module.css": 41,
+        "apps/web/src/ui/Loupe.tsx": 200,
+        "apps/web/src/ui/Mark.module.css": 63,
+        "apps/web/src/ui/Mark.tsx": 96,
+        "apps/web/src/ui/Meter.tsx": 22,
+        "apps/web/src/ui/OwnerDialog.module.css": 108,
+        "apps/web/src/ui/OwnerDialog.tsx": 196,
+        "apps/web/src/ui/ReelPlayer.module.css": 250,
+        "apps/web/src/ui/ReelPlayer.tsx": 269,
+        "apps/web/src/ui/ReelView.module.css": 461,
+        "apps/web/src/ui/ReelView.tsx": 302,
+        "apps/web/src/ui/RepoForm.module.css": 50,
+        "apps/web/src/ui/RepoForm.tsx": 71,
+        "apps/web/src/ui/RunView.module.css": 564,
+        "apps/web/src/ui/RunView.tsx": 256,
+        "apps/web/src/ui/SamplePlayer.tsx": 49,
+        "apps/web/src/ui/SampleReel.module.css": 75,
+        "apps/web/src/ui/SampleReel.tsx": 28,
+        "apps/web/src/ui/SourceFrames.tsx": 122,
+        "apps/web/src/ui/TopBar.module.css": 78,
+        "apps/web/src/ui/TopBar.tsx": 19,
+        "apps/web/src/ui/api.ts": 49,
+        "apps/web/src/ui/film.module.css": 164,
+        "apps/web/src/ui/fonts.ts": 17,
+        "apps/web/src/ui/fonts/OFL.txt": 93,
+        "apps/web/src/ui/landing-art.tsx": 127,
+        "apps/web/src/ui/parse-reel.ts": 38,
+        "apps/web/src/ui/parse.ts": 60,
+        "apps/web/src/ui/pencil.ts": 4,
+        "apps/web/src/ui/pill.module.css": 90,
+        "apps/web/src/ui/run-model.ts": 40,
+        "apps/web/src/ui/types.ts": 41,
+        "apps/web/src/ui/useRunFeed.ts": 118,
+        "apps/web/test/ui/parse.test.ts": 102,
+        "apps/web/test/ui/run-model.test.ts": 39,
+        "apps/web/test/ui/seed.test.ts": 77,
+        "apps/web/test/ui/seed.ts": 230
+      },
+      "user_removed_per_file": {
+        "apps/web/src/ui/pencil.ts": 3,
+        "apps/web/src/ui/run-model.ts": 11,
+        "apps/web/test/ui/run-model.test.ts": 1
+      }
+    }
+  ]
+}
