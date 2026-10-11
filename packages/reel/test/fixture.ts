@@ -76,7 +76,7 @@ export function fixtureStoryboard(): Storyboard {
           { id: 'l7', text: 'The last test run before that message had failed.', evidence: entry('s2:29') },
         ],
       },
-      { id: 'sc_end', type: 'end', lines: [], repo: 'acme/retry-queue', verified: 4, flagged: 1 },
+      { id: 'sc_end', type: 'end', lines: [], repo: 'acme/retry-queue', verified: 4, flagged: 1, unverified: 1 },
     ],
   };
 }
@@ -146,7 +146,7 @@ export function stressStoryboard(): Storyboard {
         reality: fill('Three source files were edited after the last passing test run, and no run was recorded after those edits. ', 200),
         lines: [line('l5')],
       },
-      { id: 'sc_end', type: 'end', lines: [], repo, verified: 128, flagged: 0 },
+      { id: 'sc_end', type: 'end', lines: [], repo, verified: 128, flagged: 7, unverified: 12 },
     ],
   };
 }

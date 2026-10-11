@@ -72,12 +72,13 @@ export async function renderReel(i: { storyboard: Storyboard; timings: LineTimin
 /**
  * One PNG per scene, taken at the scene's middle frame, for the review stage.
  * Stills are drawn as the captions cut: it is the tighter layout and shows every piece of text a frame can carry.
+ * They are also drawn settled, with every pencil mark landed, though a mark waits for its line in the reel itself.
  */
 export async function renderStills(i: { storyboard: Storyboard; timings: LineTiming[]; outDir: string }): Promise<{ sceneId: string; path: string }[]> {
   const timeline = buildTimeline(i.storyboard, i.timings);
   const outDir = resolve(i.outDir);
   await mkdir(outDir, { recursive: true });
-  const inputProps: ReelProps = { storyboard: i.storyboard, timings: i.timings, audio: false };
+  const inputProps: ReelProps = { storyboard: i.storyboard, timings: i.timings, audio: false, settled: true };
 
   return withComposition(inputProps, null, async ({ serveUrl, composition, browser }) => {
     const stills: { sceneId: string; path: string }[] = [];

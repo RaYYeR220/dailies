@@ -16,18 +16,52 @@ function luma(hex: string): number {
   return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
+/** Largest difference between two channels, 0..255: how far a colour is from a grey. */
+function chroma(hex: string): number {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) throw new Error(`not a #rrggbb colour: ${hex}`);
+  const rgb = [m[1]!, m[2]!, m[3]!].map((c) => parseInt(c, 16));
+  return Math.max(...rgb) - Math.min(...rgb);
+}
+
+const leaves = (node: unknown): unknown[] => (node !== null && typeof node === 'object' ? Object.values(node).flatMap(leaves) : [node]);
+
 describe('theme', () => {
-  it('keeps the backdrop above the blackdetect pixel threshold, so the review stage never reads a dark frame as black', () => {
-    // blackdetect counts a pixel as black at luma <= 0.10; 0.12 leaves room for encoder noise.
-    expect(luma(theme.color.bg)).toBeGreaterThanOrEqual(0.12);
-    expect(luma(theme.color.bgGlow)).toBeGreaterThanOrEqual(0.12);
-    expect(theme.backdrop).toContain(theme.color.bg);
+  it('carries the Loupe surface, the cool white and the grease pencil', () => {
+    expect(theme.color.lightbox.far).toBe('#0d1211');
+    expect(theme.color.lightbox.near).toBe('#1a2421');
+    expect(theme.color.white).toBe('#eef3f1');
+    expect(theme.color.pencil).toBe('#ffd60a');
+    expect(theme.backdrop({ x: 960, y: 540, scale: 1 })).toContain(theme.color.lightbox.far);
   });
 
-  it('keeps every type size readable at 1080p', () => {
-    const sizes = Object.values(theme.size).flatMap((s) => (typeof s === 'number' ? [s] : [s.min, s.max]));
-    expect(sizes.length).toBeGreaterThan(0);
-    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(22);
+  it('has no accent colour other than the pencil', () => {
+    const colours = leaves(theme.color) as string[];
+    expect(colours.length).toBeGreaterThan(8);
+    for (const c of colours) expect(c, 'every colour is a plain #rrggbb').toMatch(/^#[0-9a-f]{6}$/);
+    expect(colours.filter((c) => chroma(c) > 40)).toEqual([theme.color.pencil]);
+  });
+
+  it('sets display in Unbounded, text in Figtree and code in Martian Mono', () => {
+    expect(theme.font.display).toMatch(/^"Unbounded"/);
+    expect(theme.font.text).toMatch(/^"Figtree"/);
+    expect(theme.font.code).toMatch(/^"Martian Mono"/);
+  });
+
+  it('keeps every type size at or above the legibility floor of its role', () => {
+    expect(theme.floor).toEqual({ display: 72, text: 40, code: 30 });
+    for (const role of ['display', 'text', 'code'] as const) {
+      const sizes = leaves(theme.size[role]) as number[];
+      expect(sizes.length, role).toBeGreaterThan(0);
+      expect(Math.min(...sizes), role).toBeGreaterThanOrEqual(theme.floor[role]);
+    }
+  });
+
+  it('keeps the lit glass above the blackdetect pixel threshold, so the review stage never reads a frame as black', () => {
+    // blackdetect counts a pixel as black at luma <= 0.10 and a frame as black when 98% of its pixels are.
+    // The room is darker than that on purpose; the glass is in every frame and is not. lens.test.ts pins its share.
+    expect(luma(theme.color.film.lit)).toBeGreaterThanOrEqual(0.12);
+    expect(luma(theme.color.lightbox.far)).toBeLessThan(0.1);
   });
 
   it('lands every entrance before the middle of a scene, where the review still is taken', () => {
@@ -35,9 +69,11 @@ describe('theme', () => {
     expect(theme.motion.settleBy).toBeLessThan(0.5);
   });
 
-  it('names a family for display, text and code', () => {
-    for (const family of [theme.font.display, theme.font.text, theme.font.mono]) expect(family).toMatch(/\S/);
-    expect(new Set([theme.font.display, theme.font.text, theme.font.mono]).size).toBe(3);
+  it('draws the loupe from the inside out: glass, barrel, skirt', () => {
+    const { glass, barrel, skirt } = theme.loupe;
+    expect(glass).toBeLessThan(barrel.radius - barrel.width / 2 + 1);
+    expect(barrel.radius + barrel.width / 2).toBeLessThanOrEqual(skirt.inner + 1);
+    expect(skirt.inner).toBeLessThan(skirt.outer);
   });
 });
 
@@ -60,7 +96,7 @@ describe('scenes', () => {
 
   it('takes every colour, font, size and radius from the theme', () => {
     const files = tsxFiles(REMOTION_DIR);
-    expect(files.length).toBeGreaterThanOrEqual(9);   // seven scenes, Reel, Root
+    expect(files.length).toBeGreaterThanOrEqual(9);   // seven scenes, Reel, Root, and the shared pieces
     const hits = files.flatMap((file) =>
       readFileSync(file, 'utf8').split('\n').flatMap((line, i) =>
         FORBIDDEN.filter(([, re]) => re.test(line)).map(([what]) => `${file.slice(REMOTION_DIR.length + 1)}:${i + 1} ${what}: ${line.trim()}`)));
