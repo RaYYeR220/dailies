@@ -1,0 +1,166 @@
+/*
+  Loupe. The night's work is a strip of film on a switched-off lightbox; the only lit thing in the room is
+  the frame under the glass. Film frames are the record, the loupe is the check, pills are what a person
+  does. Grease-pencil yellow is the verdict and the one action, and nothing else.
+*/
+:root {
+  /* lightbox: the page, from the far field to the light spill near the glass */
+  --lb-950: #0d1211;
+  --lb-900: #121917;
+  --lb-850: #1a2421;
+  /* emulsion: film base, an unlit frame, a perforation with the lightbox behind it */
+  --em-950: #070a09;
+  --em-800: #131c19;
+  --em-700: #26352f;
+  --em-500: #5b6f68;
+  --perf: #1c2724;
+  /* a frame with light behind it */
+  --lit-top: #2e443d;
+  --lit-bottom: #22322d;
+  --lit: linear-gradient(var(--lit-top), var(--lit-bottom));
+  /* type */
+  --white: #eef3f1;
+  --glass-200: #c3cfca;
+  --glass-400: #8fa099;
+  --on-lit-dim: rgba(238, 243, 241, 0.66);
+  /* grease pencil */
+  --pencil: #ffd60a;
+  --hair: rgba(238, 243, 241, 0.13);
+  --edge: rgba(238, 243, 241, 0.16);
+
+  --disp: var(--font-unbounded), sans-serif;
+  --txt: var(--font-figtree), system-ui, sans-serif;
+  --mono: var(--font-martian), ui-monospace, monospace;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+  --s9: 112px;
+
+  --r-pill: 999px;
+  --r-player: 20px;
+  --r-frame: 5px;
+  --r-perf: 2px;
+
+  /* film base with rounded perforations: -v runs down the edges of a vertical strip, -h along a horizontal one */
+  --perf-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='24'%3E%3Crect x='7' y='7.5' width='12' height='9' rx='2' fill='%231c2724'/%3E%3C/svg%3E");
+  --perf-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='22'%3E%3Crect x='7.5' y='5' width='9' height='12' rx='2' fill='%231c2724'/%3E%3C/svg%3E");
+  --perf-h-sm: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='12'%3E%3Crect x='4' y='3' width='6' height='6' rx='2' fill='%231c2724'/%3E%3C/svg%3E");
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--lb-950);
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--lb-950);
+  color: var(--white);
+  font-family: var(--txt);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+svg text {
+  font-kerning: normal;
+}
+
+:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--pencil);
+  color: var(--lb-950);
+}
+
+/* text for a screen reader only */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* type roles, for text set inside SVG */
+.disp {
+  font-family: var(--disp);
+}
+.txt {
+  font-family: var(--txt);
+}
+.mono {
+  font-family: var(--mono);
+}
+.code {
+  font-family: var(--mono);
+  font-stretch: 75%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* A pencil stroke inside an SVG scene, drawn on once. The path carries pathLength="1". */
+.lens-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: lens-draw 0.7s cubic-bezier(0.5, 0, 0.2, 1) var(--draw-delay, 0.15s) forwards;
+}
+
+@keyframes lens-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

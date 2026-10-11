@@ -1,0 +1,90 @@
+/* Pills are what a person does. The yellow one is the single action of the page. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 24px;
+  border: 1px solid rgba(238, 243, 241, 0.3);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--white);
+  font: 600 16px/1 var(--txt);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.btn:hover {
+  border-color: rgba(238, 243, 241, 0.65);
+}
+
+.btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.btn:disabled:hover {
+  border-color: rgba(238, 243, 241, 0.3);
+  transform: none;
+}
+
+.go {
+  background: var(--pencil);
+  border-color: var(--pencil);
+  color: var(--lb-950);
+}
+
+.go:hover {
+  border-color: var(--pencil);
+  transform: scale(1.03);
+}
+
+.go:focus-visible {
+  outline-color: var(--white);
+}
+
+.quiet {
+  padding: 10px 18px;
+  border-color: var(--edge);
+  color: var(--glass-200);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.quiet:hover {
+  border-color: rgba(238, 243, 241, 0.4);
+  color: var(--white);
+}
+
+/* A field and its action in one pill. */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  border: 1px solid rgba(238, 243, 241, 0.2);
+  border-radius: var(--r-pill);
+  background: rgba(7, 10, 9, 0.62);
+}
+
+.field:focus-within {
+  border-color: var(--white);
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 0 20px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--white);
+  font: 400 14px/1 var(--mono);
+  letter-spacing: -0.02em;
+}
+
+.field input::placeholder {
+  color: var(--glass-400);
+}

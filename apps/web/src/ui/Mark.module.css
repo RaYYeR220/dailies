@@ -1,0 +1,63 @@
+.mark {
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.penciled {
+  position: relative;
+  white-space: nowrap;
+}
+
+.penciled > svg {
+  position: absolute;
+  left: -0.5em;
+  top: -0.3em;
+  width: calc(100% + 1em);
+  height: calc(100% + 0.6em);
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* A cross goes through the words, so it is drawn under them and the letters keep a thin clearing. */
+.crossed {
+  isolation: isolate;
+  -webkit-text-stroke: 0.3em var(--penciled-ground, #293c36);
+  paint-order: stroke fill;
+}
+
+.crossed > svg {
+  z-index: -1;
+}
+
+.roomy > svg {
+  left: -1.05em;
+  top: -0.62em;
+  width: calc(100% + 2.1em);
+  height: calc(100% + 1.24em);
+}
+
+/* The stroke goes on the way a hand puts it there. A dashed ring cannot be drawn by offset, so it fades in. */
+.draw path[pathLength] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 0.62s cubic-bezier(0.5, 0, 0.2, 1) var(--draw-delay, 0s) forwards;
+}
+
+.draw .dashed {
+  opacity: 0;
+  animation: appear 0.5s ease var(--draw-delay, 0s) forwards;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}

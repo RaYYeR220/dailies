@@ -7,7 +7,8 @@ type Point = [number, number];
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
-function random(seed: number): () => number {
+/** A small seeded generator: the same seed always gives the same sequence. */
+export function seeded(seed: number): () => number {
   let a = (seed * 2654435761) >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -47,7 +48,7 @@ export interface RingOptions {
 /** A hand-drawn loop around an ellipse. */
 export function ringPath(cx: number, cy: number, rx: number, ry: number, o: RingOptions = {}): string {
   const { seed = 1, turns = 1.14, start = Math.PI * 0.97, wobble = 0.035, tilt = -0.05, drift = -0.1 } = o;
-  const rand = random(seed * 7919 + 13);
+  const rand = seeded(seed * 7919 + 13);
   const phase1 = rand() * Math.PI * 2;
   const phase2 = rand() * Math.PI * 2;
   const amp1 = wobble * (0.7 + rand() * 0.6);
@@ -69,7 +70,7 @@ export function ringPath(cx: number, cy: number, rx: number, ry: number, o: Ring
 
 /** Two crossing strokes in a box `w` by `h`, each with a slight bow. */
 export function crossPath(cx: number, cy: number, w: number, h: number, seed = 1): string {
-  const rand = random(seed * 104729 + 7);
+  const rand = seeded(seed * 104729 + 7);
   const j = (m: number) => (rand() - 0.5) * m;
   const [x1, x2, y1, y2] = [cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2];
   const P = (x: number, y: number) => `${r1(x)},${r1(y)}`;

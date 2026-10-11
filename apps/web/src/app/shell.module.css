@@ -1,0 +1,38 @@
+/* The working pages sit on the same lightbox as the landing, with the light spilling from the top left. */
+.app {
+  min-height: 100vh;
+  min-height: 100svh;
+  background: radial-gradient(90vw 70vh at 30% 8%, #151d1b 0%, var(--lb-950) 62%) no-repeat, var(--lb-950);
+}
+
+.page {
+  width: min(1368px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 20px 0 44px;
+}
+
+/* A page with nothing to show: say what happened and what to do next. */
+.lost {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 18px;
+  min-height: 70vh;
+  max-width: 36em;
+}
+
+.lost h1 {
+  font: 300 clamp(26px, 3vw, 40px) / 1.12 var(--disp);
+  letter-spacing: -0.024em;
+}
+
+.lost p {
+  font-size: 17px;
+  color: var(--glass-200);
+}
+
+.wordmark {
+  font: 600 19px/1 var(--disp);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}

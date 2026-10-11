@@ -46,22 +46,51 @@ export function gateFrames(gate: { checks: GateCheck[] } | null, budgetUsd: numb
 
 export type RunStatus = 'running' | 'needs_approval' | 'blocked' | 'failed';
 
+type StageStates = { name: StageName; state: StageState }[];
+
+/**
+ * The stage the loupe rests on: the one running, the next one between two stages, or the one that ended
+ * the run. A stage that blocks is marked done, except on a budget stop, which leaves it running.
+ */
+export function focusStage(status: RunStatus, states: StageStates): number {
+  const last = STAGE_NAMES.length - 1;
+  const first = (state: StageState) => states.findIndex((s) => s.state === state);
+  const lastDone = states.findLastIndex((s) => s.state === 'done');
+  if (status === 'failed' && first('failed') !== -1) return first('failed');
+  if (first('running') !== -1) return first('running');
+  if (status === 'running' || status === 'failed') return Math.min(lastDone + 1, last);
+  return Math.max(lastDone, 0);
+}
+
 /** The page's one-line summary: where the run is, or how it ended. */
-export function runHeadline(status: RunStatus, states: { name: StageName; state: StageState }[]): { lead: string; strong: string } {
+export function runHeadline(status: RunStatus, states: StageStates): { lead: string; strong: string } {
   const total = STAGE_NAMES.length;
-  const done = states.filter((s) => s.state === 'done').length;
-  const at = (state: StageState) => states.findIndex((s) => s.state === state) + 1;
+  const stage = focusStage(status, states) + 1;
 
   if (status === 'needs_approval') return { lead: 'The cut is ready.', strong: 'Waiting for your review.' };
-  if (status === 'failed') return { lead: 'The run stopped.', strong: `Stage ${at('failed') || Math.min(done + 1, total)} of ${total} failed.` };
-  if (status === 'blocked') {
-    // The stage that blocked is marked done, except on a budget stop, which leaves it running.
-    if (states.at(-1)?.state === 'done') return { lead: 'The run stopped.', strong: 'Blocked at the gate.' };
-    const stage = at('running') || states.findLastIndex((s) => s.state === 'done') + 1 || 1;
-    return { lead: 'The run stopped.', strong: `Blocked at stage ${stage} of ${total}.` };
+  if (status === 'failed') return { lead: 'The run stopped.', strong: `Stage ${stage} of ${total} failed.` };
+  if (status === 'blocked') return { lead: 'The run stopped.', strong: stage === total ? 'Blocked at the gate.' : `Blocked at stage ${stage} of ${total}.` };
+  if (states.every((s) => s.state === 'waiting')) return { lead: 'In the queue.', strong: 'Waiting for the worker.' };
+  return { lead: 'Reading the night.', strong: `Stage ${stage} of ${total}.` };
+}
+
+const listed = (words: string[]) => (words.length <= 1 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
+
+/** The gate in a line: not reached, clean, or what stopped the run. `ended` says the run is over. */
+export function gateSummary(frames: GateFrame[], ended = false): { count: string; line: string } {
+  const failed = frames.filter((f) => f.state === 'fail');
+  const passed = frames.filter((f) => f.state === 'pass');
+  if (failed.length > 0) {
+    return { count: `${failed.length} of ${frames.length} failed`, line: `Stopped at the gate: ${listed(failed.map((f) => f.title.toLowerCase()))}.` };
   }
-  if (done === 0 && !at('running')) return { lead: 'In the queue.', strong: 'Waiting for the worker.' };
-  return { lead: 'Reading the night.', strong: `Stage ${at('running') || Math.min(done + 1, total)} of ${total}.` };
+  if (passed.length === frames.length) {
+    return { count: `${passed.length} of ${frames.length} passed`, line: 'The gate is clean. The reel can go to a person for approval.' };
+  }
+  if (ended) return { count: `${frames.length} checks, never reached`, line: 'The run stopped before it got to the gate.' };
+  return {
+    count: passed.length > 0 ? `${passed.length} of ${frames.length} passed` : `${frames.length} checks, not reached yet`,
+    line: 'Nothing leaves this run until every check is ringed.',
+  };
 }
 
 const REASONS: Record<string, string> = {

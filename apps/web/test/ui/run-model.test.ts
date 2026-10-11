@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gateFrames, mergeEvents, normalizeRepoInput, reasonInWords, refusalInWords, runHeadline, stageNote } from '../../src/ui/run-model';
+import { focusStage, gateFrames, gateSummary, mergeEvents, normalizeRepoInput, reasonInWords, refusalInWords, runHeadline, stageNote } from '../../src/ui/run-model';
 import { stageStates } from '../../src/ui/model';
 
 const ev = (id: number, stage: string | null = null, message = `m${id}`) => ({ id, ts: `2026-10-12T00:00:0${id}.000Z`, stage, message });
@@ -91,6 +91,44 @@ describe('runHeadline', () => {
     expect(runHeadline('blocked', states(1))).toEqual({ lead: 'The run stopped.', strong: 'Blocked at stage 1 of 9.' });
     expect(runHeadline('blocked', states(5, 'running'))).toEqual({ lead: 'The run stopped.', strong: 'Blocked at stage 6 of 9.' });
     expect(runHeadline('failed', states(2, 'failed'))).toEqual({ lead: 'The run stopped.', strong: 'Stage 3 of 9 failed.' });
+  });
+});
+
+describe('focusStage', () => {
+  const states = (done: number, then?: 'running' | 'failed') =>
+    stageStates(
+      ['ingest', 'edit', 'verify', 'script', 'ground', 'voice', 'render', 'review', 'gate'].map((name, i) => ({
+        name,
+        status: i < done ? 'done' : i === done && then ? then : 'pending',
+      })),
+    );
+
+  it('rests the loupe on the running stage, or on the next one between two stages', () => {
+    expect(focusStage('running', states(4, 'running'))).toBe(4);
+    expect(focusStage('running', states(3))).toBe(3);
+    expect(focusStage('running', states(0))).toBe(0);
+  });
+
+  it('rests on the stage that ended the run', () => {
+    expect(focusStage('needs_approval', states(9))).toBe(8);
+    expect(focusStage('failed', states(2, 'failed'))).toBe(2);
+    expect(focusStage('blocked', states(1))).toBe(0);
+    expect(focusStage('blocked', states(5, 'running'))).toBe(5);
+    expect(focusStage('blocked', states(9))).toBe(8);
+  });
+});
+
+describe('gateSummary', () => {
+  it('says the gate has not been reached, has passed, or names what stopped the run', () => {
+    expect(gateSummary(gateFrames(null, 0.6))).toEqual({ count: '4 checks, not reached yet', line: 'Nothing leaves this run until every check is ringed.' });
+    const pass = { checks: ['grounding', 'secrets', 'cost', 'review'].map((name) => ({ name, pass: true, reasons: [] })) };
+    expect(gateSummary(gateFrames(pass, 0.6))).toEqual({ count: '4 of 4 passed', line: 'The gate is clean. The reel can go to a person for approval.' });
+    const fail = { checks: [...pass.checks.slice(0, 2), { name: 'cost', pass: false, reasons: [] }, { name: 'review', pass: false, reasons: [] }] };
+    expect(gateSummary(gateFrames(fail, 0.6))).toEqual({ count: '2 of 4 failed', line: 'Stopped at the gate: cost and review.' });
+  });
+
+  it('says a run that ended early never got there', () => {
+    expect(gateSummary(gateFrames(null, 0.6), true)).toEqual({ count: '4 checks, never reached', line: 'The run stopped before it got to the gate.' });
   });
 });
 

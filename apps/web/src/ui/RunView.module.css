@@ -1,0 +1,564 @@
+.page {
+  width: min(1368px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 20px 0 44px;
+}
+
+.h {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font: 600 15px/1.2 var(--disp);
+  letter-spacing: -0.005em;
+}
+
+.h span {
+  font: 400 12.5px/1.2 var(--mono);
+  letter-spacing: 0;
+  color: var(--glass-400);
+}
+
+.lead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px 48px;
+  padding-top: 6px;
+}
+
+.headline {
+  font: 300 clamp(24px, 2.5vw, 34px) / 1.15 var(--disp);
+  letter-spacing: -0.022em;
+}
+
+.headline b {
+  font-weight: 800;
+}
+
+.cost {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 4px;
+}
+
+.cost dt {
+  font: 400 14.5px/1.2 var(--txt);
+  color: var(--glass-400);
+}
+
+.cost dd {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  font: 600 18px/1 var(--txt);
+  font-variant-numeric: tabular-nums;
+}
+
+/* How the run ended, and the one thing to do next. */
+.outcome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 12px;
+  margin-top: 22px;
+  padding: 16px 0;
+  border-block: 1px solid var(--hair);
+}
+
+.outcome p {
+  flex: 1 1 320px;
+  max-width: 46em;
+  font-size: 16.5px;
+  line-height: 1.45;
+  color: var(--glass-200);
+  overflow-wrap: anywhere;
+}
+
+.outcome b {
+  font-weight: 600;
+  color: var(--white);
+}
+
+/* ---------- the nine stages as half-frames on one strip, the loupe on the one in hand ---------- */
+.rail {
+  margin: 18px calc(50% - 50vw) 0;
+  padding: 22px 0 26px;
+  overflow-x: clip;
+}
+
+.strip {
+  /* The nine frames sit a little in from the edges, so the loupe is whole on the first and the last. */
+  --inner: min(1368px, 92vw);
+  position: relative;
+  transform: rotate(-1.2deg);
+}
+
+.inner {
+  position: relative;
+  width: var(--inner);
+  margin: 0 auto;
+}
+
+/* The strip goes on past the nine stages: one unexposed frame at either end. */
+.inner::before,
+.inner::after {
+  content: '';
+  position: absolute;
+  top: 66px;
+  bottom: 66px;
+  width: calc(100% / 9 - 8px);
+  border-radius: 3.4px;
+  background: #0c1210;
+}
+
+.inner::before {
+  right: calc(100% + 4px);
+}
+
+.inner::after {
+  left: calc(100% + 4px);
+}
+
+/* The film base runs off both edges of the page. */
+.strip::before {
+  content: '';
+  position: absolute;
+  inset: 0 -60px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 24' preserveAspectRatio='none'%3E%3Crect x='11.6' width='16.8' height='24' rx='3.2' fill='%231c2724'/%3E%3C/svg%3E") 0 30px / calc(var(--inner) / 36) 24px repeat-x,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 24' preserveAspectRatio='none'%3E%3Crect x='11.6' width='16.8' height='24' rx='3.2' fill='%231c2724'/%3E%3C/svg%3E") 0 calc(100% - 30px) / calc(var(--inner) / 36) 24px repeat-x,
+    var(--em-950);
+  background-position-x: calc(60px + (100vw - var(--inner)) / 2), calc(60px + (100vw - var(--inner)) / 2), 0;
+  box-shadow: inset 0 2px var(--edge), inset 0 -2px var(--edge);
+}
+
+.stages {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 66px 4px;
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 152 / 204;
+  padding: 18px 10px 20px;
+  border-radius: 3.4px;
+  background: #0f1614;
+  text-align: center;
+}
+
+.num,
+.foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  font: 400 11px/1 var(--mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.num {
+  top: -60px;
+  color: rgba(238, 243, 241, 0.4);
+}
+
+.foot {
+  bottom: -60px;
+  color: rgba(238, 243, 241, 0.42);
+}
+
+.name {
+  font: 600 17px/1.1 var(--disp);
+  letter-spacing: -0.01em;
+  color: rgba(238, 243, 241, 0.42);
+}
+
+.note {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  font: 400 13.5px/1.4 var(--txt);
+  color: var(--glass-200);
+  overflow-wrap: anywhere;
+}
+
+.done {
+  background: #1b2824;
+}
+
+.done .name,
+.running .name,
+.failed .name {
+  color: var(--white);
+}
+
+.done .foot {
+  color: rgba(238, 243, 241, 0.62);
+}
+
+.running {
+  background: var(--lit);
+}
+
+.running .foot,
+.failed .foot {
+  color: var(--white);
+}
+
+.failed {
+  background: #1b2824;
+  box-shadow: inset 0 0 0 1px rgba(238, 243, 241, 0.2);
+}
+
+.failed .note {
+  color: var(--white);
+}
+
+/* The only light in the room is the one under the loupe; some of it spills onto the strip around it. */
+.spill,
+.glass {
+  position: absolute;
+  left: calc((var(--at) + 0.5) * 100% / 9);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 0.7s cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+.spill {
+  width: calc(100% / 9 * 3.9);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(238, 243, 241, 0.2) 0%, rgba(238, 243, 241, 0.15) 54%, rgba(238, 243, 241, 0.05) 70%, rgba(238, 243, 241, 0) 100%);
+  pointer-events: none;
+}
+
+.glass {
+  width: calc(100% / 9 * 1.78);
+}
+
+.narrow {
+  display: none;
+}
+
+.below {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 470px);
+  gap: 36px clamp(36px, 5vw, 76px);
+  align-items: start;
+  margin-top: 12px;
+}
+
+/* ---------- event log ---------- */
+.feed {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--glass-200) !important;
+}
+
+.feed i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--glass-400);
+}
+
+.feed .pulse {
+  background: var(--white);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.log {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log li {
+  display: grid;
+  grid-template-columns: 50px 58px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+  padding: 8.5px 0;
+}
+
+.log time {
+  padding-top: 2.5px;
+  font: 400 12.5px/1.3 var(--mono);
+  color: var(--glass-400);
+}
+
+.who {
+  padding-top: 2.5px;
+  font: 500 12.5px/1.3 var(--mono);
+  color: var(--glass-200);
+}
+
+.log p {
+  font: 400 15.5px/1.4 var(--txt);
+  color: var(--glass-200);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.latest p {
+  font-weight: 600;
+  color: var(--white);
+}
+
+.latest p::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 1.05em;
+  margin-left: 6px;
+  vertical-align: -0.18em;
+  background: var(--white);
+  animation: pulse 1s steps(2, jump-none) infinite;
+}
+
+.quiet,
+.earlier {
+  margin-top: 16px;
+  max-width: 36em;
+  font-size: 15.5px;
+  color: var(--glass-400);
+}
+
+/* ---------- the gate: four frames, each ringed or crossed where it stands ---------- */
+.gateLine {
+  margin-top: 10px;
+  max-width: 27em;
+  font: 400 15.5px/1.45 var(--txt);
+  color: var(--glass-200);
+}
+
+.checks {
+  margin: 22px 0 0;
+  list-style: none;
+}
+
+.check {
+  padding: 17px 20px 19px;
+}
+
+.unlit {
+  background: var(--em-800);
+}
+
+.checkHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.check h3 {
+  padding: 6px 0 4px 16px;
+  font: 600 17px/1.2 var(--disp);
+  letter-spacing: -0.01em;
+}
+
+.checkState {
+  font: 400 12px/1 var(--mono);
+  color: var(--on-lit-dim);
+  white-space: nowrap;
+}
+
+.blurb {
+  margin-top: 9px;
+  font: 400 15px/1.4 var(--txt);
+  color: var(--glass-200);
+}
+
+.unlit h3 {
+  color: rgba(238, 243, 241, 0.5);
+}
+
+.unlit .blurb,
+.unlit .checkState {
+  color: var(--glass-400);
+}
+
+.reasons {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 500 14.5px/1.4 var(--txt);
+  color: var(--white);
+  overflow-wrap: anywhere;
+}
+
+.reasons li + li {
+  margin-top: 4px;
+}
+
+.gateNote {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hair);
+  max-width: 27em;
+  font: 400 14.5px/1.45 var(--txt);
+  color: var(--glass-400);
+}
+
+.gateNote a {
+  color: var(--glass-200);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 980px) {
+  .below {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Too narrow for nine frames side by side: the strip hangs down the page instead. */
+  .rail {
+    margin: 22px 0 0;
+    padding: 0;
+  }
+
+  .strip {
+    transform: none;
+  }
+
+  .inner {
+    width: auto;
+  }
+
+  .inner::before,
+  .inner::after {
+    display: none;
+  }
+
+  .strip::before {
+    inset: 0;
+    background-color: var(--em-950);
+    background-image: var(--perf-v), var(--perf-v);
+    background-repeat: repeat-y;
+    background-position: 3px 0, calc(100% - 3px) 0;
+    background-size: 26px 24px;
+    box-shadow: inset 1px 0 var(--edge), inset -1px 0 var(--edge);
+  }
+
+  .stages {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 12px 34px;
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    column-gap: 10px;
+    row-gap: 3px;
+    height: 58px;
+    aspect-ratio: auto;
+    padding: 0 14px;
+    text-align: left;
+  }
+
+  .num,
+  .foot {
+    position: static;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .name {
+    grid-column: 2;
+    font-size: 15px;
+  }
+
+  .note {
+    grid-column: 2;
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .note:empty {
+    display: none;
+  }
+
+  .foot {
+    grid-column: 3;
+  }
+
+  .spill {
+    display: none;
+  }
+
+  .wide {
+    display: none;
+  }
+
+  .narrow {
+    display: block;
+  }
+
+  .glass {
+    left: auto;
+    right: -6px;
+    top: calc(12px + var(--at) * 64px + 29px);
+    width: 112px;
+    transform: translateY(-50%);
+    transition: top 0.7s cubic-bezier(0.3, 0.9, 0.3, 1);
+  }
+
+  /* The lens sits over the right-hand end of the row in hand; what it covers is what it says. */
+  .stage[aria-current] .foot {
+    visibility: hidden;
+    min-width: 84px;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding-top: 12px;
+  }
+  .cost {
+    flex-wrap: wrap;
+  }
+  .log li {
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+  .who {
+    grid-column: 2;
+    padding: 0;
+  }
+  .log p {
+    grid-column: 2;
+    font-size: 15px;
+  }
+  .log time {
+    grid-row: 1 / span 2;
+  }
+  .check {
+    padding: 15px 14px 17px;
+  }
+}
