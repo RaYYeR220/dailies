@@ -837,21 +837,25 @@ it('honours a final status returned by a stage');
 
 Depends on Tasks 2, 3, 4, 5, 6, 7 being merged.
 
-**Files:** `packages/pipeline/src/stages/{ingest,edit,verify,script,ground,voice,render,gate}.ts`, `packages/pipeline/src/prompts/{editor,extractor,judge,writer,entail}.ts`, `packages/pipeline/src/stages/index.ts`, `packages/pipeline/test/stages/*.test.ts`
+**Files:** `packages/pipeline/src/stages/{ingest,edit,verify,script,ground,voice,render,gate}.ts`, `packages/pipeline/src/prompts/{editor,extractor,judge,writer,entail}.ts`, `packages/pipeline/src/stages/index.ts`, `packages/pipeline/test/stages/**` (the tests and their shared `fixture.ts`), `packages/pipeline/src/index.ts` (one line: `export * from './stages/index'`, so that other packages reach the stages through the package index), `packages/pipeline/package.json` and `pnpm-lock.yaml` (adds `zod`: the output and tool schemas handed to `completeJson`, `runAgent` and `defineTool` need it, and the package did not depend on it)
 
 **Interfaces:**
 - Consumes: every interface produced by Tasks 2–7.
 - Produces:
 ```ts
-export interface StageDeps { client: ModelClient; meter: CostMeter; tts: TtsProvider | null; voice: string }
+export interface StageDeps { db: Database; client: ModelClient; meter: CostMeter; tts: TtsProvider | null; voice: string }
 export function buildStages(deps: StageDeps): Stage[]     // ingest, edit, verify, script, ground, voice, render, review?, gate
+export function recordSpend<T>(deps: Pick<StageDeps, 'db' | 'meter'>, stage: Stage<T>): Stage<T>   // addCost for what the stage adds to the meter
 export interface EditArtifact { beats: Beat[] }
-export interface VerifyArtifact { claims: Claim[]; counts: Record<Verdict, number> }
+export interface VerifyArtifact { claims: Claim[]; counts: Record<Verdict, number> }   // Verdict is the claim's verdict union; core exports it as a schema only
+export interface ScriptArtifact { storyboard: Storyboard; discarded: string[] }       // discarded: what was thrown out of the writer's reply, and why
 export interface GroundArtifact { storyboard: Storyboard; dropped: { lineId: string; reasons: string[] }[]; kept: number }
 export interface VoiceArtifact { mode: 'voiced' | 'captions'; audioPath: string | null; timings: LineTiming[]; calls: number }
 export interface GateArtifact { checks: { name: string; pass: boolean; reasons: string[] }[] }
 ```
 `buildStages` returns the stages without `review`; Task 9 exports `reviewStage(deps)` and Task 10 inserts it before `gate`.
+
+`StageDeps` carries `db` because `addCost` needs it and neither the stage context nor the other deps hold one. `buildStages` wraps every stage in `recordSpend`; Task 10 wraps the review stage the same way (`recordSpend(deps, reviewStage(deps))`), or its vision spend is metered but never recorded against the run.
 
 Stage behaviour:
 
@@ -863,16 +867,17 @@ Stage behaviour:
   - `get_diff({ sha })` → paths with added and removed counts; `get_patch({ sha, path })` → the patch.
 
   Output schema `{ beats: Beat[] }`, at most six. After parsing, a beat is dropped if any range names an unknown session or indexes outside it. Zero beats left is an error (the runner retries).
-- **verify.** For each session, the extractor (`completeJson`, role `extractor`) receives the assistant entries that end a turn (the last assistant text before each user entry and the final one), each as `{ entryId, text }`, in batches of 30. It returns `{ claims: [{ entryId, quote, kind, subject? }] }`. Claims whose quote fails `quoteMatches` are dropped. `verifyClaims` judges the four deterministic kinds. Each `implemented` claim goes to the judge (role `judge`) with the patches of the session's commits; the judge returns `{ supported: boolean, path?: string, quote?: string }`. It is `verified` only if `supported` and the quote is found in that patch; `supported: false` gives `unverifiable`, never `contradicted`.
+- **verify.** For each session, the extractor (`completeJson`, role `extractor`) receives the assistant entries that end a turn (the last assistant text before each user entry and the final one), each as `{ entryId, text }`, in batches of 30. It returns `{ claims: [{ entryId, quote, kind, subject? }] }`. Claims whose quote fails `quoteMatches` are dropped. `verifyClaims` judges the four deterministic kinds. Each `implemented` claim goes to the judge (role `judge`) with the patches of the session's commits; the judge returns `{ supported: boolean, path?: string, quote?: string }`. It is `verified` only if `supported` and the quote is found in one added or removed line of that file's patch, as the judge was shown it (a header or an unchanged context line is in the patch but shows no change; an empty or few-character quote matches everything). Anything else, `supported: false` included, gives `unverifiable`, never `contradicted`. A session with no linked diff is `unverifiable` without asking the judge.
 - **script.** Code builds the frame, the model writes only narration.
-  - Code creates the title scene, one flag scene per `contradicted` or `stale` claim (at most three, newest first) and the end scene. A flag scene's narration is a template, not model text: `The agent wrote: "<quote cut to 120 characters>".` plus, by reason, `The last test run before that message had failed.` / `Code was edited after the last passing run.` / the rule's `reason`. The quote and the reality sentence are two separate lines. Their evidence is the claim's evidence.
+  - Code creates the title scene, one flag scene per `contradicted` or `stale` claim (at most three, newest first) and the end scene. A flag scene's narration is a template, not model text: `The agent wrote: "<quote cut to 120 characters>".` plus, by reason, `The last test run before that message had failed.` / `Code was edited after the last passing run.` / the rule's `reason`. The quote and the reality sentence are two separate lines. The reality line's evidence is the claim's evidence; the quote line cites the entry that holds the quote (`{ type: 'entry', entryId: claim.entryId, quote }`), because the failed run is not evidence of what the agent wrote. The test-run sentence is used for a contradicted `tests_pass` claim; a contradicted `build_passes` claim gets the rule's `reason`, since a build is not a test run. A quote that already ends its sentence gets no second full stop.
   - The writer (role `writer`) receives the beats, the verified claims, the facts and the entries each beat points to, and returns spoken scenes of types `prompt`, `terminal`, `diff`, `stats` with one-sentence lines that each cite evidence. `ctx.feedback`, when set, is appended to the prompt.
+  - The writer supplies pointers and lines only: `{ type: 'prompt', entryId }`, `{ type: 'terminal', steps: [{ entryId }] }`, `{ type: 'diff', sha, path }`, `{ type: 'stats' }`. Code fills everything a scene shows from the record at those pointers (the prompt's text, the command, its output and its pass mark, the hunk and its counts, the stat values and labels) and ignores any other key in the reply. A scene of another type, a scene whose pointer finds nothing, and a line without evidence are discarded and listed in `discarded`. A test or build run whose output the parser cannot read is not shown as a step. No usable scene is an error (the runner retries).
   - The writer is told to follow one arc: the problem (a `prompt` scene quoting the human's request), the key decisions, the implementation (`diff`), the recorded validation (`terminal` with the commands that were actually run), then `stats`.
   - The storyboard is assembled as title, writer scenes in that arc with each flag scene placed after the validation scene of its session, end. Target 75 s.
-- **ground.** For every line run `checkLine`. A passing line then goes to the entailment check (role `judge`): given the line and the text of its evidence, reply `{ entailed: boolean }`. A failing line is rewritten by the writer with the reasons, at most twice, then dropped. A scene left with no lines is removed. Flag-scene template lines skip the model check and the style lint (`skipStyle`), but their evidence refs must still resolve. If fewer than two spoken scenes remain the stage loops back to `script` with the reasons. The whole stage runs inside `guard('grounding', …)`.
-- **voice.** `voiceLines` over all lines in order with `maxCalls = run.budget.maxTtsCalls`; `tts === null` gives captions mode.
+- **ground.** For every line run `checkLine`. A passing line then goes to the entailment check (role `judge`): given the line and the text of its evidence, reply `{ entailed: boolean }`. A failing line is rewritten by the writer with the reasons, at most twice, then dropped. A scene left with no lines is removed. Flag-scene template lines skip the model check, the style lint (`skipStyle`) and the number check, but their evidence refs must still resolve (the number check reads digits out of a quote such as "v2" or "22.1.0" that it then does not find in the very entry the quote came from, which would drop a true flag). A flag line is never rewritten; a flag scene with a line that does not resolve is removed whole. If fewer than two spoken scenes remain the stage loops back to `script` with the reasons. The whole stage runs inside `guard('grounding', …)`.
+- **voice.** `voiceLines` over all lines of the grounded storyboard in order with `maxCalls = run.budget.maxTtsCalls`; `tts === null` gives captions mode (`voiceLines` takes a provider, so that cut is built in the stage from `estimateTimings`).
 - **render.** `renderReel` into `<runDir>/reel`.
-- **gate.** Inside `guard('publish_gate', …)` evaluate and record: grounding (no line without evidence in the final storyboard), secrets (`redact` over every on-screen string and line reports zero hits), cost (`meter.total() <= run.budget.maxCostPerReelUsd`), review (no high-severity finding in the review artifact; when no review stage ran, `ctx.read('review')` throws and the check is recorded as passed with the reason `review skipped`). Any failure returns `final: { status: 'blocked', reason: <failed check names> }`. All passing returns `final: { status: 'needs_approval', reason: 'awaiting human approval' }`.
+- **gate.** Inside `guard('publish_gate', …)` evaluate and record: grounding (no line without evidence in the final storyboard: the storyboard parses, and every reference of every line resolves against the ingest artifact again), secrets (`redact` over every on-screen string and line reports zero hits; a reason names the scene, never what was found), cost (`max(meter.total(), run.costUsd) <= run.budget.maxCostPerReelUsd`; the meter starts from zero after a restart, the recorded spend does not), review (no high-severity finding in the review artifact; when no review stage ran, `ctx.read('review')` throws `artifact not found` and the check is recorded as passed with the reason `review skipped`; an artifact that cannot be read or is not a review fails the check). Any failure returns `final: { status: 'blocked', reason: <failed check names> }`. All passing returns `final: { status: 'needs_approval', reason: 'awaiting human approval' }`.
 
 After every stage that used the model, `addCost(db, run.id, delta)` records the meter's increase.
 
@@ -890,7 +895,7 @@ it('gate blocks when a secret-shaped string is on screen, and when cost exceeds 
 it('gate returns needs_approval when every check passes');
 ```
 - [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement** prompts and stages. Keep each prompt in its own file as an exported function returning `{ system, user }`.
+- [ ] **Step 3: Implement** prompts and stages. Keep each prompt in its own file as an exported function returning `{ system, user }`. The rewrite prompt of the ground stage is the writer's second prompt and lives in `writer.ts`.
 - [ ] **Step 4: Run.** Expected: PASS.
 - [ ] **Step 5: Commit.**
 
@@ -927,7 +932,7 @@ Depends on Tasks 8 and 9.
 **Files:** `packages/cli/src/{index.ts,run.ts,verify.ts}`, `packages/cli/bin/{dailies,entire-dailies}`, `packages/cli/test/e2e.test.ts`, `README.md`
 
 **Interfaces:**
-- Consumes: `buildStages`, `reviewStage`, `openDb`, `createRun`, `runPipeline`, `getRun`, `listEvents`; `ingest`; `createRouter`, `CostMeter`, `initTracing`, `shutdownTracing`, `completeJson`; `verifyClaims`; `createGeminiTts`; `loadEnv`, `DEFAULT_BUDGET`.
+- Consumes: `buildStages`, `recordSpend`, `reviewStage`, `openDb`, `createRun`, `runPipeline`, `getRun`, `listEvents`; `ingest`; `createRouter`, `CostMeter`, `initTracing`, `shutdownTracing`, `completeJson`; `verifyClaims`; `createGeminiTts`; `loadEnv`, `DEFAULT_BUDGET`.
 - Produces: the commands below.
 
 ```
@@ -938,6 +943,7 @@ dailies verify <repo-url|path> [--since 24h|<ISO>] [--json]
 - `run` creates a run, executes the pipeline, prints each event as it happens, then prints the final status, reason, cost, and the paths of the MP4, subtitles and poster. Exit code 0 for `needs_approval`, 2 for `blocked`, 1 for `failed`. The whole command runs under `initTracing(env, 'dailies-reel')` with the run id attached, and calls `shutdownTracing()` in `finally`.
 - `verify` runs ingest and the verify stage only and prints a table: verdict, kind, session, quote cut to 80 characters, reason. `--json` prints the claims array.
 - `--since 24h` accepts `<n>h` and `<n>d`; anything else is parsed as an ISO date.
+- Open from Task 8: `--max-sessions` has no way into the ingest stage. `buildStages(deps)` takes `StageDeps`, which holds no session cap, and the run record holds none either, so the stage calls `ingest()` with its default of 12. An optional `maxSessions` on `StageDeps`, passed through by the ingest stage, would close it.
 - `bin/dailies` and `bin/entire-dailies` are identical shell shims that run `tsx <repo>/packages/cli/src/index.ts "$@"`. With `packages/cli/bin` on `PATH`, `entire dailies run .` works because the Entire CLI dispatches `entire <name>` to an executable named `entire-<name>`.
 
 - [ ] **Step 1: Write the failing end-to-end test.** Build a fixture repo (reuse the Task 2 builder through a relative import of its test helper) with two sessions: one where the agent says tests pass after a failing run, one honest. Run the stages with `createMockClient` (scripted replies per role), `tts: null`, and the real renderer. Assert: status `needs_approval`; the storyboard has exactly one flag scene; `reel.mp4` exists and is longer than 8 s; `gate.json` lists four passing checks.
