@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CostMeter, createMockClient, type ChatMessage, type ModelClient, type Role } from '@dailies/agent';
-import { DEFAULT_BUDGET, type Budget, type Entry, type IngestArtifact, type Session } from '@dailies/core';
+import { DEFAULT_BUDGET, type Beat, type Budget, type Claim, type Entry, type IngestArtifact, type Session } from '@dailies/core';
 import type { TtsProvider } from '@dailies/voice';
 import { createRun, getRun, openDb } from '../../src/index';
 import type { Database, StageContext, StageName } from '../../src/index';
@@ -111,6 +111,54 @@ export function twoSessions(): IngestArtifact {
     skipped: [],
     enrichments: {},
     redactions: 0,
+  };
+}
+
+/** One beat per session of `twoSessions`. */
+export function twoBeats(): { beats: Beat[] } {
+  return {
+    beats: [
+      { id: 'beat_1', kind: 'fix', title: 'Retry for failed jobs', summary: 'The agent added a retry loop to the queue and ran the queue tests.', sessionIds: ['s1'], entryRanges: [{ sessionId: 's1', from: 0, to: 6 }], commits: [SHA_A] },
+      { id: 'beat_2', kind: 'feature', title: 'JSON output for status', summary: 'The agent added a --json flag to the status command.', sessionIds: ['s2'], entryRanges: [{ sessionId: 's2', from: 0, to: 10 }], commits: [SHA_B] },
+    ],
+  };
+}
+
+export const LIE: Claim = {
+  id: 'c_1',
+  sessionId: 's1',
+  entryId: 's1:6',
+  quote: 'All tests pass and the build is green.',
+  kind: 'tests_pass',
+  verdict: 'contradicted',
+  reason: 'the last recorded run failed',
+  evidence: [{ type: 'entry', entryId: 's1:4' }, { type: 'entry', entryId: 's1:5' }],
+};
+
+/** What the verify stage finds in `twoSessions`: the lie in s1, two verified claims in s2. */
+export function threeClaims(): { claims: Claim[]; counts: Record<'verified' | 'contradicted' | 'stale' | 'unverifiable', number> } {
+  return {
+    claims: [
+      LIE,
+      { id: 'c_2', sessionId: 's2', entryId: 's2:6', quote: 'All 3 tests pass.', kind: 'tests_pass', verdict: 'verified', reason: 'the last recorded run passed with no edits after', evidence: [{ type: 'entry', entryId: 's2:4' }, { type: 'entry', entryId: 's2:5' }] },
+      { id: 'c_3', sessionId: 's2', entryId: 's2:6', quote: 'Added the --json flag to the status command.', kind: 'implemented', subject: '--json flag', verdict: 'verified', reason: 'the diff contains the quoted change', evidence: [{ type: 'diff', sha: SHA_B, path: 'src/status.ts', quote: 'if (opts.json) return console.log(JSON.stringify(report));' }] },
+    ],
+    counts: { verified: 2, contradicted: 1, stale: 0, unverifiable: 0 },
+  };
+}
+
+const entryRef = (entryId: string) => ({ type: 'entry' as const, entryId });
+
+/** A writer reply that follows the arc over `twoSessions`: every pointer and every citation resolves. */
+export function writerReply() {
+  return {
+    scenes: [
+      { type: 'prompt', entryId: 's1:0', lines: [{ text: 'The session opened with a request to retry failed jobs.', evidence: [entryRef('s1:0')] }] },
+      { type: 'diff', sha: SHA_A, path: 'src/queue.ts', lines: [{ text: 'The retry lives in the run method of the queue.', evidence: [{ type: 'diff', sha: SHA_A, path: 'src/queue.ts', quote: 'return this.run(job);' }] }] },
+      { type: 'terminal', steps: [{ entryId: 's1:4' }], lines: [{ text: 'The queue test run failed on the retry count.', evidence: [entryRef('s1:5')] }] },
+      { type: 'terminal', steps: [{ entryId: 's2:4' }, { entryId: 's2:8' }], lines: [{ text: 'In the second session all 3 tests passed.', evidence: [entryRef('s2:5')] }] },
+      { type: 'stats', lines: [{ text: 'The window holds 2 sessions and 2 commits.', evidence: [{ type: 'stat', key: 'sessions.count' }, { type: 'stat', key: 'commits.count' }] }] },
+    ],
   };
 }
 
