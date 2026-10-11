@@ -3,7 +3,8 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { getDiff, ingest } from '../src/index';
+import { getDiff, ingest, listCheckpointRefs } from '../src/index';
+import { readCheckpointMetadata } from '../src/checkpoints';
 import { getDiffsBatched, getDiffsPerCommit, ObjectBatchReader } from '../src/git';
 import { selectCandidateSessionIds } from '../src/window';
 import { makeRepo } from './fixture';
@@ -112,6 +113,31 @@ describe('getDiffsBatched', () => {
     const batched = await getDiffsBatched(repoDir, shas);
     expect(batched.droppedCount).toBe(2);
     expect(Object.keys(batched.diffs).filter((k) => k.endsWith(':f.txt')).length).toBe(60);
+  });
+});
+
+describe('readCheckpointMetadata', () => {
+  it('reports a metadata read failure in skipped, rather than silently dropping the session', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'ffff6666',
+          sessions: [{ sessionId: 's1', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('hello', '2026-10-10T07:00:00Z')] }],
+        },
+      ],
+    });
+    const refs = await listCheckpointRefs(repoDir);
+    // metadata.json is always well over 10 bytes, so the size cap rejects reading it.
+    const reader = new ObjectBatchReader(repoDir, 10);
+    try {
+      const result = await readCheckpointMetadata(repoDir, refs[0]!, reader);
+      expect(result.sessions).toHaveLength(0);
+      expect(result.skipped).toHaveLength(1);
+      expect(result.skipped[0]!.reason).toMatch(/over the 10-byte read limit/);
+    } finally {
+      reader.close();
+    }
   });
 });
 

@@ -55,12 +55,38 @@ describe('ObjectBatchReader', () => {
     }
   });
 
-  it('rejects a read of an object over the size cap, even when the object is already local', async () => {
+  it('rejects a read of an object over the size cap, but keeps the reader usable for the next one', async () => {
     const repoDir = await initRepo();
-    const oid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'x'.repeat(5000))).trim();
+    const bigOid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'x'.repeat(5000))).trim();
+    const smallOid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'tiny')).trim();
     const reader = new ObjectBatchReader(repoDir, 1000);
     try {
-      await expect(reader.read(oid)).rejects.toThrow(/over the 1000-byte read limit/);
+      await expect(reader.read(bigOid)).rejects.toThrow(/over the 1000-byte read limit/);
+      // A single oversized object must fail only its own request, not take the whole reader
+      // (and every other session still being read through it) down with it.
+      const stillWorks = await reader.read(smallOid);
+      expect(stillWorks?.toString('utf8')).toBe('tiny');
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('rejects several oversized reads in a row, one at a time, without leaking their bodies into later replies', async () => {
+    const repoDir = await initRepo();
+    const bigOid1 = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'a'.repeat(5000))).trim();
+    const bigOid2 = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'b'.repeat(5000))).trim();
+    const smallOid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'tiny')).trim();
+    const reader = new ObjectBatchReader(repoDir, 1000);
+    try {
+      const [first, second, third] = await Promise.allSettled([
+        reader.read(bigOid1),
+        reader.read(bigOid2),
+        reader.read(smallOid),
+      ]);
+      expect(first.status).toBe('rejected');
+      expect(second.status).toBe('rejected');
+      expect(third.status).toBe('fulfilled');
+      expect((third as PromiseFulfilledResult<Buffer | null>).value?.toString('utf8')).toBe('tiny');
     } finally {
       reader.close();
     }

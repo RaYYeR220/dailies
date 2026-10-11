@@ -197,18 +197,35 @@ export async function assertBlobWithinFetchLimit(repoDir: string, oid: string, m
   }
 }
 
+interface PendingRead {
+  resolve: (buf: Buffer | null) => void;
+  reject: (err: Error) => void;
+  timer: NodeJS.Timeout;
+}
+
+/** An object whose body is being accumulated, within the size cap. */
+interface InFlightBody {
+  size: number;
+  collected: Buffer[];
+  have: number;
+}
+
 /** A long-lived `git cat-file --batch` process: write an object id, read its full content back. */
 export class ObjectBatchReader {
   private readonly proc: ChildProcessWithoutNullStreams;
-  private readonly pending: Array<{ resolve: (buf: Buffer | null) => void; reject: (err: Error) => void; timer: NodeJS.Timeout }> = [];
+  private readonly pending: PendingRead[] = [];
   private buffer: Buffer = Buffer.alloc(0);
   private closed = false;
-  // Set once the reply stream can no longer be trusted to line up with pending requests (a
-  // process exit, an unparseable header, or an object over the size cap); every read from this
-  // point on fails fast instead of risking a later reply being resolved against the wrong
-  // pending request.
+  // Set once the reply stream can no longer be trusted to line up with pending requests at all
+  // (a process exit or an unparseable header, as opposed to one oversized object, which is
+  // handled per-request below); every read from this point on fails fast instead of risking a
+  // later reply being resolved against the wrong pending request.
   private desynced = false;
   private readonly maxObjectSize: number;
+  // Bytes still to be discarded from an oversized object's body, tracked by count rather than
+  // buffered, so refusing one large object can never itself grow memory with its content.
+  private skipRemaining = 0;
+  private body: InFlightBody | null = null;
 
   constructor(repoDir: string, maxObjectSize = MAX_FETCHED_BLOB_SIZE) {
     this.maxObjectSize = maxObjectSize;
@@ -220,6 +237,7 @@ export class ObjectBatchReader {
       env: { ...process.env, GIT_NO_LAZY_FETCH: '1' },
     });
     this.proc.stdout.on('data', (chunk: Buffer) => {
+      if (this.desynced) return; // the stream is torn down on poison(); nothing left to do with it
       this.buffer = this.buffer.length === 0 ? chunk : Buffer.concat([this.buffer, chunk]);
       this.drain();
     });
@@ -234,8 +252,19 @@ export class ObjectBatchReader {
     });
   }
 
+  /** Tears the reader down entirely: every *other* pending request fails too, since the reply stream can no longer be trusted to line up with them. */
   private poison(err: Error): void {
+    if (this.desynced) return;
     this.desynced = true;
+    this.buffer = Buffer.alloc(0);
+    this.body = null;
+    this.skipRemaining = 0;
+    this.proc.stdout.removeAllListeners('data');
+    if (!this.closed) {
+      this.closed = true;
+      this.proc.stdin.end();
+      this.proc.kill();
+    }
     while (this.pending.length > 0) {
       const next = this.pending.shift()!;
       clearTimeout(next.timer);
@@ -244,12 +273,39 @@ export class ObjectBatchReader {
   }
 
   private drain(): void {
-    while (this.pending.length > 0) {
+    while (true) {
+      if (this.skipRemaining > 0) {
+        const take = Math.min(this.skipRemaining, this.buffer.length);
+        this.buffer = this.buffer.subarray(take);
+        this.skipRemaining -= take;
+        if (this.skipRemaining > 0) return;
+        continue;
+      }
+
+      if (this.body) {
+        const need = this.body.size + 1 - this.body.have; // +1 for the trailing newline after content
+        const take = Math.min(need, this.buffer.length);
+        if (take > 0) {
+          this.body.collected.push(Buffer.from(this.buffer.subarray(0, take)));
+          this.body.have += take;
+          this.buffer = this.buffer.subarray(take);
+        }
+        if (this.body.have < this.body.size + 1) return;
+        const data = Buffer.concat(this.body.collected).subarray(0, this.body.size);
+        this.body = null;
+        const next = this.pending.shift()!;
+        clearTimeout(next.timer);
+        next.resolve(data);
+        continue;
+      }
+
+      if (this.pending.length === 0) return;
       const nl = this.buffer.indexOf(0x0a);
       if (nl === -1) return;
       const header = this.buffer.subarray(0, nl).toString('utf8');
+      this.buffer = this.buffer.subarray(nl + 1);
+
       if (header.endsWith(' missing')) {
-        this.buffer = this.buffer.subarray(nl + 1);
         const next = this.pending.shift()!;
         clearTimeout(next.timer);
         next.resolve(null);
@@ -264,19 +320,16 @@ export class ObjectBatchReader {
       }
       const size = Number(m[1]);
       if (size > this.maxObjectSize) {
-        // Caught from the header, before any of the body has necessarily arrived: this object is
-        // never buffered, fetched-and-capped or not — a caller that skips the fetch-time check
-        // (or a blob that was simply already local) is still bounded here.
-        this.poison(new Error(`git cat-file --batch reported an object of ${size} bytes, over the ${this.maxObjectSize}-byte read limit`));
-        return;
+        // Fail only this one request and discard its body by count, without buffering it: a
+        // single oversized object must not take the whole reader (and every other session still
+        // being read through it) down with it.
+        const next = this.pending.shift()!;
+        clearTimeout(next.timer);
+        next.reject(new Error(`git cat-file --batch reported an object of ${size} bytes, over the ${this.maxObjectSize}-byte read limit`));
+        this.skipRemaining = size + 1;
+        continue;
       }
-      const need = nl + 1 + size + 1;
-      if (this.buffer.length < need) return;
-      const data = Buffer.from(this.buffer.subarray(nl + 1, nl + 1 + size));
-      this.buffer = this.buffer.subarray(need);
-      const next = this.pending.shift()!;
-      clearTimeout(next.timer);
-      next.resolve(data);
+      this.body = { size, collected: [], have: 0 };
     }
   }
 

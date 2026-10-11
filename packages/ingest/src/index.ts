@@ -94,8 +94,9 @@ export async function ingest(opts: {
     const metaRecords: MetaRecord[] = [];
     for (const ref of refs) {
       try {
-        const metas = await readCheckpointMetadata(repoDir, ref, reader);
-        for (const meta of metas) metaRecords.push({ ref, meta });
+        const result = await readCheckpointMetadata(repoDir, ref, reader);
+        for (const meta of result.sessions) metaRecords.push({ ref, meta });
+        skipped.push(...result.skipped);
       } catch (err) {
         skipped.push({ ref: ref.treeish, reason: err instanceof Error ? err.message : String(err) });
       }

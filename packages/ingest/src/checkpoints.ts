@@ -104,25 +104,37 @@ async function listSessionBlobs(repoDir: string, ref: CheckpointRef): Promise<Ma
   return byIndex;
 }
 
+export interface CheckpointMetadataResult {
+  sessions: SessionMetaOnly[];
+  // A metadata.json that simply doesn't exist for a session index is not reported here (that's
+  // normal, sparse layout); a metadata.json that exists but couldn't actually be read — a fetch
+  // failure, a size-cap rejection, a desynchronized reader — is, so one bad blob never silently
+  // erases sessions from the result without a trace.
+  skipped: { ref: string; reason: string }[];
+}
+
 /**
  * Reads only the small `<n>/metadata.json` file for every session in a checkpoint, through the
- * shared batch reader, without opening any `transcript.jsonl`. A malformed or unreadable session
- * is skipped, not fatal.
+ * shared batch reader, without opening any `transcript.jsonl`. A malformed session (bad JSON, no
+ * session_id) is skipped silently, as in Task 2; a session whose metadata blob exists but could
+ * not actually be read is skipped and reported.
  */
 export async function readCheckpointMetadata(
   repoDir: string,
   ref: CheckpointRef,
   reader: ObjectBatchReader,
-): Promise<SessionMetaOnly[]> {
+): Promise<CheckpointMetadataResult> {
   const byIndex = await listSessionBlobs(repoDir, ref);
   const sessions: SessionMetaOnly[] = [];
+  const skipped: { ref: string; reason: string }[] = [];
 
   for (const [n, entry] of Array.from(byIndex.entries()).sort((a, b) => a[0] - b[0])) {
     if (!entry.metaOid) continue;
     let metaBuf: Buffer;
     try {
       metaBuf = await readBlobOrFetch(repoDir, reader, entry.metaOid);
-    } catch {
+    } catch (err) {
+      skipped.push({ ref: `${ref.treeish}#${n}`, reason: err instanceof Error ? err.message : String(err) });
       continue;
     }
     let meta: RawSessionMetadata;
@@ -152,7 +164,7 @@ export async function readCheckpointMetadata(
     });
   }
 
-  return sessions;
+  return { sessions, skipped };
 }
 
 /** Reads a session's `transcript.jsonl` text through the shared batch reader. No transcript blob gives `''`, as before. */
