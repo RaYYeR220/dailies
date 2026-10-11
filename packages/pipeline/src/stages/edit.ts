@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { z } from 'zod';
 import { defineTool, runAgent, type Tool } from '@dailies/agent';
 import { Beat, type Entry, type IngestArtifact, type Session } from '@dailies/core';
@@ -14,6 +15,11 @@ const FIRST_PROMPT_CHARS = 200;
 const MAX_MATCHES = 20;
 const SNIPPET_CHARS = 200;
 const MIN_SHA_PREFIX = 7;
+const COMMAND_CHARS = 600;
+const PATH_CHARS = 300;
+const NAME_CHARS = 80;
+const MAX_LISTED_COMMITS = 40;
+const LABEL_CHARS = 80;
 
 /** `text` in at most `max` characters; a cut is marked with an ellipsis that counts towards the limit. */
 export function cut(text: string, max: number): string {
@@ -31,11 +37,33 @@ export function patchCounts(patch: string): { added: number; removed: number } {
   return { added, removed };
 }
 
-/** `owner/name` for a remote URL, the directory name for a local path. */
+/**
+ * `owner/name` for a remote URL, the directory name for a local path. It goes into prompts and onto the title
+ * card, so it is built from path segments only (a URL's credentials never reach it), kept to one short line,
+ * and never falls back to the raw input.
+ */
 export function repoLabel(repoUrl: string): string {
-  const parts = repoUrl.replace(/\.git$/, '').split(/[/:]/).filter(Boolean);
-  const remote = /^(https?:\/\/|git@|ssh:\/\/)/.test(repoUrl);
-  return parts.slice(remote ? -2 : -1).join('/') || repoUrl;
+  const scp = /^[^@/\s]+@[^:/\s]+:(.+)$/.exec(repoUrl);   // git@host:owner/name
+  const url = /^[a-z][a-z0-9+.-]*:\/\//i.test(repoUrl);
+  const remote = scp !== null || url;
+  const path = scp ? scp[1]! : url ? urlPath(repoUrl) : resolve(repoUrl);
+  // eslint-disable-next-line no-control-regex
+  const segments = path.replace(/[\u0000-\u001f\u007f]+/g, ' ').split('/').map((part) => part.trim()).filter(Boolean);
+  const label = segments.slice(remote ? -2 : -1).join('/').replace(/\.git$/, '');
+  return cut(label, LABEL_CHARS) || 'repository';
+}
+
+function urlPath(url: string): string {
+  try {
+    const { pathname } = new URL(url);
+    try {
+      return decodeURIComponent(pathname);
+    } catch {
+      return pathname;
+    }
+  } catch {
+    return '';
+  }
 }
 
 /** Every commit the artifact knows: the ones linked to a session and the ones it holds a patch for. */
@@ -53,8 +81,20 @@ export function resolveCommit(sha: string, known: string[]): string | null {
   return matches.length === 1 ? matches[0]! : null;
 }
 
+const cutOptional = (text: string | undefined, max: number) => (text === undefined ? undefined : cut(text, max));
+
+// Ingest bounds an entry's text but not its command, file path or tool name, so every string is cut here.
 function entryView(e: Entry) {
-  return { id: e.id, index: e.index, kind: e.kind, text: cut(e.text, ENTRY_TEXT_CHARS), toolName: e.toolName, command: e.command, filePath: e.filePath, isError: e.isError };
+  return {
+    id: e.id,
+    index: e.index,
+    kind: e.kind,
+    text: cut(e.text, ENTRY_TEXT_CHARS),
+    toolName: cutOptional(e.toolName, NAME_CHARS),
+    command: cutOptional(e.command, COMMAND_CHARS),
+    filePath: cutOptional(e.filePath, PATH_CHARS),
+    isError: e.isError,
+  };
 }
 
 /** The editor's read-only view of the ingest artifact. Every result is bounded, whatever the transcript holds. */
@@ -80,12 +120,12 @@ export function transcriptTools(ingest: IngestArtifact): Tool[] {
       execute: async () =>
         ingest.sessions.map((s) => ({
           id: s.id,
-          agent: s.agent,
-          model: s.model,
+          agent: cut(s.agent, NAME_CHARS),
+          model: s.model === null ? null : cut(s.model, NAME_CHARS),
           start: s.startedAt,
           end: s.endedAt,
           entryCount: s.entries.length,
-          commits: s.commits,
+          commits: s.commits.slice(0, MAX_LISTED_COMMITS),
           firstPrompt: cut(s.entries.find((e) => e.kind === 'user')?.text ?? '', FIRST_PROMPT_CHARS),
         })),
     }),

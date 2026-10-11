@@ -3,7 +3,7 @@ import type { ChatMessage } from '@dailies/agent';
 import type { IngestArtifact } from '@dailies/core';
 import { runPipeline } from '../../src/index';
 import type { Stage } from '../../src/index';
-import { editStage } from '../../src/stages/edit';
+import { editStage, repoLabel } from '../../src/stages/edit';
 import { cleanup, harness, json, promptText, session, twoSessions, SHA_A, SHA_B, QUEUE_PATCH, type MockRequest } from './fixture';
 
 afterEach(cleanup);
@@ -177,5 +177,66 @@ describe('edit stage', () => {
     await editStage(h.deps).run(h.ctx());
 
     expect(firstPrompt).toHaveLength(200);
+  });
+
+  it('edit bounds every string a tool returns, not only the entry text', async () => {
+    const big = session('big', [
+      { kind: 'user', text: 'go' },
+      { kind: 'tool_call', toolName: 'T'.repeat(500), toolUseId: 't1', command: 'c'.repeat(5000), filePath: 'f'.repeat(5000), text: '{}' },
+    ], { commits: Array.from({ length: 90 }, (_, n) => String(n).padStart(40, '0')) });
+    let read: { entries: { toolName?: string; command?: string; filePath?: string }[] } = { entries: [] };
+    let listed: { commits: string[] }[] = [];
+    const h = harness({
+      artifacts: { ingest: { ...twoSessions(), sessions: [big] } },
+      reply: (req) => {
+        const results = req.messages.filter((m) => m.role === 'tool');
+        if (results.length === 0) {
+          return {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              { id: 'list', type: 'function', function: { name: 'list_sessions', arguments: '{}' } },
+              { id: 'read', type: 'function', function: { name: 'read_entries', arguments: JSON.stringify({ sessionId: 'big', from: 0, to: 1 }) } },
+            ],
+          };
+        }
+        listed = JSON.parse(results[0]!.content as string);
+        read = JSON.parse(results[1]!.content as string);
+        return json({ beats: [beat({ sessionIds: ['big'], entryRanges: [{ sessionId: 'big', from: 0, to: 1 }], commits: [] })] });
+      },
+    });
+
+    await editStage(h.deps).run(h.ctx());
+
+    const call = read.entries[1]!;
+    expect(call.command).toHaveLength(600);
+    expect(call.filePath).toHaveLength(300);
+    expect(call.toolName).toHaveLength(80);
+    expect(listed[0]!.commits).toHaveLength(40);
+  });
+});
+
+describe('repoLabel', () => {
+  it('names a remote repository by owner and name', () => {
+    expect(repoLabel('https://github.com/acme/retry-queue.git')).toBe('acme/retry-queue');
+    expect(repoLabel('git@github.com:acme/retry-queue.git')).toBe('acme/retry-queue');
+    expect(repoLabel('ssh://git@github.com/acme/retry-queue')).toBe('acme/retry-queue');
+  });
+
+  it('names a local path by its directory', () => {
+    expect(repoLabel('/Users/me/work/retry-queue')).toBe('retry-queue');
+    expect(repoLabel('/Users/me/work/retry-queue/')).toBe('retry-queue');
+  });
+
+  it('never carries credentials from the URL', () => {
+    expect(repoLabel('https://x-access-token:ghp_abcdefghijklmnopqrstuvwxyz0123@github.com/acme/retry-queue')).toBe('acme/retry-queue');
+    expect(repoLabel('https://ghp_abcdefghijklmnopqrstuvwxyz0123@example.com/solo.git')).toBe('solo');
+    expect(repoLabel('https://user:hunter2hunter2@example.com/')).toBe('repository');
+  });
+
+  it('is one short line whatever the input holds', () => {
+    expect(repoLabel(`https://example.com/acme/${'n'.repeat(300)}`)).toHaveLength(80);
+    expect(repoLabel('https://example.com/acme/retry%0Aqueue\u0007')).not.toMatch(/[\u0000-\u001f]/);
+    expect(repoLabel('/tmp/line\nbreak')).toBe('line break');
   });
 });
