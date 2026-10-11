@@ -9,7 +9,7 @@ function escapeRegex(s: string): string {
 }
 
 function containsNumber(haystack: string, n: string): boolean {
-  return new RegExp(`(?<![\\d.])${escapeRegex(n)}(?![\\d.])`).test(haystack);
+  return new RegExp(`(?<![\\w.])${escapeRegex(n)}(?![\\w.])`).test(haystack);
 }
 
 export function checkLine(

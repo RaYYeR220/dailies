@@ -79,6 +79,18 @@ describe('checkLine', () => {
     expect(result.reasons.some((r) => r.includes('3'))).toBe(true);
   });
 
+  it('does not ground a number that is only a substring of an alphanumeric code', () => {
+    const codeSess = session([{ kind: 'assistant', text: 'src/a.ts(3,1): error TS2322: nope' }]);
+    const line: Line = {
+      id: 'l10',
+      text: 'Fixed 2322 issues in the codebase.',
+      evidence: [{ type: 'entry', entryId: codeSess.entries[0]!.id, quote: 'error TS2322' }],
+    };
+    const result = checkLine(line, { sessions: [codeSess], facts, diffs });
+    expect(result.ok).toBe(false);
+    expect(result.reasons.some((r) => r.includes('2322'))).toBe(true);
+  });
+
   it('does not treat an inherited object property as a known stat', () => {
     const line: Line = {
       id: 'l9',
