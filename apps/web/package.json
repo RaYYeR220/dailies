@@ -1,0 +1,28 @@
+{
+  "name": "@dailies/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker": "tsx src/worker-main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.4.0",
+    "better-sqlite3": "latest",
+    "@dailies/core": "workspace:*",
+    "@dailies/pipeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/better-sqlite3": "latest",
+    "typescript": "^5",
+    "tsx": "latest",
+    "vitest": "latest"
+  }
+}

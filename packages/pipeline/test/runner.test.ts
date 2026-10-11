@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_BUDGET, BudgetExceededError } from '@dailies/core';
-import { openDb, createRun, getRun, listEvents, addCost, unfinishedRuns, runPipeline } from '../src/index';
-import type { Database, Stage } from '../src/index';
+import { openDb, createRun, getRun, listEvents, addCost, unfinishedRuns, runPipeline, recut } from '../src/index';
+import type { Database, Stage, StageName } from '../src/index';
 
 let db: Database;
 let dataDir: string;
@@ -255,5 +255,92 @@ describe('store', () => {
     const ids = unfinishedRuns(db);
     expect(ids).toContain(running);
     expect(ids).not.toContain(finished);
+  });
+});
+
+const ALL_STAGE_NAMES: StageName[] = [
+  'ingest',
+  'edit',
+  'verify',
+  'script',
+  'ground',
+  'voice',
+  'render',
+  'review',
+  'gate',
+];
+
+function stubStages(calls: Record<string, number>): Stage[] {
+  return ALL_STAGE_NAMES.map((name) => ({
+    name,
+    maxAttempts: 1,
+    run: async () => {
+      calls[name] = (calls[name] ?? 0) + 1;
+      return { artifact: { name } };
+    },
+  }));
+}
+
+describe('recut', () => {
+  it('throws when the run never completed verify', async () => {
+    const id = createRun(db, input);
+
+    expect(() => recut(db, id, 'make it punchier')).toThrow(/verify/);
+  });
+
+  it('resets script and every later stage and passes the feedback to the next script stage', async () => {
+    const calls: Record<string, number> = {};
+    const id = createRun(db, input);
+    const firstStatus = await runPipeline(db, id, stubStages(calls), { dataDir, sleep: noSleep });
+    expect(firstStatus).toBe('needs_approval');
+    expect(calls).toEqual({
+      ingest: 1,
+      edit: 1,
+      verify: 1,
+      script: 1,
+      ground: 1,
+      voice: 1,
+      render: 1,
+      review: 1,
+      gate: 1,
+    });
+
+    recut(db, id, 'make it punchier');
+
+    expect(getRun(db, id).status).toBe('running');
+    const rows = db
+      .prepare('SELECT name, status, attempt FROM stages WHERE run_id = ?')
+      .all(id) as { name: string; status: string; attempt: number }[];
+    const byName = new Map(rows.map((r) => [r.name, r]));
+    expect(byName.get('ingest')).toMatchObject({ status: 'done' });
+    expect(byName.get('edit')).toMatchObject({ status: 'done' });
+    expect(byName.get('verify')).toMatchObject({ status: 'done' });
+    for (const name of ['script', 'ground', 'voice', 'render', 'review', 'gate']) {
+      expect(byName.get(name)).toMatchObject({ status: 'pending', attempt: 0 });
+    }
+
+    const scriptFeedback: (string | null)[] = [];
+    const secondStages = stubStages(calls);
+    const scriptStage = secondStages.find((s) => s.name === 'script')!;
+    scriptStage.run = async (ctx) => {
+      calls.script = (calls.script ?? 0) + 1;
+      scriptFeedback.push(ctx.feedback);
+      return { artifact: { name: 'script' } };
+    };
+    const secondStatus = await runPipeline(db, id, secondStages, { dataDir, sleep: noSleep });
+
+    expect(secondStatus).toBe('needs_approval');
+    expect(scriptFeedback).toEqual(['make it punchier']);
+    expect(calls).toEqual({
+      ingest: 1,
+      edit: 1,
+      verify: 1,
+      script: 2,
+      ground: 2,
+      voice: 2,
+      render: 2,
+      review: 2,
+      gate: 2,
+    });
   });
 });

@@ -17,6 +17,36 @@ import type { Database, RunStatus, Stage, StageContext, StageName } from './type
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+const STAGE_ORDER: StageName[] = ['ingest', 'edit', 'verify', 'script', 'ground', 'voice', 'render', 'review', 'gate'];
+
+function ensureRecutFeedbackTable(db: Database): void {
+  db.exec('CREATE TABLE IF NOT EXISTS recut_feedback (run_id TEXT PRIMARY KEY, feedback TEXT NOT NULL)');
+}
+
+function readRecutFeedback(db: Database, runId: string): string | null {
+  ensureRecutFeedbackTable(db);
+  const row = db.prepare('SELECT feedback FROM recut_feedback WHERE run_id = ?').get(runId) as
+    | { feedback: string }
+    | undefined;
+  return row?.feedback ?? null;
+}
+
+export function recut(db: Database, runId: string, feedback: string): void {
+  if (!isStageDone(db, runId, 'verify')) {
+    throw new Error(`cannot recut run ${runId}: the verify stage never completed`);
+  }
+  ensureRecutFeedbackTable(db);
+  const scriptIndex = STAGE_ORDER.indexOf('script');
+  db.transaction(() => {
+    for (let i = scriptIndex; i < STAGE_ORDER.length; i++) resetStage(db, runId, STAGE_ORDER[i]!);
+    db.prepare(
+      `INSERT INTO recut_feedback (run_id, feedback) VALUES (?, ?)
+       ON CONFLICT(run_id) DO UPDATE SET feedback = excluded.feedback`,
+    ).run(runId, feedback);
+    setRunFinal(db, runId, 'running', null);
+  })();
+}
+
 export async function runPipeline(
   db: Database,
   runId: string,
@@ -28,7 +58,7 @@ export async function runPipeline(
 
   const sleep = o.sleep ?? defaultSleep;
   const runDir = join(o.dataDir, 'runs', runId);
-  let feedback: string | null = null;
+  let feedback: string | null = readRecutFeedback(db, runId);
 
   let i = stages.findIndex((s) => !isStageDone(db, runId, s.name));
   if (i === -1) i = stages.length;
