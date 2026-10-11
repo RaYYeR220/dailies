@@ -1,0 +1,25 @@
+Implement Task 16 ("Reel scenes in the Loupe direction") from docs/plans/2026-10-11-dailies-product.md.
+
+Read first: that plan's Task 16 in full; the Global Constraints of docs/plans/2026-10-11-dailies-core.md; Task 6 of the core plan (the renderer you are restyling); and the current code in packages/reel/src. If the remotion-best-practices and frontend-design skills are available, use them.
+
+The visual target is a set of seven static reference frames at /Users/yehor/Desktop/projects/neathack-internal/finalists/03-loupe/ : open frames.html and the images frame-1.png to frame-7.png (title, prompt, terminal, diff, stats, flag, end) and study them before you write anything. Read only inside that directory. They show the composition, the lens, the film strip and the pencil marks at the quality expected. Your job is to make the real renderer produce frames that hold up next to them, from real storyboard data of any length, and to add what a still cannot show: the lens gliding from scene to scene and the pencil marks drawing on.
+
+This is the part of the product people will actually see. Spend your effort on how the frames look and move. Look at your own rendered stills often, and be honest about which ones are weaker than the reference.
+
+Keep the render API and the timeline behaviour exactly as they are; other packages call them. The one schema change is the optional `unverified` field on the end scene, as the task says.
+
+There is no `.env` and there are no API keys in this checkout, by design. Rendering needs the network for fonts and a browser download; that is expected.
+
+Commit after each green test cycle. Finish by running the reel package's tests and `pnpm typecheck` at the repo root.
+
+End with a short report: what exists now, test counts, which frames you consider weakest and why, and every deviation from the plan with the reason.
+
+---
+
+<task-notification>
+<task-id>b586l92ro</task-id>
+<tool-use-id>toolu_0198AUVGWPMhTrgmwhVbi5so</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-16-loupe-reel/3b678d13-0f37-4e1e-ba66-81164965a414/tasks/b586l92ro.output</output-file>
+<status>completed</status>
+<summary>Background command "Run baseline reel tests and record timing" completed (exit code 0)</summary>
+</task-notification>
