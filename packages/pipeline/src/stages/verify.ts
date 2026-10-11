@@ -18,6 +18,8 @@ const JUDGE_PATCH_CHARS = 4000;
 const JUDGE_BUDGET_CHARS = 24000;
 // A judge quote shorter than this ("}", "+") is in every patch and shows nothing.
 const MIN_JUDGE_QUOTE_CHARS = 8;
+const SUBJECT_CHARS = 200;
+const MAX_NOT_SHOWN = 40;
 
 const ExtractorReply = z.object({
   claims: z.array(z.object({ entryId: z.string(), quote: z.string(), kind: ClaimKind, subject: z.string().nullish() })),
@@ -38,6 +40,15 @@ function turnEnds(session: Session): Entry[] {
   if (last) ends.push(last);
   return ends;
 }
+
+/** The lines a patch adds or removes, markers kept. Headers and context are not changes and cannot support a claim. */
+function changedLines(patch: string): string[] {
+  return patch.split('\n').filter((line) => (line.startsWith('+') && !line.startsWith('+++')) || (line.startsWith('-') && !line.startsWith('---')));
+}
+
+// The subject is model output about untrusted text and is passed on to the judge: one bounded line, nothing else.
+// eslint-disable-next-line no-control-regex
+const oneLine = (text: string, max: number) => cut(text.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').trim(), max);
 
 function sessionPatches(session: Session, diffs: DiffIndex): { sha: string; path: string; patch: string }[] {
   return session.commits.flatMap((sha) =>
@@ -68,14 +79,17 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
         if (!entry || normalize(raw.quote) === '' || !quoteMatches(raw.quote, entry.text)) dropped += 1;
         else if (!seen.has(key)) {
           seen.add(key);
-          kept.push({ id: nextId(), sessionId: session.id, entryId: entry.id, quote: raw.quote, kind: raw.kind, subject: raw.subject ?? undefined, evidence: [] });
+          kept.push({ id: nextId(), sessionId: session.id, entryId: entry.id, quote: raw.quote, kind: raw.kind, subject: raw.subject ? oneLine(raw.subject, SUBJECT_CHARS) : undefined, evidence: [] });
         }
       }
     }
     return { kept, dropped };
   }
 
-  /** `verified` only when the judge quotes a line that is in the patch of the file it names; anything else is unverifiable. */
+  /**
+   * `verified` only when the judge quotes one added or removed line of the file it names, out of the patch text
+   * it was actually shown. Anything else is unverifiable.
+   */
   async function judgeImplemented(claim: Claim, session: Session | undefined, diffs: DiffIndex): Promise<Claim> {
     const patches = session ? sessionPatches(session, diffs) : [];
     if (patches.length === 0) return unverifiable(claim, 'no commit diff is linked to this session');
@@ -88,13 +102,13 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
       shown.push({ ...p, patch });
       room -= patch.length;
     }
-    const { system, user } = judgePrompt({ quote: claim.quote, subject: claim.subject, patches: shown, notShown: patches.slice(shown.length).map((p) => p.path) });
+    const { system, user } = judgePrompt({ quote: claim.quote, subject: claim.subject, patches: shown, notShown: patches.slice(shown.length, shown.length + MAX_NOT_SHOWN).map((p) => p.path) });
     const reply = await completeJson({ client: deps.client, role: 'judge', name: 'judge', system, user, output: JudgeReply });
 
     if (!reply.supported) return unverifiable(claim, 'the judge found no supporting change in the diff');
     const quote = reply.quote ?? '';
     if (!reply.path || normalize(quote).length < MIN_JUDGE_QUOTE_CHARS) return unverifiable(claim, 'the judge did not quote a line of the diff');
-    const hit = patches.find((p) => p.path === reply.path && quoteMatches(quote, p.patch));
+    const hit = shown.find((p) => p.path === reply.path && changedLines(p.patch).some((line) => quoteMatches(quote, line)));
     if (!hit) return unverifiable(claim, 'the judge quote is not in the diff');
     return { ...claim, verdict: 'verified', reason: 'the diff contains the quoted change', evidence: [{ type: 'diff', sha: hit.sha, path: hit.path, quote }] };
   }
