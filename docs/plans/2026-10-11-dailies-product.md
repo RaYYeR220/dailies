@@ -243,6 +243,45 @@ Container:
 
 ---
 
+### Task 16: Reel scenes in the Loupe direction
+
+The neutral placeholder look of the renderer is replaced by the chosen visual direction, "Loupe": the night's work is a strip of film on a switched-off lightbox, and a loupe moves along it. What sits under the glass is what the narrator is talking about.
+
+**Files:** `packages/reel/src/theme.ts`, `packages/reel/src/remotion/**`, `packages/reel/test/**`, `packages/core/src/schema.ts` (one optional field), `docs/design.md`
+
+**Interfaces:**
+- Consumes and produces: `buildTimeline`, `toSrt`, `renderReel`, `renderStills` keep their signatures and behaviour. `Storyboard` gains one optional field: the `end` scene accepts `unverified: z.number().int().default(0)`.
+
+Visual language (binding):
+
+- **Surface.** Green-black emulsion `#0d1211` to `#1a2421`; cool white `#eef3f1` for text; grease-pencil yellow `#ffd60a` for every mark. No other accent colour.
+- **Type.** Unbounded for display, Figtree for text, Martian Mono for code, loaded through `@remotion/google-fonts`.
+- **The film strip.** A horizontal strip with sprocket holes carries small frames; each scene's content lives on frames of that strip. The strip drifts slowly while a scene plays.
+- **The loupe.** One lens (glass, knurled rim, a soft highlight, the engraved rim text) is drawn by a single component. It is a persistent layer of the composition, not part of any scene: each scene declares where the lens rests and how large it is, and between scenes the lens glides from one resting place to the next with a spring. Content under the glass is shown enlarged.
+- **Pencil grammar.** A hand-drawn closed ring means verified. A hand-drawn cross means contradicted. A dashed ring means stale. A pencil question mark means unverified. Marks draw on (stroke animation) when their line is spoken. The same four marks are used everywhere and nothing else carries those meanings.
+- **Scenes.**
+  - `title`: the lens rests on the repo name; the window label is set large beside it.
+  - `prompt`: the human's request seen through the glass, labelled `You asked`, with its session reference.
+  - `terminal`: one film frame per step with the command and the decisive part of the output set large (`2 failed`, `14 passed`); the lens rests on the last step; a passing step is ringed, a failing step is crossed.
+  - `diff`: the patch through the glass with file name and the added and removed counts; added and removed lines keep a restrained tint.
+  - `stats`: one frame per value; the lens rests on the first.
+  - `flag`: the agent's quote on a frame with the cross drawn through it; beside it the lens over the recorded reality with a ring; a yellow pill with the verdict; the source reference under the frame. For a `stale` verdict the mark over the quote is the dashed ring and the pill reads `STALE`.
+  - `end`: the repo name, and a strip of small frames with one mark per claim: rings for `verified`, crosses for `flagged`, question marks for `unverified`, in that order, capped at 16 marks with a `+n` after them; below it the three counts in words.
+- **Captions.** In a captions-only cut the current line is shown in a bar at the bottom; in a voiced cut there is no bar.
+- **Legibility floor.** Display text is at least 72 px, body at least 40 px, code at least 30 px at 1920x1080. Text never touches the lens rim. A line too long for its frame is shortened with an ellipsis by the existing text helpers, never shrunk below the floor.
+
+Reference mock-ups of all seven frames exist as static HTML outside the repository (path given in the task prompt). They are the visual target. Reproduce their composition with Remotion components; do not copy their HTML wholesale, and do not import anything from that directory.
+
+- [ ] **Step 1: Read the reference frames and the current renderer.** Write `docs/design.md`: the colour, type and spacing tokens, the pencil grammar, and one paragraph per scene. This file is the product's design reference from now on.
+- [ ] **Step 2: Write failing tests:** the theme exposes the tokens above; the `end` scene accepts `unverified` and defaults it to 0; a pure `lensPath(timeline, storyboard)` function returns one resting place per scene and interpolates between two consecutive ones at the midpoint of the transition; a pure `endMarks({ verified, flagged, unverified })` returns the marks in order and caps at 16 with the overflow count.
+- [ ] **Step 3: Run.** Expected: FAIL.
+- [ ] **Step 4: Implement** the theme, the film strip, the lens layer, the pencil marks, and the seven scenes.
+- [ ] **Step 5: Run the unit tests and the existing render tests.** Expected: PASS.
+- [ ] **Step 6: Render stills** of the fixture storyboard and of the stress storyboard, open every one, and compare with the reference frames. Fix overflow, collisions with the lens rim and anything weaker than the reference. Repeat until they hold up. Then render the full fixture reel once and step through it for the lens glide and the mark animations.
+- [ ] **Step 7: Commit.**
+
+---
+
 ### Task 14: Web interface
 
 Depends on Task 11 and on the chosen visual direction. Its steps are written once that direction is fixed; the routes it renders are listed in spec section 7 and the data comes only from the Task 11 API.
