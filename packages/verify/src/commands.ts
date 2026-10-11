@@ -18,7 +18,13 @@ const TEST_PATTERNS = [
   /\bmake\s+test\b/,
 ];
 
-const TYPECHECK_PATTERNS = [/\btsc\b/, /\bmypy\b/, /\bpyright\b/];
+const TYPECHECK_PATTERNS = [
+  /\btsc\b/,
+  /\bmypy\b/,
+  /\bpyright\b/,
+  new RegExp(`\\b${PM}\\s+(?:run\\s+)?type-?check\\b`),
+  new RegExp(`\\b${PM}\\s+(?:run\\s+)?check-types\\b`),
+];
 
 const LINT_PATTERNS = [
   /\beslint\b/,
