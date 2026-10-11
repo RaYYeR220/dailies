@@ -3,8 +3,9 @@ import type { ChatMessage } from '@dailies/agent';
 import type { IngestArtifact } from '@dailies/core';
 import { runPipeline } from '../../src/index';
 import type { Stage } from '../../src/index';
+import { fallbackBeats } from '../../src/outline';
 import { editStage, repoLabel } from '../../src/stages/edit';
-import { cleanup, harness, json, promptText, session, twoSessions, SHA_A, SHA_B, QUEUE_PATCH, type MockRequest } from './fixture';
+import { cleanup, harness, json, promptText, session, twoSessions, SHA_A, SHA_B, type MockRequest } from './fixture';
 
 afterEach(cleanup);
 
@@ -17,6 +18,13 @@ const beat = (o: Record<string, unknown> = {}) => ({
   commits: [SHA_A],
   ...o,
 });
+
+/** A reply that never finishes: always one more tool call, so the agent loop runs to its step limit. */
+const neverFinishes: ChatMessage = {
+  role: 'assistant',
+  content: null,
+  tool_calls: [{ id: 'r', type: 'function', function: { name: 'read_entries', arguments: JSON.stringify({ sessionId: 's1', from: 0, to: 1 }) } }],
+};
 
 describe('edit stage', () => {
   it('edit drops beats that point outside a session', async () => {
@@ -44,26 +52,56 @@ describe('edit stage', () => {
     expect(h.events.join('\n')).toContain('Range past the end');
   });
 
-  it('edit fails on zero beats, so the runner retries it', async () => {
-    let attempts = 0;
+  it('edit returns fallback beats when the editor replies with no usable beat, and logs why', async () => {
     const h = harness({
-      reply: () => {
-        attempts += 1;
-        return attempts === 1 ? json({ beats: [beat({ entryRanges: [{ sessionId: 's1', from: 0, to: 99 }] })] }) : json({ beats: [beat()] });
-      },
+      artifacts: { ingest: twoSessions() },
+      reply: () => json({ beats: [beat({ entryRanges: [{ sessionId: 's1', from: 0, to: 99 }] })] }),   // the only beat offered is out of range
+    });
+
+    const result = await editStage(h.deps).run(h.ctx());
+
+    expect(result.artifact.beats).toEqual(fallbackBeats(twoSessions().sessions, 6));
+    expect(h.events.join('\n')).toContain('no usable beat');
+  });
+
+  it('edit no longer throws (and the runner no longer retries) on a reply with no usable beat', async () => {
+    const h = harness({
+      artifacts: { ingest: twoSessions() },
+      reply: () => json({ beats: [beat({ entryRanges: [{ sessionId: 's1', from: 0, to: 99 }] })] }),
     });
     const ingest: Stage<IngestArtifact> = { name: 'ingest', maxAttempts: 1, run: async () => ({ artifact: twoSessions() }) };
     const edit = editStage(h.deps);
-    expect(edit.maxAttempts).toBeGreaterThanOrEqual(2);
 
-    await expect(edit.run({ ...h.ctx(), read: <T>() => twoSessions() as T })).rejects.toThrow(/no usable beat/);
-
-    attempts = 0;
     const status = await runPipeline(h.db, h.runId, [ingest, edit], { dataDir: h.dataDir, sleep: async () => {} });
+
     expect(status).toBe('needs_approval');
-    expect(attempts).toBe(2);
     const row = h.db.prepare("SELECT attempt, status FROM stages WHERE run_id = ? AND name = 'edit'").get(h.runId);
-    expect(row).toEqual({ attempt: 2, status: 'done' });
+    expect(row).toEqual({ attempt: 1, status: 'done' });
+  });
+
+  it('edit returns fallback beats when the editor exceeds its step limit, and logs why', async () => {
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => neverFinishes });
+
+    const result = await editStage(h.deps).run(h.ctx());
+
+    expect(result.artifact.beats).toEqual(fallbackBeats(twoSessions().sessions, 6));
+    expect(h.events.join('\n')).toMatch(/step/);
+    expect(h.calls).toHaveLength(8);   // maxSteps
+  });
+
+  it('edit returns fallback beats when it spends past its share of the run budget, and logs why', async () => {
+    const h = harness({
+      artifacts: { ingest: twoSessions() },
+      budget: { maxCostPerReelUsd: 1, maxTtsCalls: 3, maxRenderSec: 300 },
+      costPerCall: 0.35,   // over the 30% ($0.30) edit share after just one call
+      reply: () => neverFinishes,
+    });
+
+    const result = await editStage(h.deps).run(h.ctx());
+
+    expect(result.artifact.beats).toEqual(fallbackBeats(twoSessions().sessions, 6));
+    expect(h.events.join('\n')).toMatch(/budget/);
+    expect(h.calls).toHaveLength(1);   // the share is checked before the second call is ever made
   });
 
   it('edit keeps at most six beats', async () => {
@@ -88,7 +126,7 @@ describe('edit stage', () => {
     expect(result.artifact.beats[0]!.commits).toEqual([SHA_A, SHA_B]);
   });
 
-  it('edit tells the editor what the reel is for and the arc it follows', async () => {
+  it('edit gives the editor outlines of every session up front, and the arc it follows', async () => {
     const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [beat()] }) });
 
     await editStage(h.deps).run(h.ctx());
@@ -96,17 +134,33 @@ describe('edit stage', () => {
     expect(h.calls[0]!.role).toBe('editor');
     const told = promptText(h.calls[0]!.messages);
     expect(told).toContain('acme/retry-queue');
+    expect(told).toContain('s1');
+    expect(told).toContain('s2');
     for (const part of ['problem', 'key decisions', 'implementation', 'recorded validation']) expect(told).toContain(part);
     expect(told).toMatch(/exactly as/);
   });
 
-  it('edit gives the editor bounded tools over the ingest artifact', async () => {
-    const long = session(
-      'long',
-      Array.from({ length: 60 }, (_, n) => ({ kind: 'assistant' as const, text: `${n % 2 === 0 ? 'needle ' : ''}${'x'.repeat(1000)}` })),
+  it("edit's first message stays under 12,000 characters and names every session, even for 12 long sessions", async () => {
+    const sessions = Array.from({ length: 12 }, (_, n) =>
+      session(`long${n}`, [
+        { kind: 'user', text: `Session ${n} prompt. ${'detail '.repeat(100)}` },
+        { kind: 'assistant', text: `Session ${n} wrap-up. ${'notes '.repeat(100)}` },
+      ]),
     );
+    const h = harness({ artifacts: { ingest: { ...twoSessions(), sessions } }, reply: () => json({ beats: [beat({ sessionIds: ['long0'], entryRanges: [{ sessionId: 'long0', from: 0, to: 1 }], commits: [] })] }) });
+
+    await editStage(h.deps).run(h.ctx());
+
+    const told = promptText(h.calls[0]!.messages);
+    expect(told.length).toBeLessThan(12_000);
+    for (const s of sessions) expect(told).toContain(s.id);
+  });
+
+  it('edit gives the editor tight, bounded tools over the ingest artifact', async () => {
+    const long = session('long', Array.from({ length: 60 }, (_, n) => ({ kind: 'assistant' as const, text: `${n % 2 === 0 ? 'needle ' : ''}${'x'.repeat(1000)}` })));
+    const manyFiles = Object.fromEntries(Array.from({ length: 20 }, (_, n) => [`${SHA_A}:extra-file-${n}.ts`, 'y'.repeat(2000)]));
     const base = twoSessions();
-    const ingest: IngestArtifact = { ...base, sessions: [...base.sessions, long] };
+    const ingest: IngestArtifact = { ...base, sessions: [...base.sessions, long], diffs: { ...base.diffs, ...manyFiles } };
     const call = (id: string, name: string, args: unknown) => ({ id, type: 'function' as const, function: { name, arguments: JSON.stringify(args) } });
     let toolResults: Record<string, unknown> = {};
     const h = harness({
@@ -118,11 +172,10 @@ describe('edit stage', () => {
             role: 'assistant',
             content: null,
             tool_calls: [
-              call('list', 'list_sessions', {}),
               call('read', 'read_entries', { sessionId: 'long', from: 0, to: 59 }),
               call('search', 'search_transcript', { query: 'NEEDLE' }),
               call('diff', 'get_diff', { sha: SHA_A }),
-              call('patch', 'get_patch', { sha: SHA_A, path: 'src/queue.ts' }),
+              call('patch', 'get_patch', { sha: SHA_A, path: 'extra-file-0.ts' }),
               call('missing', 'read_entries', { sessionId: 'nope', from: 0, to: 1 }),
             ],
           };
@@ -134,74 +187,57 @@ describe('edit stage', () => {
 
     await editStage(h.deps).run(h.ctx());
 
-    const sessions = toolResults.list as { id: string; firstPrompt: string; entryCount: number; commits: string[]; agent: string; model: string; start: string; end: string }[];
-    expect(sessions.map((s) => s.id)).toEqual(['s1', 's2', 'long']);
-    expect(sessions[0]).toEqual({
-      id: 's1',
-      agent: 'claude-code',
-      model: 'claude-sonnet-4.6',
-      start: '2026-10-10T07:00:00Z',
-      end: '2026-10-10T07:30:00Z',
-      entryCount: 7,
-      commits: [SHA_A],
-      firstPrompt: 'The queue drops jobs when the worker restarts. Add a retry with backoff.',
-    });
-
-    const read = toolResults.read as { entries: { id: string; index: number; kind: string; text: string }[] };
-    expect(read.entries).toHaveLength(40);
+    const read = toolResults.read as { entries: { id: string; index: number; kind: string; text: string }[]; next: number | null };
+    expect(read.entries).toHaveLength(12);
     expect(read.entries[0]).toMatchObject({ id: 'long:0', index: 0, kind: 'assistant' });
-    expect(Math.max(...read.entries.map((e) => e.text.length))).toBe(600);
+    expect(Math.max(...read.entries.map((e) => e.text.length))).toBe(300);
+    expect(read.next).toBe(12);
 
-    const search = toolResults.search as { matches: { id: string; sessionId: string }[] };
-    expect(search.matches).toHaveLength(20);
+    const search = toolResults.search as { matches: { id: string; sessionId: string }[]; more: boolean };
+    expect(search.matches).toHaveLength(8);
+    expect(search.more).toBe(true);
     expect(search.matches[0]).toMatchObject({ id: 'long:0', sessionId: 'long' });
 
-    expect(toolResults.diff).toEqual({ files: [{ path: 'src/queue.ts', added: 5, removed: 1 }] });
-    expect(toolResults.patch).toEqual({ patch: QUEUE_PATCH });
+    const diff = toolResults.diff as { files: { path: string }[] };
+    expect(diff.files).toHaveLength(12);
+
+    const patch = toolResults.patch as { patch: string };
+    expect(patch.patch).toHaveLength(1200);
+
     expect(toolResults.missing).toEqual({ error: 'unknown session: nope' });
   });
 
-  it('edit cuts the first prompt of a session to 200 characters', async () => {
-    const wordy = session('wordy', [{ kind: 'user', text: 'p'.repeat(500) }, { kind: 'assistant', text: 'ok' }]);
-    let firstPrompt = '';
+  it('edit has no list_sessions tool: the outlines given up front replace it', async () => {
     const h = harness({
-      artifacts: { ingest: { ...twoSessions(), sessions: [wordy] } },
+      artifacts: { ingest: twoSessions() },
       reply: (req) => {
-        const result = req.messages.find((m) => m.role === 'tool');
-        if (!result) return { role: 'assistant', content: null, tool_calls: [{ id: 'c', type: 'function', function: { name: 'list_sessions', arguments: '{}' } }] };
-        firstPrompt = (JSON.parse(result.content as string) as { firstPrompt: string }[])[0]!.firstPrompt;
-        return json({ beats: [beat({ sessionIds: ['wordy'], entryRanges: [{ sessionId: 'wordy', from: 0, to: 1 }], commits: [] })] });
+        const results = req.messages.filter((m) => m.role === 'tool');
+        if (results.length === 0) {
+          return { role: 'assistant', content: null, tool_calls: [{ id: 'c', type: 'function', function: { name: 'list_sessions', arguments: '{}' } }] };
+        }
+        const result = JSON.parse(results[0]!.content as string);
+        expect(result).toEqual({ error: 'unknown tool: list_sessions' });
+        return json({ beats: [beat()] });
       },
     });
 
     await editStage(h.deps).run(h.ctx());
-
-    expect(firstPrompt).toHaveLength(200);
   });
 
   it('edit bounds every string a tool returns, not only the entry text', async () => {
     const big = session('big', [
       { kind: 'user', text: 'go' },
       { kind: 'tool_call', toolName: 'T'.repeat(500), toolUseId: 't1', command: 'c'.repeat(5000), filePath: 'f'.repeat(5000), text: '{}' },
-    ], { commits: Array.from({ length: 90 }, (_, n) => String(n).padStart(40, '0')) });
+    ]);
     let read: { entries: { toolName?: string; command?: string; filePath?: string }[] } = { entries: [] };
-    let listed: { commits: string[] }[] = [];
     const h = harness({
       artifacts: { ingest: { ...twoSessions(), sessions: [big] } },
       reply: (req) => {
         const results = req.messages.filter((m) => m.role === 'tool');
         if (results.length === 0) {
-          return {
-            role: 'assistant',
-            content: null,
-            tool_calls: [
-              { id: 'list', type: 'function', function: { name: 'list_sessions', arguments: '{}' } },
-              { id: 'read', type: 'function', function: { name: 'read_entries', arguments: JSON.stringify({ sessionId: 'big', from: 0, to: 1 }) } },
-            ],
-          };
+          return { role: 'assistant', content: null, tool_calls: [{ id: 'read', type: 'function', function: { name: 'read_entries', arguments: JSON.stringify({ sessionId: 'big', from: 0, to: 1 }) } }] };
         }
-        listed = JSON.parse(results[0]!.content as string);
-        read = JSON.parse(results[1]!.content as string);
+        read = JSON.parse(results[0]!.content as string);
         return json({ beats: [beat({ sessionIds: ['big'], entryRanges: [{ sessionId: 'big', from: 0, to: 1 }], commits: [] })] });
       },
     });
@@ -212,7 +248,6 @@ describe('edit stage', () => {
     expect(call.command).toHaveLength(600);
     expect(call.filePath).toHaveLength(300);
     expect(call.toolName).toHaveLength(80);
-    expect(listed[0]!.commits).toHaveLength(40);
   });
 });
 
