@@ -1,0 +1,13 @@
+Implement Task 7 ("Durable runner") from docs/plans/2026-10-11-dailies-core.md.
+
+Read first: the plan's header (Global Constraints, Review Focus, File Structure) and Task 7 in full, then sections 3 (Run lifecycle, Data model) and 8 of docs/specs/2026-10-11-dailies-design.md. The shared types you need are already implemented in packages/core; read packages/core/src/schema.ts before writing anything.
+
+Work test-first, in the order the task lists its steps. Where the task gives a test only by name, write a full test that pins the behaviour described under "Behaviour" or "Rules" with concrete values. Keep every exported name and signature in the task's "Produces" block exactly as written: other packages are being built against them in parallel right now. Edit only the directories listed under the task's Files.
+
+better-sqlite3 is a native module; if its build is blocked by pnpm's build-script policy, allow it in the root package.json pnpm.onlyBuiltDependencies and say so in the report.
+
+There is no `.env` and there are no API keys in this checkout, by design. Do not look for any; tests that need a key must skip themselves when it is absent.
+
+Commit after each green test cycle. Finish by running this package's tests and `pnpm typecheck` at the repo root.
+
+End with a short report: what exists now, test counts, and every deviation from the plan with the reason. If the plan is wrong somewhere, implement the correct thing, fix the plan file too, and say so.
