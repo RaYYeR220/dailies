@@ -446,16 +446,17 @@ Facts about the data, confirmed on real repositories:
 Parsing rules:
 
 - A user text block becomes a `user` entry. An assistant text block becomes an `assistant` entry.
-- A `tool_use` block becomes a `tool_call` entry (`toolName`, `toolUseId`, `command = input.command` when it is a string, `filePath = input.file_path` when it is a string, `text = JSON.stringify(input)` cut to 4000 characters). When `result` exists it is followed by a `tool_result` entry with the same `toolName` and `toolUseId`, `isError = result.status !== 'success'`.
-- Tool output is stripped of ANSI escape codes and, when longer than 8000 characters, reduced to its first 3000 and last 5000 characters joined by `\n…[truncated]…\n`. Test summaries sit at the end, so the tail is kept longer.
-- Every `text` and `command` passes through `redact`.
+- A `tool_use` block becomes a `tool_call` entry (`toolName`, `toolUseId`, `command = input.command` when it is a string, `filePath = input.file_path` when it is a string, `text = JSON.stringify(input)`, redacted, then cut to 4000 characters). When `result` exists it is followed by a `tool_result` entry with the same `toolName` and `toolUseId`, `isError = result.status !== 'success'`.
+- Tool output is stripped of ANSI escape codes, redacted, and only then, when longer than 8000 characters, reduced to its first 3000 and last 5000 characters joined by `\n…[truncated]…\n`. Test summaries sit at the end, so the tail is kept longer. **Redact before truncating, not after**: a secret that straddles the cut leaves an unredacted fragment if truncation runs first. Bound the pre-redaction text to roughly head+8KB and tail+8KB windows (redact only those, not the untruncated whole) so this ordering doesn't turn an attacker-sized tool output in a cloned public repo into an unbounded regex scan; also treat a `-----BEGIN ... PRIVATE KEY-----` with no matching `END` inside a window as a match through the window's end, since the `private_key` rule can't find a terminator a window edge cut off.
+- Every `text` and `command` passes through `redact`, following the redact-before-truncate rule above. Diff patches (see the `diffs` rule below) get the same treatment: a diff can reach an on-screen diff or flag scene later in the pipeline, so it is not exempt.
 - A session keeps at most 5000 entries. A malformed line is skipped, not fatal.
 - `startedAt` is the first entry timestamp, else `created_at`. `endedAt` is the last entry timestamp.
 - A session is inside the window when `startedAt <= until` and `(endedAt ?? startedAt) >= since`. Keep the newest `maxSessions` (default 12).
 - The same `session_id` appearing in several checkpoints is merged: keep the longest transcript, union the checkpoint ids and commits.
 - `cloneOrUpdate`: a local path is used in place. A URL is cloned with `git clone --filter=blob:none` into `<dataDir>/repos/<owner>__<name>`, or fetched if present. Then `git fetch origin '+refs/entire/*:refs/entire/*'` and `git fetch origin '+refs/heads/entire/*:refs/remotes/origin/entire/*'`; a failure of either fetch is tolerated.
 - `ingest` throws `NoCheckpointsError` when no checkpoint ref exists. When checkpoints exist but none fall inside the window it returns an artifact with `sessions: []`.
-- `diffs` holds `getDiff` output for every linked commit under keys `${sha}:${path}`, each patch cut to 6000 characters, at most 40 files per commit.
+- `diffs` holds `getDiff` output for every linked commit under keys `${sha}:${path}`, each patch redacted (redact-before-truncate, as above) then cut to 6000 characters, at most 40 files per commit.
+- Commit messages and tool output come from a cloned public repository and are not trusted input. Map the `Entire-Checkpoint:` trailer with a NUL-delimited `git log` format (a commit sha or message cannot contain NUL, unlike arbitrary control characters a crafted commit message could use to desynchronize a custom delimiter) and validate each parsed sha against a hex pattern before it is used as a git revision argument anywhere (e.g. in `getDiff`).
 
 - [ ] **Step 1: Write the fixture builder** `packages/ingest/test/fixture.ts`: `makeRepo(spec)` creates a temp git repo with one normal commit carrying an `Entire-Checkpoint: <id>` trailer and writes checkpoint trees in either layout using `git hash-object -w`, `git mktree` and `git commit-tree` then `git update-ref`. It returns the repo path. The spec is `{ layout, checkpoints: [{ id, sessions: [{ sessionId, createdAt, lines: object[] }] }] }`.
 - [ ] **Step 2: Write failing tests** `packages/ingest/test/ingest.test.ts`:
@@ -477,10 +478,14 @@ it('pairs a tool call with its result and marks failed results', () => {
 });
 it('strips ANSI codes and truncates a 2 MB tool output head-and-tail');         // text.length <= 8100, ends with the original tail
 it('redacts a key that appears in a user prompt and counts it');
+it('redacts a secret that straddles the truncation boundary, leaving no fragment');   // pins redact-before-truncate
+it('redacts a secret near the tail of a multi-megabyte output without scanning the whole thing');  // pins the bounded window, not a full scan
+it('redacts a private key left unterminated by a truncation window');          // pins the BEGIN-with-no-END catch
 it('skips malformed lines and image blocks');
 it('throws NoCheckpointsError for a repo without checkpoints');
 it('returns no sessions when checkpoints exist but none are in the window');
 it('merges one session that appears in two checkpoints');
+it('returns a patch for a modified file, keyed by sha:path, capped at 6000 characters');   // getDiff has no other pinned test
 ```
 Write each `it` with a real body in the style of the third one, using `makeRepo`.
 - [ ] **Step 3: Run the tests.** Expected: FAIL.
