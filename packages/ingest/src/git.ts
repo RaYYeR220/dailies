@@ -1,7 +1,7 @@
-import { redact } from '@dailies/core';
 import { execFile } from 'node:child_process';
 import { access, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { redactBounded } from './transcript';
 
 const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
 
@@ -85,7 +85,7 @@ export async function getDiff(repoDir: string, sha: string): Promise<Record<stri
     const path = headerMatch?.[2];
     if (!path) continue;
     const bounded = chunk.length <= MAX_PATCH_CHARS + SAFETY_MARGIN ? chunk : chunk.slice(0, MAX_PATCH_CHARS + SAFETY_MARGIN);
-    result[path] = redact(bounded).text.slice(0, MAX_PATCH_CHARS);
+    result[path] = redactBounded(bounded).text.slice(0, MAX_PATCH_CHARS);
   }
   return result;
 }

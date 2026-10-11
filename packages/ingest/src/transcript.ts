@@ -15,21 +15,33 @@ function stripAnsi(text: string): string {
   return text.replace(ANSI_RE, '');
 }
 
+// redact()'s private_key rule needs a literal "-----END ... PRIVATE KEY-----" to match; a window
+// edge can cut that marker off. Catch a BEGIN with no matching END in the same window and redact
+// from it to the window's end, so a key is never left exposed just because it is unterminated here.
+const UNTERMINATED_PRIVATE_KEY_RE = /-----BEGIN [A-Z ]*PRIVATE KEY-----(?![\s\S]*-----END [A-Z ]*PRIVATE KEY-----)[\s\S]*$/;
+
+/** redact(), plus a defensive catch for a private key left unterminated by a truncation window. */
+export function redactBounded(text: string): { text: string; hits: number } {
+  const r = redact(text);
+  if (!UNTERMINATED_PRIVATE_KEY_RE.test(r.text)) return r;
+  return { text: r.text.replace(UNTERMINATED_PRIVATE_KEY_RE, '[REDACTED:private_key]'), hits: r.hits + 1 };
+}
+
 /** Redacts, then truncates to head+tail — redacting first so a secret can't survive by straddling
  * the cut; bounding the pre-redaction window first so redact() never scans an unbounded string. */
 function redactAndTruncateOutput(text: string): { text: string; hits: number } {
-  if (text.length <= TOOL_OUTPUT_LIMIT) return redact(text);
+  if (text.length <= TOOL_OUTPUT_LIMIT) return redactBounded(text);
 
   const windowSize = TOOL_OUTPUT_HEAD + SAFETY_MARGIN + TOOL_OUTPUT_TAIL + SAFETY_MARGIN;
   if (text.length <= windowSize) {
-    const r = redact(text);
+    const r = redactBounded(text);
     return { text: `${r.text.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${r.text.slice(-TOOL_OUTPUT_TAIL)}`, hits: r.hits };
   }
 
   const headWindow = text.slice(0, TOOL_OUTPUT_HEAD + SAFETY_MARGIN);
   const tailWindow = text.slice(-(TOOL_OUTPUT_TAIL + SAFETY_MARGIN));
-  const redactedHead = redact(headWindow);
-  const redactedTail = redact(tailWindow);
+  const redactedHead = redactBounded(headWindow);
+  const redactedTail = redactBounded(tailWindow);
   return {
     text: `${redactedHead.text.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${redactedTail.text.slice(-TOOL_OUTPUT_TAIL)}`,
     hits: redactedHead.hits + redactedTail.hits,
@@ -38,7 +50,7 @@ function redactAndTruncateOutput(text: string): { text: string; hits: number } {
 
 function redactAndTruncateInput(inputJson: string): { text: string; hits: number } {
   const bounded = inputJson.length <= TOOL_INPUT_LIMIT + SAFETY_MARGIN ? inputJson : inputJson.slice(0, TOOL_INPUT_LIMIT + SAFETY_MARGIN);
-  const r = redact(bounded);
+  const r = redactBounded(bounded);
   return { text: r.text.slice(0, TOOL_INPUT_LIMIT), hits: r.hits };
 }
 

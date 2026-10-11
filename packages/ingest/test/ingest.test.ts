@@ -8,6 +8,7 @@ import {
   NoCheckpointsError,
   parseTranscript,
 } from '../src/index';
+import { redactBounded } from '../src/transcript';
 import { makeRepo } from './fixture';
 
 function run(cwd: string, args: string[]): Promise<string> {
@@ -271,6 +272,13 @@ describe('ingest', () => {
     expect(artifact.sessions[0]!.entries).toHaveLength(4);
     expect(artifact.sessions[0]!.checkpointIds.sort()).toEqual(['aa111111', 'bb222222']);
     expect(artifact.sessions[0]!.commits).toHaveLength(2);
+  });
+
+  it('redacts a private key left unterminated by a truncation window', () => {
+    const { text, hits } = redactBounded(`before ${'x'.repeat(50)} -----BEGIN RSA PRIVATE KEY-----\n${'A'.repeat(9000)}`);
+    expect(text).not.toContain('-----BEGIN RSA PRIVATE KEY-----');
+    expect(text).not.toMatch(/A{20,}/);
+    expect(hits).toBeGreaterThan(0);
   });
 
   it('returns a patch for a modified file, keyed by sha:path, capped at 6000 characters', async () => {
