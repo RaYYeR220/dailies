@@ -1,0 +1,15 @@
+Implement Task 8b ("Editor cost") from docs/plans/2026-10-11-dailies-core.md.
+
+Read first: the plan's header (Global Constraints, Review Focus, File Structure) and Task 8 and Task 8b in full, then sections 4.1 to 4.11 and 8 of docs/specs/2026-10-11-dailies-design.md. Every package this task consumes is already implemented and merged: read each one's src/index.ts and exported types before writing anything, and use them as they are. Where the real signature differs from what the plan says, the code is the truth; follow it and note the difference in your report.
+
+Work test-first, in the order the task lists its steps. Where the task gives a test only by name, write a full test that pins the behaviour described in the task with concrete values. Keep every exported name and signature in the task's "Produces" block exactly as written. Edit only the files and directories listed under the task's Files.
+
+Task 8 is already implemented and merged; you are cutting what its edit stage costs without changing what it produces. The numbers in the task come from a real run. You cannot measure model cost here, so make the size limits testable: character budgets on what is sent, caps on what each tool returns, a step limit, and a fallback that still yields a reel when a limit is hit.
+
+This session ends the moment you stop responding, and anything still running in the background is killed. Run long commands in the foreground and wait for them. Commit everything the task produced before your final report.
+
+There is no `.env` and there are no API keys in this checkout, by design. Do not look for any; tests use the mock model client, and anything that needs a key must skip or exit with a clear message when it is absent.
+
+Commit after each green test cycle. Finish by running the tests you added and `pnpm typecheck` at the repo root.
+
+End with a short report: what exists now, test counts, and every deviation from the plan with the reason. If the plan is wrong somewhere, implement the correct thing, fix the plan file too, and say so.
