@@ -64,6 +64,7 @@ describe('recallRepo', () => {
     expect(memory.notes.some((n) => n.includes('oldest failure'))).toBe(false);
 
     expect(searchTraces).toHaveBeenCalledWith({
+      workflowName: 'dailies-reel',
       query: 'https://github.com/foo/bar',
       dateFrom: '2026-09-27T12:00:00.000Z',
       limit: 10,

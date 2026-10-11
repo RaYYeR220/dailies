@@ -162,11 +162,11 @@ export function createNeatlogsMcp(o: { apiKey: string; url?: string; fetchImpl?:
   }
 
   async function traceContext(traceId: string): Promise<unknown> {
-    return call('trace_context', { trace_id: traceId });
+    return call('get_trace_context', { trace_id: traceId });
   }
 
   async function analytics(a: { from: string; to: string; workflowName?: string; view?: string }): Promise<unknown> {
-    return call('analytics', { from: a.from, to: a.to, workflow_name: a.workflowName, view: a.view });
+    return call('get_project_analytics', { from: a.from, to: a.to, workflow_name: a.workflowName, view: a.view });
   }
 
   return { call, searchTraces, traceContext, analytics };
