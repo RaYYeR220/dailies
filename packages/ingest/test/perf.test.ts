@@ -1,0 +1,336 @@
+import { describe, expect, it, vi } from 'vitest';
+import { execFile } from 'node:child_process';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { getDiff, ingest, listCheckpointRefs } from '../src/index';
+import { readCheckpointMetadata } from '../src/checkpoints';
+import { getDiffsBatched, getDiffsPerCommit, ObjectBatchReader } from '../src/git';
+import { selectCandidateSessionIds } from '../src/window';
+import { makeRepo } from './fixture';
+
+function run(cwd: string, args: string[]): Promise<string> {
+  return new Promise((resolvePromise, reject) => {
+    execFile('git', args, { cwd }, (err, stdout) => {
+      if (err) reject(err);
+      else resolvePromise(stdout.toString().trim());
+    });
+  });
+}
+
+const okLine = (text: string, ts: string) => ({
+  type: 'user' as const,
+  ts,
+  content: [{ id: 'u1', text }],
+});
+
+describe('selectCandidateSessionIds', () => {
+  it('keeps a session whose createdAt falls in the window and drops one outside it', () => {
+    const survivors = selectCandidateSessionIds(
+      [
+        { sessionId: 'old', createdAt: '2020-01-01T00:00:00Z' },
+        { sessionId: 'new', createdAt: '2026-10-10T00:00:00Z' },
+      ],
+      '2026-10-01T00:00:00Z',
+      '2026-10-20T00:00:00Z',
+      12,
+    );
+    expect(survivors).toEqual(new Set(['new']));
+  });
+
+  it('caps survivors to maxSessions, keeping the most recent', () => {
+    const hints = Array.from({ length: 5 }, (_, i) => ({
+      sessionId: `s${i}`,
+      createdAt: new Date(2026, 9, 10 + i).toISOString(),
+    }));
+    const survivors = selectCandidateSessionIds(hints, '2026-10-01T00:00:00Z', '2026-10-20T00:00:00Z', 2);
+    expect(survivors).toEqual(new Set(['s3', 's4']));
+  });
+
+  it('treats several copies of the same session id as one candidate', () => {
+    const survivors = selectCandidateSessionIds(
+      [
+        { sessionId: 'shared', createdAt: '2026-10-10T00:00:00Z' },
+        { sessionId: 'shared', createdAt: '2026-10-11T00:00:00Z' },
+      ],
+      '2026-10-01T00:00:00Z',
+      '2026-10-20T00:00:00Z',
+      12,
+    );
+    expect(survivors).toEqual(new Set(['shared']));
+  });
+});
+
+describe('getDiffsBatched', () => {
+  it('produces the same patches as per-commit getDiff for a three-commit fixture', async () => {
+    const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
+    const shas: string[] = [];
+    for (const name of ['a.txt', 'b.txt', 'c.txt']) {
+      await writeFile(join(repoDir, name), `${name} line one\n`);
+      await run(repoDir, ['add', name]);
+      await run(repoDir, ['commit', '-q', '-m', `add ${name}`]);
+      shas.push(await run(repoDir, ['rev-parse', 'HEAD']));
+    }
+
+    const individually: Record<string, string> = {};
+    for (const sha of shas) {
+      const fileDiffs = await getDiff(repoDir, sha);
+      for (const [path, patch] of Object.entries(fileDiffs)) individually[`${sha}:${path}`] = patch;
+    }
+
+    const batched = await getDiffsBatched(repoDir, shas);
+    expect(batched.diffs).toEqual(individually);
+    expect(batched.droppedCount).toBe(0);
+  });
+
+  it('the per-commit fallback agrees with the batched path (the safety net it falls back to)', async () => {
+    const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
+    const shas: string[] = [];
+    for (const name of ['a.txt', 'b.txt', 'c.txt']) {
+      await writeFile(join(repoDir, name), `${name} line one\n`);
+      await run(repoDir, ['add', name]);
+      await run(repoDir, ['commit', '-q', '-m', `add ${name}`]);
+      shas.push(await run(repoDir, ['rev-parse', 'HEAD']));
+    }
+
+    const batched = await getDiffsBatched(repoDir, shas);
+    const fallback = await getDiffsPerCommit(repoDir, shas, 60);
+
+    expect(fallback.diffs).toEqual(batched.diffs);
+    expect(fallback.droppedCount).toBe(batched.droppedCount);
+  });
+
+  it(
+    'caps at the most recent 60 commits and reports the dropped count',
+    async () => {
+      const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
+      const shas: string[] = [];
+      for (let i = 0; i < 62; i += 1) {
+        await writeFile(join(repoDir, 'f.txt'), `v${i}\n`);
+        await run(repoDir, ['add', 'f.txt']);
+        await run(repoDir, ['commit', '-q', '-m', `rev ${i}`]);
+        shas.push(await run(repoDir, ['rev-parse', 'HEAD']));
+      }
+
+      const batched = await getDiffsBatched(repoDir, shas);
+      expect(batched.droppedCount).toBe(2);
+      expect(Object.keys(batched.diffs).filter((k) => k.endsWith(':f.txt')).length).toBe(60);
+    },
+    20000,
+  );
+});
+
+describe('readCheckpointMetadata', () => {
+  it('caps the number of session indexes read, keeping the lowest-numbered ones, and reports the drop', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'aaaa0001',
+          sessions: [
+            { sessionId: 's0', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('a', '2026-10-10T07:00:00Z')] },
+            { sessionId: 's1', createdAt: '2026-10-10T07:01:00Z', lines: [okLine('b', '2026-10-10T07:01:00Z')] },
+            { sessionId: 's2', createdAt: '2026-10-10T07:02:00Z', lines: [okLine('c', '2026-10-10T07:02:00Z')] },
+          ],
+        },
+      ],
+    });
+    const refs = await listCheckpointRefs(repoDir);
+    const reader = new ObjectBatchReader(repoDir);
+    try {
+      const result = await readCheckpointMetadata(repoDir, refs[0]!, reader, 2);
+      expect(result.sessions.map((s) => s.sessionId)).toEqual(['s0', 's1']);
+      expect(result.skipped).toEqual([
+        { ref: refs[0]!.treeish, reason: '1 session index(es) dropped past the 2-per-checkpoint cap' },
+      ]);
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('rejects a zero-padded session index instead of letting it collide with the canonical one', async () => {
+    const repoDir = await mkdtemp(join(tmpdir(), 'dailies-alias-'));
+    await run(repoDir, ['init', '-q', '-b', 'main']);
+    const legitMeta = JSON.stringify({ session_id: 'legit', created_at: '2026-10-10T07:00:00Z' });
+    const aliasMeta = JSON.stringify({ session_id: 'alias', created_at: '2026-10-10T07:00:00Z' });
+
+    async function hashBlob(content: string): Promise<string> {
+      return new Promise((resolvePromise, reject) => {
+        const child = execFile('git', ['hash-object', '-w', '--stdin'], { cwd: repoDir }, (err, stdout) => {
+          if (err) reject(err);
+          else resolvePromise(stdout.toString().trim());
+        });
+        child.stdin!.end(content);
+      });
+    }
+
+    const legitMetaSha = await hashBlob(legitMeta);
+    const aliasMetaSha = await hashBlob(aliasMeta);
+
+    async function mktree(lines: string[]): Promise<string> {
+      return new Promise((resolvePromise, reject) => {
+        const child = execFile('git', ['mktree'], { cwd: repoDir }, (err, stdout) => {
+          if (err) reject(err);
+          else resolvePromise(stdout.toString().trim());
+        });
+        child.stdin!.end(lines.join('\n') + '\n');
+      });
+    }
+
+    const legitDirSha = await mktree([`100644 blob ${legitMetaSha}\tmetadata.json`]);
+    const aliasDirSha = await mktree([`100644 blob ${aliasMetaSha}\tmetadata.json`]);
+    const treeSha = await mktree([`040000 tree ${legitDirSha}\t7`, `040000 tree ${aliasDirSha}\t007`]);
+    const commitSha = await new Promise<string>((resolvePromise, reject) => {
+      execFile(
+        'git',
+        ['commit-tree', treeSha, '-m', 'checkpoint'],
+        { cwd: repoDir, env: { ...process.env, GIT_AUTHOR_NAME: 'f', GIT_AUTHOR_EMAIL: 'f@f.com', GIT_COMMITTER_NAME: 'f', GIT_COMMITTER_EMAIL: 'f@f.com' } },
+        (err, stdout) => (err ? reject(err) : resolvePromise(stdout.toString().trim())),
+      );
+    });
+    await run(repoDir, ['update-ref', 'refs/entire/checkpoints/aa/aaaaaaaa', commitSha]);
+
+    const refs = await listCheckpointRefs(repoDir);
+    const reader = new ObjectBatchReader(repoDir);
+    try {
+      const result = await readCheckpointMetadata(repoDir, refs[0]!, reader);
+      // Only the canonical "7" is a session; "007" is not a valid index at all, so it neither
+      // collides with "7" nor appears as a session of its own.
+      expect(result.sessions.map((s) => s.sessionId)).toEqual(['legit']);
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('reports a metadata read failure in skipped, rather than silently dropping the session', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'ffff6666',
+          sessions: [{ sessionId: 's1', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('hello', '2026-10-10T07:00:00Z')] }],
+        },
+      ],
+    });
+    const refs = await listCheckpointRefs(repoDir);
+    // metadata.json is always well over 10 bytes, so the size cap rejects reading it.
+    const reader = new ObjectBatchReader(repoDir, 10);
+    try {
+      const result = await readCheckpointMetadata(repoDir, refs[0]!, reader);
+      expect(result.sessions).toHaveLength(0);
+      expect(result.skipped).toHaveLength(1);
+      expect(result.skipped[0]!.reason).toMatch(/over the 10-byte read limit/);
+    } finally {
+      reader.close();
+    }
+  });
+});
+
+describe('ingest performance behaviour', () => {
+  it('does not read the transcript of a session outside the window', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'aaaa1111',
+          sessions: [{ sessionId: 'old', createdAt: '2020-01-01T00:00:00Z', lines: [okLine('old session', '2020-01-01T00:00:00Z')] }],
+        },
+        {
+          id: 'bbbb2222',
+          sessions: [{ sessionId: 'new', createdAt: '2026-10-10T00:00:00Z', lines: [okLine('new session', '2026-10-10T00:00:00Z')] }],
+        },
+      ],
+    });
+
+    const readSpy = vi.spyOn(ObjectBatchReader.prototype, 'read');
+    try {
+      const artifact = await ingest({
+        repoUrl: repoDir,
+        dataDir: repoDir,
+        since: '2026-10-01T00:00:00Z',
+        until: '2026-10-20T00:00:00Z',
+      });
+      expect(artifact.sessions.map((s) => s.id)).toEqual(['new']);
+      // 2 metadata.json reads (one per checkpoint) + 1 transcript.jsonl read (only the in-window session).
+      expect(readSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      readSpy.mockRestore();
+    }
+  });
+
+  it('reuses the parsed-session cache on a second ingest and parses zero transcripts', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'cccc3333',
+          sessions: [{ sessionId: 's1', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('cached session', '2026-10-10T07:00:00Z')] }],
+        },
+      ],
+    });
+    const opts = { repoUrl: repoDir, dataDir: repoDir, since: '2026-10-01T00:00:00Z', until: '2026-10-20T00:00:00Z' };
+
+    const first = await ingest(opts);
+    expect(first.sessions[0]!.entries).toHaveLength(1);
+
+    const readSpy = vi.spyOn(ObjectBatchReader.prototype, 'read');
+    try {
+      const second = await ingest(opts);
+      expect(second.sessions[0]!.entries).toEqual(first.sessions[0]!.entries);
+      // Only the metadata.json read; the transcript is served from cache.
+      expect(readSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      readSpy.mockRestore();
+    }
+  });
+
+  it('invalidates the cache when the transcript object id changes', async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), 'dailies-cache-'));
+    const repoDir1 = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'dddd4444',
+          sessions: [{ sessionId: 's1', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('version one', '2026-10-10T07:00:00Z')] }],
+        },
+      ],
+    });
+    const first = await ingest({ repoUrl: repoDir1, dataDir, since: '2026-10-01T00:00:00Z', until: '2026-10-20T00:00:00Z' });
+    expect(first.sessions[0]!.entries[0]!.text).toBe('version one');
+
+    const repoDir2 = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'dddd4444',
+          sessions: [{ sessionId: 's1', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('version two', '2026-10-10T07:00:00Z')] }],
+        },
+      ],
+    });
+    const second = await ingest({ repoUrl: repoDir2, dataDir, since: '2026-10-01T00:00:00Z', until: '2026-10-20T00:00:00Z' });
+    expect(second.sessions[0]!.entries[0]!.text).toBe('version two');
+  });
+
+  it('reports progress phases in order', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'eeee5555',
+          sessions: [{ sessionId: 's1', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('progress session', '2026-10-10T07:00:00Z')] }],
+        },
+      ],
+    });
+
+    const messages: string[] = [];
+    await ingest({
+      repoUrl: repoDir,
+      dataDir: repoDir,
+      since: '2026-10-01T00:00:00Z',
+      until: '2026-10-20T00:00:00Z',
+      onProgress: (m) => messages.push(m),
+    });
+
+    expect(messages).toEqual(['cloning', 'read 1 checkpoints', '1 sessions in window', 'parsing 1/1', 'diffs for 1 commits']);
+  });
+});

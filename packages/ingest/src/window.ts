@@ -21,6 +21,39 @@ export function mergeSessions(sessions: Session[]): Session[] {
   return Array.from(byId.values());
 }
 
+export interface SessionTimeHint {
+  sessionId: string;
+  createdAt: string;
+}
+
+/**
+ * Approximates `selectWindow`'s window-and-cap decision from session metadata alone (`createdAt`),
+ * before any transcript is read. Several hints sharing a session id (the same session appearing
+ * in more than one checkpoint) count as one candidate, using the earliest and latest `createdAt`
+ * among them as a stand-in for that session's true start and end. The exact window is re-applied
+ * by `selectWindow` once the surviving sessions are actually parsed.
+ */
+export function selectCandidateSessionIds(hints: SessionTimeHint[], since: string, until: string, maxSessions: number): Set<string> {
+  const sinceMs = Date.parse(since);
+  const untilMs = Date.parse(until);
+
+  const byId = new Map<string, { min: number; max: number }>();
+  for (const hint of hints) {
+    const ms = Date.parse(hint.createdAt);
+    const existing = byId.get(hint.sessionId);
+    if (!existing) byId.set(hint.sessionId, { min: ms, max: ms });
+    else {
+      existing.min = Math.min(existing.min, ms);
+      existing.max = Math.max(existing.max, ms);
+    }
+  }
+
+  const inWindow = Array.from(byId.entries()).filter(([, r]) => r.min <= untilMs && r.max >= sinceMs);
+  inWindow.sort((a, b) => b[1].max - a[1].max);
+
+  return new Set(inWindow.slice(0, maxSessions).map(([id]) => id));
+}
+
 /** Keeps sessions inside [since, until], sorted newest-first, truncated to maxSessions, then returned chronologically. */
 export function selectWindow(sessions: Session[], since: string, until: string, maxSessions: number): Session[] {
   const sinceMs = Date.parse(since);

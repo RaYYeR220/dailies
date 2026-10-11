@@ -1,4 +1,4 @@
-import { git } from './git';
+import { git, readBlobOrFetch, type ObjectBatchReader } from './git';
 
 export interface CheckpointRef {
   id: string;
@@ -46,22 +46,6 @@ export async function listCheckpointRefs(repoDir: string): Promise<CheckpointRef
   return refs;
 }
 
-function checkpointFilePath(ref: CheckpointRef, relPath: string): string {
-  return ref.layout === 'refs' ? `${ref.treeish}:${relPath}` : `${ref.treeish}/${relPath}`;
-}
-
-async function readCheckpointFile(repoDir: string, ref: CheckpointRef, relPath: string): Promise<string | null> {
-  return git(repoDir, ['show', checkpointFilePath(ref, relPath)]).catch(() => null);
-}
-
-async function listSessionIndices(repoDir: string, ref: CheckpointRef): Promise<number[]> {
-  const out = await git(repoDir, ['ls-tree', ref.treeish]);
-  return lsTreeNames(out, 'tree')
-    .filter((n) => /^\d+$/.test(n))
-    .map(Number)
-    .sort((a, b) => a - b);
-}
-
 interface RawTokenUsage {
   input_tokens?: number;
   output_tokens?: number;
@@ -80,7 +64,8 @@ interface RawSessionMetadata {
   session_metrics?: { turn_count?: number };
 }
 
-export interface RawSession {
+export interface SessionMetaOnly {
+  sessionIndex: number;
   sessionId: string;
   createdAt: string;
   agent: string;
@@ -89,27 +74,103 @@ export interface RawSession {
   filesTouched: string[];
   tokens: { input: number; output: number; cacheRead: number; cacheWrite: number };
   turnCount: number;
-  transcriptJsonl: string;
+  transcriptOid: string | null;
 }
 
-/** Reads every `<n>/metadata.json` + `<n>/transcript.jsonl` pair under a checkpoint's tree. A malformed session is skipped. */
-export async function readCheckpointSessions(repoDir: string, ref: CheckpointRef): Promise<RawSession[]> {
-  const indices = await listSessionIndices(repoDir, ref);
-  const sessions: RawSession[] = [];
+// Canonical form only (`0`, or a non-zero digit then digits, up to 7 of them): a zero-padded or
+// otherwise non-canonical spelling of the same integer (`007`, `7`) would parse to the same
+// Number key and silently collide with — or let an attacker overwrite — the real session at that
+// index. Capping at 7 digits also keeps the key itself far below where Number loses precision.
+const SESSION_FILE_RE = /^(0|[1-9]\d{0,6})\/(metadata\.json|transcript\.jsonl)$/;
+// A real checkpoint has a handful of sessions; this only exists to bound how many session
+// indexes a single crafted checkpoint tree (from an untrusted cloned repo) can make the ingest
+// attempt to read, fetch, or report in `skipped`.
+const MAX_SESSIONS_PER_CHECKPOINT = 1000;
 
-  for (const n of indices) {
-    const metaRaw = await readCheckpointFile(repoDir, ref, `${n}/metadata.json`);
-    if (!metaRaw) continue;
+/** One recursive `ls-tree` walk of the checkpoint's tree, giving the blob id of every session's metadata and transcript. */
+async function listSessionBlobs(repoDir: string, ref: CheckpointRef): Promise<Map<number, { metaOid?: string; transcriptOid?: string }>> {
+  const out = await git(repoDir, ['ls-tree', '-r', ref.treeish]);
+  const byIndex = new Map<number, { metaOid?: string; transcriptOid?: string }>();
+
+  for (const line of out.split('\n')) {
+    if (!line.trim()) continue;
+    const tabIdx = line.indexOf('\t');
+    if (tabIdx === -1) continue;
+    const info = line.slice(0, tabIdx).split(' ');
+    if (info[1] !== 'blob') continue;
+    const sha = info[2];
+    const path = line.slice(tabIdx + 1);
+    const m = SESSION_FILE_RE.exec(path);
+    if (!m || !sha) continue;
+    const n = Number(m[1]);
+    const entry = byIndex.get(n) ?? {};
+    if (m[2] === 'metadata.json') entry.metaOid = sha;
+    else entry.transcriptOid = sha;
+    byIndex.set(n, entry);
+  }
+
+  return byIndex;
+}
+
+export interface CheckpointMetadataResult {
+  sessions: SessionMetaOnly[];
+  // A metadata.json that simply doesn't exist for a session index is not reported here (that's
+  // normal, sparse layout); a metadata.json that exists but couldn't actually be read — a fetch
+  // failure, a size-cap rejection, a desynchronized reader — is, so one bad blob never silently
+  // erases sessions from the result without a trace.
+  skipped: { ref: string; reason: string }[];
+}
+
+/**
+ * Reads only the small `<n>/metadata.json` file for every session in a checkpoint, through the
+ * shared batch reader, without opening any `transcript.jsonl`. A malformed session (bad JSON, no
+ * session_id) is skipped silently, as in Task 2; a session whose metadata blob exists but could
+ * not actually be read is skipped and reported.
+ */
+export async function readCheckpointMetadata(
+  repoDir: string,
+  ref: CheckpointRef,
+  reader: ObjectBatchReader,
+  maxSessions = MAX_SESSIONS_PER_CHECKPOINT,
+): Promise<CheckpointMetadataResult> {
+  const byIndex = await listSessionBlobs(repoDir, ref);
+  const sessions: SessionMetaOnly[] = [];
+  const skipped: { ref: string; reason: string }[] = [];
+
+  // The cap applies only to indexes that actually carry a metadata.json — the only ones that can
+  // ever produce a session — and in canonical numeric order, not raw `ls-tree` line order: an
+  // attacker could otherwise spend the whole budget on indexes that have only a transcript.jsonl
+  // (and so could never produce a session anyway) ordered ahead of real ones, silently dropping
+  // legitimate sessions instead of the junk entries the cap exists to bound.
+  const eligible = Array.from(byIndex.entries())
+    .filter(([, entry]) => entry.metaOid)
+    .sort((a, b) => a[0] - b[0]);
+  const candidates = eligible.slice(0, maxSessions);
+  if (eligible.length > maxSessions) {
+    skipped.push({
+      ref: ref.treeish,
+      reason: `${eligible.length - maxSessions} session index(es) dropped past the ${maxSessions}-per-checkpoint cap`,
+    });
+  }
+
+  for (const [n, entry] of candidates) {
+    let metaBuf: Buffer;
+    try {
+      metaBuf = await readBlobOrFetch(repoDir, reader, entry.metaOid!); // filtered to entries with metaOid above
+    } catch (err) {
+      skipped.push({ ref: `${ref.treeish}#${n}`, reason: err instanceof Error ? err.message : String(err) });
+      continue;
+    }
     let meta: RawSessionMetadata;
     try {
-      meta = JSON.parse(metaRaw);
+      meta = JSON.parse(metaBuf.toString('utf8'));
     } catch {
       continue;
     }
     if (!meta.session_id) continue;
 
-    const transcriptJsonl = (await readCheckpointFile(repoDir, ref, `${n}/transcript.jsonl`)) ?? '';
     sessions.push({
+      sessionIndex: n,
       sessionId: meta.session_id,
       createdAt: meta.created_at,
       agent: meta.agent ?? 'unknown',
@@ -123,9 +184,20 @@ export async function readCheckpointSessions(repoDir: string, ref: CheckpointRef
         cacheWrite: meta.token_usage?.cache_creation_tokens ?? 0,
       },
       turnCount: meta.session_metrics?.turn_count ?? 0,
-      transcriptJsonl,
+      transcriptOid: entry.transcriptOid ?? null,
     });
   }
 
-  return sessions;
+  return { sessions, skipped };
+}
+
+/** Reads a session's `transcript.jsonl` text through the shared batch reader. No transcript blob gives `''`, as before. */
+export async function readSessionTranscriptText(
+  repoDir: string,
+  transcriptOid: string | null,
+  reader: ObjectBatchReader,
+): Promise<string> {
+  if (!transcriptOid) return '';
+  const buf = await readBlobOrFetch(repoDir, reader, transcriptOid);
+  return buf.toString('utf8');
 }
