@@ -23,6 +23,9 @@ export async function runPipeline(
   stages: Stage[],
   o: { dataDir: string; sleep?: (ms: number) => Promise<void> },
 ): Promise<RunStatus> {
+  const initial = getRun(db, runId);
+  if (initial.status !== 'running') return initial.status;
+
   const sleep = o.sleep ?? defaultSleep;
   const runDir = join(o.dataDir, 'runs', runId);
   let feedback: string | null = null;
@@ -45,27 +48,36 @@ export async function runPipeline(
     try {
       const result = await stage.run(ctx);
       writeArtifact(o.dataDir, runId, stage.name, result.artifact);
-      markStageDone(db, runId, stage.name);
 
       if (result.final) {
-        setRunFinal(db, runId, result.final.status, result.final.reason);
+        db.transaction(() => {
+          markStageDone(db, runId, stage.name);
+          setRunFinal(db, runId, result.final!.status, result.final!.reason);
+        })();
         return result.final.status;
       }
 
       if (result.loopBackTo) {
+        const target = stages.findIndex((s) => s.name === result.loopBackTo);
+        if (target === -1) throw new Error(`loopBackTo names an unknown stage: ${result.loopBackTo}`);
         if (getRun(db, runId).loops < 2) {
-          incrementLoops(db, runId);
+          db.transaction(() => {
+            markStageDone(db, runId, stage.name);
+            incrementLoops(db, runId);
+            for (let j = target; j < stages.length; j++) resetStage(db, runId, stages[j]!.name);
+          })();
           feedback = result.reason ?? null;
-          const target = stages.findIndex((s) => s.name === result.loopBackTo);
-          if (target === -1) throw new Error(`loopBackTo names an unknown stage: ${result.loopBackTo}`);
-          for (let j = target; j < stages.length; j++) resetStage(db, runId, stages[j]!.name);
           i = target;
           continue;
         }
-        setRunFinal(db, runId, 'blocked', result.reason ?? null);
+        db.transaction(() => {
+          markStageDone(db, runId, stage.name);
+          setRunFinal(db, runId, 'blocked', result.reason ?? null);
+        })();
         return 'blocked';
       }
 
+      markStageDone(db, runId, stage.name);
       i += 1;
     } catch (err) {
       if (err instanceof BudgetExceededError) {
@@ -73,11 +85,14 @@ export async function runPipeline(
         return 'blocked';
       }
       const message = err instanceof Error ? err.message : String(err);
-      markStageFailed(db, runId, stage.name, message);
       if (attempt >= stage.maxAttempts) {
-        setRunFinal(db, runId, 'failed', message);
+        db.transaction(() => {
+          markStageFailed(db, runId, stage.name, message);
+          setRunFinal(db, runId, 'failed', message);
+        })();
         return 'failed';
       }
+      markStageFailed(db, runId, stage.name, message);
       await sleep(500 * 2 ** attempt);
     }
   }

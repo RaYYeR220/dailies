@@ -212,6 +212,28 @@ describe('runPipeline', () => {
     const run = getRun(db, id);
     expect(run.reason).toBe('secrets found');
   });
+
+  it('calling runPipeline again on an already-terminal run returns its status without re-running stages', async () => {
+    let gateCalls = 0;
+    const stages: Stage[] = [
+      {
+        name: 'gate',
+        maxAttempts: 1,
+        run: async () => {
+          gateCalls += 1;
+          return { artifact: {}, final: { status: 'blocked', reason: 'secrets found' } };
+        },
+      },
+    ];
+    const id = createRun(db, input);
+    await runPipeline(db, id, stages, { dataDir, sleep: noSleep });
+    expect(gateCalls).toBe(1);
+
+    const status = await runPipeline(db, id, stages, { dataDir, sleep: noSleep });
+
+    expect(status).toBe('blocked');
+    expect(gateCalls).toBe(1);
+  });
 });
 
 describe('store', () => {
