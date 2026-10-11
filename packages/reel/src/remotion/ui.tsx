@@ -137,32 +137,34 @@ export function fitRoles(text: string, roles: Role[], room: Room, opts: { maxLin
 /** The width in px of the widest line of a fitted text. */
 export const widthOf = (fitted: Fitted, face: Face): number => Math.max(0, ...fitted.lines.map((line) => emOf(face)(line) * fitted.size));
 
-const OWNER_HEIGHT = size.text.detail * leading.text + space.xs;
+const OWNER = { max: size.text.detail, min: size.text.label, leading: leading.text };
+const OWNER_HEIGHT = OWNER.max * OWNER.leading + space.xs;
 const WHOLE_NAME = 0.3;   // a name on one line has to keep this much of its size range, or the owner moves to a line of its own
 
 /**
  * A repo name: `owner/name` on one line of display when that stays large, otherwise the owner in the text face
- * over the name in display, broken where a name may break. `room(above)` is the room for the display lines
- * when `above` px sit over them.
+ * over the name in display, broken where a name may break. `room(above, below)` is the room for lines that
+ * have `above` px over them and `below` px under them in the same block.
  */
-export function fitRepo(repo: string, range: { max: number; min: number }, room: (above: number) => Room, maxLines = 3): { owner: string | null; name: Fitted; height: number } {
+export function fitRepo(repo: string, range: { max: number; min: number }, room: (above: number, below: number) => Room, maxLines = 3): { owner: Fitted | null; name: Fitted; height: number } {
   const type = { ...range, leading: leading.display };
-  const whole = fitText(repo, type, room(0), emOf(FACE.heavy), { maxLines: 1, soft: BREAKS.name });
+  const whole = fitText(repo, type, room(0, 0), emOf(FACE.heavy), { maxLines: 1, soft: BREAKS.name });
   const { head, tail } = splitLast(repo);
   if (!head || (!whole.cut && whole.lines.length > 0 && whole.size >= range.min + (range.max - range.min) * WHOLE_NAME)) {
-    const name = head ? whole : fitText(repo, type, room(0), emOf(FACE.heavy), { maxLines, soft: BREAKS.name, fewest: true });
+    const name = head ? whole : fitText(repo, type, room(0, 0), emOf(FACE.heavy), { maxLines, soft: BREAKS.name, fewest: true });
     return { owner: null, name, height: name.lines.length * name.size * leading.display };
   }
-  const name = fitText(tail, type, room(OWNER_HEIGHT), emOf(FACE.heavy), { maxLines, soft: BREAKS.name, fewest: true });
-  return { owner: head, name, height: OWNER_HEIGHT + name.lines.length * name.size * leading.display };
+  const name = fitText(tail, type, room(OWNER_HEIGHT, 0), emOf(FACE.heavy), { maxLines, soft: BREAKS.name, fewest: true });
+  const below = name.lines.length * name.size * leading.display;
+  // The owner sits on the line above the name, where a glass is narrower: it is fitted to that line, not to the name's.
+  const owner = fitText(head, OWNER, room(0, space.xs + below), emOf(FACE.body), { maxLines: 1, soft: BREAKS.name });
+  return { owner, name, height: OWNER_HEIGHT + below };
 }
 
 /** The repo name as `fitRepo` set it. */
 export const RepoName: React.FC<{ fit: ReturnType<typeof fitRepo>; align?: 'left' | 'center' }> = ({ fit, align = 'left' }) => (
   <div style={{ textAlign: align }}>
-    {fit.owner ? (
-      <Type face={FACE.body} size={size.text.detail} tone={color.soft} style={{ height: OWNER_HEIGHT }}>{fit.owner}</Type>
-    ) : null}
+    {fit.owner ? <Lines fitted={fit.owner} face={FACE.body} leading={OWNER.leading} align={align} tone={color.soft} style={{ height: OWNER_HEIGHT }} /> : null}
     <Lines fitted={fit.name} face={FACE.heavy} leading={leading.display} align={align} />
   </div>
 );

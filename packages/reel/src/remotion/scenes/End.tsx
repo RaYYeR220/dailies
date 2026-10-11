@@ -66,7 +66,7 @@ export const End: SceneParts<'end'> = {
     const above = m.shot.lens.y + drop - strip.height / 2;
     const below = m.shot.lens.y + drop + strip.height / 2;
     const hero = above - layout.margin - space.xl;
-    const fit = fitRepo(clampEnd(scene.repo, REPO_CHARS), size.display.hero, (owner) => boxRoom(width, hero - owner), HERO_LINES);
+    const fit = fitRepo(clampEnd(scene.repo, REPO_CHARS), size.display.hero, (above, below) => boxRoom(width, hero - above - below), HERO_LINES);
     const tallies: { kind: EndMark; count: number; text: string }[] = [
       { kind: 'ring', count: scene.verified, text: `${scene.verified.toLocaleString('en-US')} ${scene.verified === 1 ? 'claim' : 'claims'} verified` },
       { kind: 'cross', count: scene.flagged, text: `${scene.flagged.toLocaleString('en-US')} flagged` },

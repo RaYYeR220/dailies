@@ -24,7 +24,7 @@ export const Title: SceneParts<'title'> = {
   Glass: ({ scene }) => {
     const { shot } = useScene();
     const room = glassRoom(shot.lens);
-    const fit = fitRepo(clampEnd(scene.repo, REPO_CHARS), size.display.repo, (above) => linesRoom(room, above), NAME_LINES);
+    const fit = fitRepo(clampEnd(scene.repo, REPO_CHARS), size.display.repo, (above, below) => linesRoom(room, above, below), NAME_LINES);
     const r = loupe.glass * shot.lens.scale;
     const bar = r * loupe.greek.bar;
     return (
