@@ -21,6 +21,14 @@ function ingestFailureCode(err: unknown): string {
   return 'ingest-failed';
 }
 
+// Tails and error text are untrusted content from a real session or a remote git error;
+// printing them to the operator's own terminal without stripping control/escape characters
+// would let either inject terminal escape sequences.
+function consoleSafe(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
+}
+
 async function main(): Promise<void> {
   const dataDir = resolve(process.cwd(), '.dailies');
   const datasetPath = resolve(import.meta.dirname, '../datasets/public.json');
@@ -45,7 +53,7 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       skipped.push({ repo: entry.url, reason: ingestFailureCode(err) });
-      console.error(`skipped ${entry.url}: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`skipped ${entry.url}: ${consoleSafe(err instanceof Error ? err.message : String(err))}`);
     }
   }
 
@@ -90,7 +98,7 @@ async function main(): Promise<void> {
   }
   if (tails.length > 0) {
     console.log('most common unrecognised output tails (not written to eval/results):');
-    for (const t of tails) console.log(`  (${t.count}x) ${t.tail}`);
+    for (const t of tails) console.log(`  (${t.count}x) ${consoleSafe(t.tail)}`);
   }
 }
 
