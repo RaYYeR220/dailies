@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "77fcbdda8695",
+  "strategy": "manual-commit",
+  "branch": "task/6-reel",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/plans/2026-10-11-dailies-core.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/77/fcbdda8695/0/metadata.json",
+      "transcript": "/77/fcbdda8695/0/full.jsonl",
+      "compact_transcript": "/77/fcbdda8695/0/transcript.jsonl",
+      "content_hash": "/77/fcbdda8695/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 2,
+    "cache_creation_tokens": 3089,
+    "cache_read_tokens": 311255,
+    "output_tokens": 730,
+    "api_call_count": 1
+  }
+}
