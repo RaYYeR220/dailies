@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "6fd2890bcc30",
+  "strategy": "manual-commit",
+  "branch": "task/15-deploy",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/web/src/app/api/health/route.ts",
+    "apps/web/src/server/heartbeat.ts",
+    "apps/web/src/worker.ts",
+    "apps/web/test/health.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/6f/d2890bcc30/0/metadata.json",
+      "transcript": "/6f/d2890bcc30/0/full.jsonl",
+      "compact_transcript": "/6f/d2890bcc30/0/transcript.jsonl",
+      "content_hash": "/6f/d2890bcc30/0/content_hash.txt",
+      "prompt": "/6f/d2890bcc30/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 74,
+    "cache_creation_tokens": 98969,
+    "cache_read_tokens": 3503961,
+    "output_tokens": 25258,
+    "api_call_count": 37
+  }
+}
