@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "326a6967e2c9",
+  "strategy": "manual-commit",
+  "branch": "task/8-stages",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/pipeline/src/prompts/entail.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/32/6a6967e2c9/0/metadata.json",
+      "transcript": "/32/6a6967e2c9/0/full.jsonl",
+      "compact_transcript": "/32/6a6967e2c9/0/transcript.jsonl",
+      "content_hash": "/32/6a6967e2c9/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 9,
+    "cache_creation_tokens": 22404,
+    "cache_read_tokens": 1591753,
+    "output_tokens": 19489,
+    "api_call_count": 5
+  }
+}
