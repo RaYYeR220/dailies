@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "62be90357504",
+  "strategy": "manual-commit",
+  "branch": "task/12-eval",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "eval/src/repoKey.ts",
+    "eval/test/repoKey.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/62/be90357504/0/metadata.json",
+      "transcript": "/62/be90357504/0/full.jsonl",
+      "compact_transcript": "/62/be90357504/0/transcript.jsonl",
+      "content_hash": "/62/be90357504/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 10,
+    "cache_creation_tokens": 2244,
+    "cache_read_tokens": 1006220,
+    "output_tokens": 1038,
+    "api_call_count": 5
+  }
+}
