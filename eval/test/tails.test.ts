@@ -44,4 +44,22 @@ describe('unrecognisedTails', () => {
     expect(result[0]!.tail).not.toContain('AKIAABCDEFGHIJKLMNOP');
     expect(result[0]!.tail).toContain('[REDACTED:aws_key_id]');
   });
+
+  it('redacts a secret that straddles the 200-character truncation boundary', () => {
+    // If the tail were truncated to 200 characters *before* redacting, this key would be cut
+    // mid-pattern: the surviving fragment lacks the "AKIA" prefix redact() needs, and leaks.
+    const key = 'AKIAABCDEFGHIJKLMNOP';
+    const leakedFragment = key.slice(9);
+    const text = `${'z'.repeat(190)} ${key} ${'y'.repeat(188)}`;
+    const sessions = [
+      session([
+        { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm test' },
+        { kind: 'tool_result', toolUseId: 't1', text, isError: false },
+      ]),
+    ];
+    const result = unrecognisedTails(sessions, 10);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.tail).not.toContain(key);
+    expect(result[0]!.tail).not.toContain(leakedFragment);
+  });
 });

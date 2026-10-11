@@ -2,6 +2,22 @@ import type { Session } from '@dailies/core';
 import { redact } from '@dailies/core';
 import { collectRuns } from '@dailies/verify';
 
+const TAIL_LENGTH = 200;
+// Larger than any realistic single secret match, so a secret sitting right at the 200-character
+// cut is still fully visible to redact() before that cut is made (mirrors @dailies/ingest's
+// redactBounded pattern: redact a bounded window, then truncate — never the other way round).
+const SAFETY_MARGIN = 8192;
+
+// redact()'s private_key rule needs a literal "-----END ... PRIVATE KEY-----"; the safety-margin
+// window can still cut that marker off. Catch an unterminated BEGIN and redact to the window's end.
+const UNTERMINATED_PRIVATE_KEY_RE = /-----BEGIN [A-Z ]*PRIVATE KEY-----(?![\s\S]*-----END [A-Z ]*PRIVATE KEY-----)[\s\S]*$/;
+
+function redactBounded(text: string): string {
+  const r = redact(text);
+  if (!UNTERMINATED_PRIVATE_KEY_RE.test(r.text)) return r.text;
+  return r.text.replace(UNTERMINATED_PRIVATE_KEY_RE, '[REDACTED:private_key]');
+}
+
 export interface TailCount {
   tail: string;
   count: number;
@@ -16,7 +32,8 @@ export function unrecognisedTails(sessions: Session[], limit = 10): TailCount[] 
       if (run.outcome !== 'unknown' || !run.resultEntryId) continue;
       const result = session.entries.find((e) => e.id === run.resultEntryId);
       if (!result) continue;
-      const tail = redact(result.text.slice(-200)).text;
+      const window = result.text.slice(-(TAIL_LENGTH + SAFETY_MARGIN));
+      const tail = redactBounded(window).slice(-TAIL_LENGTH);
       counts.set(tail, (counts.get(tail) ?? 0) + 1);
     }
   }
