@@ -989,3 +989,48 @@ Acceptance, measured on this machine and written into the commit message:
 - [ ] **Step 4: Run all ingest tests.** Expected: PASS.
 - [ ] **Step 5: Measure** the two cases above with a clean `--dataDir` in the system temp directory, and record the numbers.
 - [ ] **Step 6: Commit.**
+
+---
+
+### Task 8b: Editor cost
+
+The first real run (12 sessions of this repository, 208 file diffs) was stopped by its own budget gate: the edit stage alone spent $1.79 against a $1.50 run budget, in 12 agent steps and 84 seconds. The editor navigates megabytes of transcript through tools, and every step resends everything it has read so far to the most expensive model. The gate did its job; the stage has to cost a tenth of that.
+
+**Files:** `packages/pipeline/src/outline.ts` (new), `packages/pipeline/src/stages/edit.ts`, `packages/pipeline/src/stages/verify.ts`, `packages/pipeline/src/prompts/editor.ts`, `packages/pipeline/src/budget.ts` (new), their tests; `packages/agent/src/router.ts` and its test (model override only)
+
+**Interfaces:**
+- Unchanged: `buildStages`, `EditArtifact`, `VerifyArtifact` and every exported signature of the stages.
+- New:
+```ts
+// packages/pipeline/src/outline.ts
+export interface SessionOutline {
+  id: string; agent: string; model: string | null; startedAt: string; minutes: number; turns: number; entries: number;
+  firstPrompt: string;            // first user entry, at most 240 characters
+  lastMessage: string;            // last assistant entry, at most 240 characters
+  commits: string[];              // short SHAs, at most 6
+  files: string[];                // at most 8
+  runs: string[];                 // e.g. "test fail @120", "test pass @188", at most 12, in order
+  edits: number;                  // file-editing tool calls
+}
+export function outlineSession(session: Session): SessionOutline
+export function outlinesWithin(sessions: Session[], maxChars: number): SessionOutline[]   // trims the two text fields evenly until the JSON fits
+export function fallbackBeats(sessions: Session[], max: number): Beat[]                   // newest sessions with commits first; kind 'feature'; range = first prompt to last entry
+
+// packages/pipeline/src/budget.ts
+export class StageBudgetError extends Error {}
+export function stageMeter(meter: CostMeter, shareUsd: number): { check(): void; spent(): number }   // check() throws StageBudgetError once the stage has spent shareUsd
+```
+- `createRouter` reads an optional `DAILIES_MODEL_<ROLE>` environment variable per role and uses it instead of the default model. The default for the `editor` role becomes `claude-haiku`.
+
+Behaviour:
+
+- **Outlines first.** The editor's first message carries the outlines of all sessions (`outlinesWithin(sessions, 9000)`), built by code with `collectRuns` for the runs. It is told to choose beats from the outlines and to use tools only to pin exact entry ranges and commits for the beats it has chosen. The `list_sessions` tool is removed.
+- **Tight tools.** `read_entries` returns at most 12 entries of at most 300 characters; `search_transcript` at most 8 matches of at most 160 characters; `get_diff` at most 12 paths; `get_patch` at most 1200 characters. `maxSteps` is 8.
+- **Stage shares.** The edit stage may spend 30% of the run budget and the verify stage 30%. Each checks its share before every model call.
+- **Fallbacks, not failures.** When the editor hits its share or its step limit, or returns no usable beat, the stage logs the reason and returns `fallbackBeats(sessions, 6)`. When the verify stage hits its share, the remaining `implemented` claims are left `unverifiable` with the reason `not checked: verification budget reached`, and the count is logged; the deterministic kinds are unaffected because they call no model.
+
+- [ ] **Step 1: Write failing tests:** `outlineSession` on a hand-built session (prompt cut, runs in order, edit count); `outlinesWithin` keeps every session and fits the limit for 12 long sessions; `fallbackBeats` order and ranges; the editor's first message contains every session id and stays under 12,000 characters for a 12-session fixture; each tool's output cap; the stage returns fallback beats on `AgentStepLimitError`, on `StageBudgetError` and on zero usable beats, and logs why; verify leaves the remaining `implemented` claims unverifiable when its share is spent; the router honours `DAILIES_MODEL_EDITOR` and defaults the editor to `claude-haiku`.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run all pipeline and agent tests.** Expected: PASS.
+- [ ] **Step 5: Commit.** The maintainer measures the real cost after merge; the target is under $0.20 for the edit stage on the same 12 sessions.

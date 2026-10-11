@@ -8,6 +8,7 @@ export interface CheckpointRef {
 
 const HEX2 = /^[0-9a-f]{2}$/;
 const BRANCH_REF = 'refs/heads/entire/checkpoints/v1';
+const REMOTE_BRANCH_REF = 'refs/remotes/origin/entire/checkpoints/v1';
 
 function lsTreeNames(output: string, typeFilter: 'blob' | 'tree'): string[] {
   const names: string[] = [];
@@ -32,13 +33,17 @@ export async function listCheckpointRefs(repoDir: string): Promise<CheckpointRef
     refs.push({ id, treeish: refName, layout: 'refs' });
   }
 
-  const branchExists = await git(repoDir, ['rev-parse', '--verify', BRANCH_REF]).then(() => true, () => false);
-  if (branchExists) {
-    const shardNames = lsTreeNames(await git(repoDir, ['ls-tree', BRANCH_REF]), 'tree').filter((n) => HEX2.test(n));
+  // A clone holds the checkpoint branch as a remote-tracking ref; a repository used in place holds it as a local branch.
+  let branchRef: string | null = null;
+  for (const candidate of [REMOTE_BRANCH_REF, BRANCH_REF]) {
+    if (await git(repoDir, ['rev-parse', '--verify', candidate]).then(() => true, () => false)) { branchRef = candidate; break; }
+  }
+  if (branchRef) {
+    const shardNames = lsTreeNames(await git(repoDir, ['ls-tree', branchRef]), 'tree').filter((n) => HEX2.test(n));
     for (const shard of shardNames) {
-      const restNames = lsTreeNames(await git(repoDir, ['ls-tree', `${BRANCH_REF}:${shard}`]), 'tree');
+      const restNames = lsTreeNames(await git(repoDir, ['ls-tree', `${branchRef}:${shard}`]), 'tree');
       for (const rest of restNames) {
-        refs.push({ id: shard + rest, treeish: `${BRANCH_REF}:${shard}/${rest}`, layout: 'branch' });
+        refs.push({ id: shard + rest, treeish: `${branchRef}:${shard}/${rest}`, layout: 'branch' });
       }
     }
   }
