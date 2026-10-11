@@ -100,6 +100,16 @@ describe('ObjectBatchReader', () => {
     await expect(reader.read('a'.repeat(40))).rejects.toThrow();
     reader.close();
   });
+
+  it('keeps rejecting after it dies, instead of resolving null as if objects were merely missing', async () => {
+    const notARepo = await mkdtemp(join(tmpdir(), 'dailies-notrepo-'));
+    const reader = new ObjectBatchReader(notARepo);
+    await expect(reader.read('a'.repeat(40))).rejects.toThrow();
+    // A caller like readBlobOrFetch treats `null` as "missing, worth a fetch"; once poisoned,
+    // every further read must reject instead, or that distinction is lost.
+    await expect(reader.read('b'.repeat(40))).rejects.toThrow();
+    reader.close();
+  });
 });
 
 describe('assertBlobWithinFetchLimit', () => {

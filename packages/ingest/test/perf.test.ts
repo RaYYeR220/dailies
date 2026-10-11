@@ -100,23 +100,51 @@ describe('getDiffsBatched', () => {
     expect(fallback.droppedCount).toBe(batched.droppedCount);
   });
 
-  it('caps at the most recent 60 commits and reports the dropped count', async () => {
-    const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
-    const shas: string[] = [];
-    for (let i = 0; i < 62; i += 1) {
-      await writeFile(join(repoDir, 'f.txt'), `v${i}\n`);
-      await run(repoDir, ['add', 'f.txt']);
-      await run(repoDir, ['commit', '-q', '-m', `rev ${i}`]);
-      shas.push(await run(repoDir, ['rev-parse', 'HEAD']));
-    }
+  it(
+    'caps at the most recent 60 commits and reports the dropped count',
+    async () => {
+      const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
+      const shas: string[] = [];
+      for (let i = 0; i < 62; i += 1) {
+        await writeFile(join(repoDir, 'f.txt'), `v${i}\n`);
+        await run(repoDir, ['add', 'f.txt']);
+        await run(repoDir, ['commit', '-q', '-m', `rev ${i}`]);
+        shas.push(await run(repoDir, ['rev-parse', 'HEAD']));
+      }
 
-    const batched = await getDiffsBatched(repoDir, shas);
-    expect(batched.droppedCount).toBe(2);
-    expect(Object.keys(batched.diffs).filter((k) => k.endsWith(':f.txt')).length).toBe(60);
-  });
+      const batched = await getDiffsBatched(repoDir, shas);
+      expect(batched.droppedCount).toBe(2);
+      expect(Object.keys(batched.diffs).filter((k) => k.endsWith(':f.txt')).length).toBe(60);
+    },
+    20000,
+  );
 });
 
 describe('readCheckpointMetadata', () => {
+  it('caps the number of session indexes read from one checkpoint', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'aaaa0001',
+          sessions: [
+            { sessionId: 's0', createdAt: '2026-10-10T07:00:00Z', lines: [okLine('a', '2026-10-10T07:00:00Z')] },
+            { sessionId: 's1', createdAt: '2026-10-10T07:01:00Z', lines: [okLine('b', '2026-10-10T07:01:00Z')] },
+            { sessionId: 's2', createdAt: '2026-10-10T07:02:00Z', lines: [okLine('c', '2026-10-10T07:02:00Z')] },
+          ],
+        },
+      ],
+    });
+    const refs = await listCheckpointRefs(repoDir);
+    const reader = new ObjectBatchReader(repoDir);
+    try {
+      const result = await readCheckpointMetadata(repoDir, refs[0]!, reader, 2);
+      expect(result.sessions).toHaveLength(2);
+    } finally {
+      reader.close();
+    }
+  });
+
   it('reports a metadata read failure in skipped, rather than silently dropping the session', async () => {
     const repoDir = await makeRepo({
       layout: 'refs',

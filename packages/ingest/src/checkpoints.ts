@@ -78,9 +78,17 @@ export interface SessionMetaOnly {
 }
 
 const SESSION_FILE_RE = /^(\d+)\/(metadata\.json|transcript\.jsonl)$/;
+// A real checkpoint has a handful of sessions; this only exists to bound how many session
+// indexes a single crafted checkpoint tree (from an untrusted cloned repo) can make the ingest
+// attempt to read, fetch, or report in `skipped`.
+const MAX_SESSIONS_PER_CHECKPOINT = 1000;
 
 /** One recursive `ls-tree` walk of the checkpoint's tree, giving the blob id of every session's metadata and transcript. */
-async function listSessionBlobs(repoDir: string, ref: CheckpointRef): Promise<Map<number, { metaOid?: string; transcriptOid?: string }>> {
+async function listSessionBlobs(
+  repoDir: string,
+  ref: CheckpointRef,
+  maxSessions = MAX_SESSIONS_PER_CHECKPOINT,
+): Promise<Map<number, { metaOid?: string; transcriptOid?: string }>> {
   const out = await git(repoDir, ['ls-tree', '-r', ref.treeish]);
   const byIndex = new Map<number, { metaOid?: string; transcriptOid?: string }>();
 
@@ -95,6 +103,7 @@ async function listSessionBlobs(repoDir: string, ref: CheckpointRef): Promise<Ma
     const m = SESSION_FILE_RE.exec(path);
     if (!m || !sha) continue;
     const n = Number(m[1]);
+    if (!byIndex.has(n) && byIndex.size >= maxSessions) continue;
     const entry = byIndex.get(n) ?? {};
     if (m[2] === 'metadata.json') entry.metaOid = sha;
     else entry.transcriptOid = sha;
@@ -123,8 +132,9 @@ export async function readCheckpointMetadata(
   repoDir: string,
   ref: CheckpointRef,
   reader: ObjectBatchReader,
+  maxSessions = MAX_SESSIONS_PER_CHECKPOINT,
 ): Promise<CheckpointMetadataResult> {
-  const byIndex = await listSessionBlobs(repoDir, ref);
+  const byIndex = await listSessionBlobs(repoDir, ref, maxSessions);
   const sessions: SessionMetaOnly[] = [];
   const skipped: { ref: string; reason: string }[] = [];
 

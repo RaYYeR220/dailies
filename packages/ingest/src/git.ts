@@ -335,8 +335,13 @@ export class ObjectBatchReader {
 
   /** Resolves with the object's content, or `null` when the object is missing locally. */
   read(oid: string): Promise<Buffer | null> {
-    if (this.closed) return Promise.resolve(null);
+    // desynced is checked first: poison() also sets closed (so it can reuse the same teardown as
+    // an explicit close()), but a poisoned reader must reject, never resolve `null` as if the
+    // object were merely missing — a caller like readBlobOrFetch would otherwise read that as
+    // "missing, fetch it" and paper over the real failure with a wasted fetch and a misleading
+    // error.
     if (this.desynced) return Promise.reject(new Error('git cat-file --batch reader is desynchronized and no longer usable'));
+    if (this.closed) return Promise.resolve(null);
     return new Promise((resolvePromise, reject) => {
       const timer = setTimeout(() => {
         const idx = this.pending.findIndex((p) => p.resolve === resolvePromise);
