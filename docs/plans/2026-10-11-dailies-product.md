@@ -331,3 +331,32 @@ Reference mock-ups of the landing, the reel page and the run page exist as stati
 - [ ] **Step 4: Run the tests, `pnpm typecheck` and `pnpm --filter @dailies/web build`.** Expected: PASS.
 - [ ] **Step 5: Look at it.** Start the app against a temp data directory seeded with one finished run's artifacts (write a small seed script under `apps/web/test/ui/seed.ts` that creates the rows and artifact files from fixtures), open each page at 1440 and 390 wide, screenshot, compare with the reference mock-ups, and fix what is weaker. Repeat until the pages hold up.
 - [ ] **Step 6: Commit.**
+
+---
+
+### Task 12b: Mutation benchmark, second version
+
+The first run of the benchmark on real sessions reported a flip rate of 0.693 over 202 cases. The session that built it traced the misses to the harness, not the verifier: a case was created for every recognised run, but the verifier rests a claim on the last run of that class before the claim. In real sessions several runs often precede one assistant message, so mutating an earlier run cannot change the verdict. The benchmark was measuring its own anchoring.
+
+The first result stays in the repository as it is. This task adds a second version beside it and reports both.
+
+**Files:** `eval/**`
+
+**Interfaces:**
+- `runMutationBenchmark` keeps its signature and now returns, in addition, `version: 2`, `eligible`, `ineligible` and `ineligibleReasons: Record<string, number>`.
+- New: `export function isEvidencingRun(session: Session, run: ToolRun, claim: Claim): boolean` — true only when `run` is the last run of its class before the claim's entry.
+
+Behaviour:
+
+- A run yields a case only if it is the evidencing run of its synthetic claim. Runs that are not are counted under `ineligible` with the reason `not the last run before the next message`. The other existing skip reasons (no following assistant entry, a source edit in between) are counted there too.
+- `flipRate` is computed over eligible cases only. Any eligible case that does not flip is a verifier defect: list it, and if it reproduces in a unit test, fix `packages/verify` in this branch with that test.
+- The scorecard opens with a summary table (version 1 and version 2 side by side: runs seen, recognised, unknown, recognition rate, cases, flipped, flip rate), then one paragraph that says in plain words why version 1 under-reported, then the ineligible reasons with counts, then only the eligible cases that did not flip.
+- Results are written as `<date>-mutation-v2.json` and `<date>-scorecard.md`; the version 1 files from the first run are not modified or deleted. The scorecard links to them.
+- Add `https://github.com/HighnessAtharva/firstrun` (`maxSessions: 12`) to the dataset, so the numbers rest on more than one repository.
+
+- [ ] **Step 1: Write failing tests:** `isEvidencingRun` for a cluster of three runs before one message (only the third is true); a session with such a cluster yields one case and two ineligible; an eligible passing run flips to contradicted and back; the scorecard contains both versions' numbers and no repository URL.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run.** Expected: PASS.
+- [ ] **Step 5: Run the benchmark** on the dataset and commit the results exactly as produced.
+- [ ] **Step 6: Commit.**
