@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "b3de4ba14f98",
+  "strategy": "manual-commit",
+  "branch": "task/8-stages",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/plans/2026-10-11-dailies-core.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b3/de4ba14f98/0/metadata.json",
+      "transcript": "/b3/de4ba14f98/0/full.jsonl",
+      "compact_transcript": "/b3/de4ba14f98/0/transcript.jsonl",
+      "content_hash": "/b3/de4ba14f98/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 0,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 0,
+    "output_tokens": 0,
+    "api_call_count": 0
+  }
+}
