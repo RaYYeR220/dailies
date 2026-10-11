@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "3837f1474366",
+  "strategy": "manual-commit",
+  "branch": "task/8-stages",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/pipeline/src/prompts/editor.ts",
+    "packages/pipeline/src/stages/edit.ts",
+    "packages/pipeline/src/stages/index.ts",
+    "packages/pipeline/test/stages/edit.test.ts",
+    "packages/pipeline/test/stages/fixture.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/38/37f1474366/0/metadata.json",
+      "transcript": "/38/37f1474366/0/full.jsonl",
+      "compact_transcript": "/38/37f1474366/0/transcript.jsonl",
+      "content_hash": "/38/37f1474366/0/content_hash.txt",
+      "prompt": "/38/37f1474366/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 35,
+    "cache_creation_tokens": 199710,
+    "cache_read_tokens": 2490513,
+    "output_tokens": 83410,
+    "api_call_count": 19
+  }
+}

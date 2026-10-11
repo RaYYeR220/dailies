@@ -1,0 +1,13 @@
+Implement Task 8 ("Pipeline stages") from docs/plans/2026-10-11-dailies-core.md.
+
+Read first: the plan's header (Global Constraints, Review Focus, File Structure) and Task 8 in full, then sections 4.1 to 4.11 and 8 of docs/specs/2026-10-11-dailies-design.md. Every package this task consumes is already implemented and merged: read each one's src/index.ts and exported types before writing anything, and use them as they are. Where the real signature differs from what the plan says, the code is the truth; follow it and note the difference in your report.
+
+Work test-first, in the order the task lists its steps. Where the task gives a test only by name, write a full test that pins the behaviour described in the task with concrete values. Keep every exported name and signature in the task's "Produces" block exactly as written. Edit only the files and directories listed under the task's Files.
+
+This task decides what the narrator is allowed to say. Two rules are not negotiable: a flag scene is assembled by code from a rule's verdict and never from model output, and no narration line survives without evidence that resolves. Write the prompts so the models are told plainly what they are for, what the reel's arc is (the problem, the key decisions, the implementation, the recorded validation), and that they must cite entry ids and patch quotes exactly as given to them. Keep each prompt in its own file. The stages must record their model spend with addCost.
+
+There is no `.env` and there are no API keys in this checkout, by design. Do not look for any; tests use the mock model client, and anything that needs a key must skip or exit with a clear message when it is absent.
+
+Commit after each green test cycle. Finish by running the tests you added and `pnpm typecheck` at the repo root.
+
+End with a short report: what exists now, test counts, and every deviation from the plan with the reason. If the plan is wrong somewhere, implement the correct thing, fix the plan file too, and say so.
