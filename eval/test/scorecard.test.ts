@@ -41,4 +41,55 @@ describe('buildScorecard', () => {
     expect(md).toContain('2026-10-12');
     expect(md).toContain('20');
   });
+
+  it('scrubs the repository URL out of free-text command and reason fields', () => {
+    const url = 'https://github.com/acme/widgets';
+    const cases: MutationCase[] = [
+      {
+        repo: url,
+        sessionId: 's9',
+        command: `git clone ${url} repo && pnpm test`,
+        original: 'pass',
+        verdictBefore: 'verified',
+        verdictAfter: 'verified',
+        flipped: false,
+      },
+    ];
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: { cases, recognised: 1, unknown: 0, flipRate: 0 },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      // NoCheckpointsError's message literally embeds the repo URL this way.
+      skipped: [{ repo: url, reason: `no checkpoint refs found in ${url}` }],
+    });
+    expect(md).not.toContain(url);
+    expect(md.match(new RegExp(repoKey(url), 'g'))!.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('neutralises markdown-breaking characters in untrusted command, reason and tail text', () => {
+    const cases: MutationCase[] = [
+      {
+        repo: 'https://github.com/acme/widgets',
+        sessionId: 's1',
+        command: 'echo "a | b"\nand more',
+        original: 'pass',
+        verdictBefore: 'verified',
+        verdictAfter: 'verified',
+        flipped: false,
+      },
+    ];
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: { cases, recognised: 1, unknown: 0, flipRate: 0 },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      skipped: [{ repo: 'https://github.com/other/repo', reason: 'line one\nline two' }],
+      tails: [{ tail: 'weird `output`\nwith a newline', count: 3 }],
+    });
+
+    expect(md).toContain('a \\| b');
+    expect(md.split('\n').some((l) => l.trim() === 'and more')).toBe(false);
+    expect(md.split('\n').some((l) => l.trim() === 'line two')).toBe(false);
+    expect(md).not.toContain('`output`');
+    expect(md.split('\n').some((l) => l.trim() === 'with a newline')).toBe(false);
+  });
 });

@@ -15,6 +15,24 @@ function recognitionRate(recognised: number, unknown: number): number {
   return total === 0 ? 0 : recognised / total;
 }
 
+// Collapses line breaks and control characters (which would split a table row or list item
+// across lines) and escapes the characters that would otherwise break a Markdown table cell or
+// inline code span: a literal `|` adds a column, a backtick closes the span early.
+function sanitizeCell(text: string): string {
+  return text
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\u0000-\u001f]/g, '')
+    .replace(/\|/g, '\\|')
+    .replace(/`/g, "'");
+}
+
+// Error messages from @dailies/ingest (e.g. NoCheckpointsError) embed the repo URL verbatim;
+// command text can too (a recorded `git clone <url>`). Scrub it wherever it appears, not just
+// in the dedicated `repo` field.
+function scrubRepo(text: string, repo: string): string {
+  return repo ? text.split(repo).join(repoKey(repo)) : text;
+}
+
 /** Renders the mutation/grounding totals and every non-flipping case as Markdown, identifying
  * repositories only by repoKey so a result never names one. */
 export function buildScorecard(input: ScorecardInput): string {
@@ -40,7 +58,9 @@ export function buildScorecard(input: ScorecardInput): string {
     lines.push('| repo | session | command | original | before | after |');
     lines.push('|---|---|---|---|---|---|');
     for (const c of nonFlipping) {
-      lines.push(`| ${repoKey(c.repo)} | ${c.sessionId} | ${c.command} | ${c.original} | ${c.verdictBefore} | ${c.verdictAfter} |`);
+      const command = sanitizeCell(scrubRepo(c.command, c.repo));
+      const sessionId = sanitizeCell(c.sessionId);
+      lines.push(`| ${repoKey(c.repo)} | ${sessionId} | ${command} | ${c.original} | ${c.verdictBefore} | ${c.verdictAfter} |`);
     }
   }
   lines.push('');
@@ -54,13 +74,13 @@ export function buildScorecard(input: ScorecardInput): string {
   if (skipped.length === 0) {
     lines.push('None.');
   } else {
-    for (const s of skipped) lines.push(`- ${repoKey(s.repo)}: ${s.reason}`);
+    for (const s of skipped) lines.push(`- ${repoKey(s.repo)}: ${sanitizeCell(scrubRepo(s.reason, s.repo))}`);
   }
 
   if (tails.length > 0) {
     lines.push('');
     lines.push('## Unrecognised output tails');
-    tails.forEach((t, i) => lines.push(`${i + 1}. (${t.count}x) \`${t.tail}\``));
+    tails.forEach((t, i) => lines.push(`${i + 1}. (${t.count}x) \`${sanitizeCell(t.tail)}\``));
   }
 
   return `${lines.join('\n')}\n`;
