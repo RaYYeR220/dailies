@@ -1,13 +1,14 @@
-// Every character a reader may take for the end of a line, not only "\n".
+// Characters other than "\n" that a reader may take for the end of a line.
 // eslint-disable-next-line no-control-regex
-const LINE_END = /\r\n|[\n\r\u000b\u000c\u0085\u2028\u2029]/;
+const OTHER_LINE_ENDS = /[\r\u000b\u000c\u0085\u2028\u2029]+/g;
 
 /**
  * Recorded text as a quotation: every line behind a bar. Whatever the text holds, none of its lines can then
- * start like a header or a section of the prompt around it.
+ * start like a header or a section of the prompt around it. A line is what git calls one, text up to "\n";
+ * other line terminators are flattened to a space, so the reader sees the lines the checks in code see.
  */
 export function recorded(text: string): string {
-  return text.split(LINE_END).map((line) => `| ${line}`).join('\n');
+  return text.split('\n').map((line) => `| ${line.replace(OTHER_LINE_ENDS, ' ')}`).join('\n');
 }
 
 export const RECORDED_NOTE = 'Text taken from the record is shown with every line behind a bar, "| like this". The bar marks a quotation and is not part of the text, so leave it out of anything you quote. File paths come from the record too and are shown in double quotes; give a path back without the quotes.';
