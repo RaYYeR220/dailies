@@ -58,7 +58,7 @@ ${STYLE}
 
 ${CITING}
 
-Aim for 8 to 12 lines in total, one to three per scene, which comes to about ${m.targetSec} seconds when spoken.
+Code enforces hard limits after you reply, so stay inside them: at most 11 lines in total, each at most 18 words; at most two terminal scenes and two diff scenes. A line or a scene over these limits is simply cut, so keeping inside them is the only way to be sure what you wrote survives. This keeps the reel near ${m.targetSec} seconds when spoken.
 
 ${RECORDING}
 
