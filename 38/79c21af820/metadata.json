@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "3879c21af820",
+  "strategy": "manual-commit",
+  "branch": "task/2b-ingest-perf",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/ingest/src/cache.ts",
+    "packages/ingest/src/checkpoints.ts",
+    "packages/ingest/src/git.ts",
+    "packages/ingest/src/index.ts",
+    "packages/ingest/src/window.ts",
+    "packages/ingest/test/batch.test.ts",
+    "packages/ingest/test/perf.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/38/79c21af820/0/metadata.json",
+      "transcript": "/38/79c21af820/0/full.jsonl",
+      "compact_transcript": "/38/79c21af820/0/transcript.jsonl",
+      "content_hash": "/38/79c21af820/0/content_hash.txt",
+      "prompt": "/38/79c21af820/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 106,
+    "cache_creation_tokens": 185045,
+    "cache_read_tokens": 8638722,
+    "output_tokens": 86688,
+    "api_call_count": 53
+  }
+}
