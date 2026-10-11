@@ -62,6 +62,7 @@ describe('ground stage', () => {
     expect(told[4]).toContain('sessions.count = 2');
     expect(told[4]).toContain('commits.count = 2');
     expect(told[0]).toMatch(/"entailed"/);
+    for (const part of ['problem', 'key decisions', 'implementation', 'recorded validation']) expect(told[0]).toContain(part);
   });
 
   it('ground drops a line after two failed rewrites and removes the empty scene', async () => {
@@ -82,6 +83,7 @@ describe('ground stage', () => {
     expect(first).toContain('not entailed by its evidence');
     expect(first).toContain('return this.run(job);');
     expect(promptText(asked('writer')[1]!.messages)).toContain('The retry sits in the run method.');
+    for (const part of ['problem', 'key decisions', 'implementation', 'recorded validation', 'exactly as']) expect(first).toContain(part);
     expect(asked('judge')).toHaveLength(7);   // 5 lines, and the 2 rewrites of the one that failed
   });
 

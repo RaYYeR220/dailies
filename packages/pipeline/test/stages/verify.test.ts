@@ -92,6 +92,7 @@ describe('verify stage', () => {
     for (const line of STATUS_PATCH.split('\n')) expect(told).toContain(`| ${line}`);
     expect(told).toContain(SHA_B);
     expect(told).toMatch(/exactly/);
+    for (const part of ['problem', 'key decisions', 'implementation', 'recorded validation']) expect(told).toContain(part);
   });
 
   it.each([
@@ -269,6 +270,7 @@ describe('verify stage', () => {
     expect(told).toContain('All tests pass and the build is green.');
     expect(told).toMatch(/character for character|exactly/);
     for (const kind of ['tests_pass', 'build_passes', 'ran_command', 'fixed_error', 'implemented']) expect(told).toContain(kind);
+    for (const part of ['problem', 'key decisions', 'implementation', 'recorded validation']) expect(told).toContain(part);
   });
 
   it('verify sends turn ends to the extractor in batches of 30', async () => {

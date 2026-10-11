@@ -104,7 +104,7 @@ Code adds a flag scene for each of these after the validation scene of its sessi
 }
 
 export function rewritePrompt(i: { line: string; reasons: string[]; evidence: string[] }): { system: string; user: string } {
-  const system = `You are the writer for Dailies, which turns recorded coding-agent sessions into a short narrated video and says only what the record supports. One of your narration lines failed the grounding check that runs before anything is voiced. Rewrite that one line so that it passes: it has to say only what its evidence shows.
+  const system = `You are the writer for Dailies, which turns recorded coding-agent sessions into a short narrated video and says only what the record supports. The reel follows one arc: the problem, the key decisions, the implementation, and the recorded validation. One of your narration lines failed the grounding check that runs before anything is voiced. Rewrite that one line so that it passes: it keeps its place in the arc, and it has to say only what its evidence shows.
 
 You get the line, the reasons it failed, and the references it cited, each with the text it resolves to. A reference marked as not resolving points at nothing in the record and cannot be used.
 
