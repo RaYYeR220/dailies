@@ -3,17 +3,39 @@ import type { MutationCase } from './mutation';
 import { repoKey } from './repoKey';
 import type { TailCount } from './tails';
 
+export interface VersionSummary {
+  recognised: number;
+  unknown: number;
+  cases: number;
+  flipped: number;
+  flipRate: number;
+}
+
 export interface ScorecardInput {
   date: string;
-  mutation: { cases: MutationCase[]; recognised: number; unknown: number; flipRate: number };
+  mutation: {
+    cases: MutationCase[];
+    recognised: number;
+    unknown: number;
+    flipRate: number;
+    ineligibleReasons?: Record<string, number>;
+  };
   grounding: { fabricated: number; rejected: number; genuine: number; accepted: number };
   skipped: { repo: string; reason: string }[];
   tails?: TailCount[];
+  // Present only when this scorecard reports the corrected mutation benchmark beside the
+  // first, uncorrected run: the comparison table, the explanation and the ineligible-reason
+  // breakdown all key off this field.
+  versions?: { v1: VersionSummary; v1Date: string };
 }
 
 function recognitionRate(recognised: number, unknown: number): number {
   const total = recognised + unknown;
   return total === 0 ? 0 : recognised / total;
+}
+
+function versionRow(label: string, v1: string, v2: string): string {
+  return `| ${label} | ${v1} | ${v2} |`;
 }
 
 // Collapses line breaks and control characters (which would split a table row or list item
@@ -61,22 +83,62 @@ export function safeCommand(command: string): string {
 /** Renders the mutation/grounding totals and every non-flipping case as Markdown, identifying
  * repositories only by repoKey so a result never names one. */
 export function buildScorecard(input: ScorecardInput): string {
-  const { date, mutation, grounding, skipped, tails = [] } = input;
+  const { date, mutation, grounding, skipped, tails = [], versions } = input;
   const rate = recognitionRate(mutation.recognised, mutation.unknown);
   const nonFlipping = mutation.cases.filter((c) => !c.flipped);
 
   const lines: string[] = [];
   lines.push(`# Dailies evaluation scorecard — ${date}`, '');
 
-  lines.push('## Mutation benchmark');
-  lines.push(`- recognised: ${mutation.recognised}`);
-  lines.push(`- unknown: ${mutation.unknown}`);
-  lines.push(`- recognition rate: ${rate.toFixed(3)}`);
-  lines.push(`- cases: ${mutation.cases.length}`);
-  lines.push(`- flip rate: ${mutation.flipRate.toFixed(3)}`);
-  lines.push('');
+  if (versions) {
+    const { v1, v1Date } = versions;
+    const v1Rate = recognitionRate(v1.recognised, v1.unknown);
+    const v2Flipped = mutation.cases.filter((c) => c.flipped).length;
 
-  lines.push('### Non-flipping cases');
+    lines.push('## Mutation benchmark — version 1 vs version 2');
+    lines.push(versionRow('', `version 1 (${v1Date})`, 'version 2'));
+    lines.push(versionRow('---', '---', '---'));
+    lines.push(versionRow('runs seen', `${v1.recognised + v1.unknown}`, `${mutation.recognised + mutation.unknown}`));
+    lines.push(versionRow('recognised', `${v1.recognised}`, `${mutation.recognised}`));
+    lines.push(versionRow('unknown', `${v1.unknown}`, `${mutation.unknown}`));
+    lines.push(versionRow('recognition rate', v1Rate.toFixed(3), rate.toFixed(3)));
+    lines.push(versionRow('cases', `${v1.cases}`, `${mutation.cases.length}`));
+    lines.push(versionRow('flipped', `${v1.flipped}`, `${v2Flipped}`));
+    lines.push(versionRow('flip rate', v1.flipRate.toFixed(3), mutation.flipRate.toFixed(3)));
+    lines.push('');
+
+    lines.push(
+      'Version 1 counted a case for every recognised run and mutated that run in isolation, but ' +
+        'the verifier always rests a `tests_pass`/`build_passes` claim on the last run of its ' +
+        "class before the next message. When several runs of the same class preceded one " +
+        'message, mutating an earlier one could never change the verdict — version 1 was ' +
+        'measuring its own anchoring, not the verifier. Version 2 counts a case only for the ' +
+        'run that actually evidences the claim, so its flip rate reflects the verifier alone.',
+    );
+    lines.push('');
+
+    const reasons = Object.entries(mutation.ineligibleReasons ?? {});
+    lines.push('### Ineligible runs (version 2)');
+    if (reasons.length === 0) {
+      lines.push('None.');
+    } else {
+      for (const [reason, count] of reasons) lines.push(`- ${sanitizeCell(reason)}: ${count}`);
+    }
+    lines.push('');
+
+    lines.push(`See [${v1Date}-mutation.json](${v1Date}-mutation.json) and [${v1Date}-scorecard.md](${v1Date}-scorecard.md) for the version 1 result.`);
+    lines.push('');
+  } else {
+    lines.push('## Mutation benchmark');
+    lines.push(`- recognised: ${mutation.recognised}`);
+    lines.push(`- unknown: ${mutation.unknown}`);
+    lines.push(`- recognition rate: ${rate.toFixed(3)}`);
+    lines.push(`- cases: ${mutation.cases.length}`);
+    lines.push(`- flip rate: ${mutation.flipRate.toFixed(3)}`);
+    lines.push('');
+  }
+
+  lines.push(versions ? '### Eligible cases that did not flip' : '### Non-flipping cases');
   if (nonFlipping.length === 0) {
     lines.push('None.');
   } else {
