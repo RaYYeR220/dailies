@@ -84,17 +84,33 @@ function toDataUrl(path: string): string {
   return `data:image/png;base64,${readFileSync(path).toString('base64')}`;
 }
 
+const MAX_FINDING_TEXT_LEN = 240;
+const truncate = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
+
+// The vision model reads the rendered stills, which ultimately carry content derived from the
+// repository under review; treat its reply as untrusted. A `sceneId` it did not get handed back
+// unmodified is not a real scene, and `issue`/`fix` text is capped before it can reach `reason`,
+// which the runner forwards verbatim as `ctx.feedback` into the next stage's prompt.
+function sanitizeVisionFinding(f: Finding, validSceneIds: Set<string>): Finding {
+  return {
+    sceneId: f.sceneId !== null && validSceneIds.has(f.sceneId) ? f.sceneId : null,
+    issue: truncate(f.issue, MAX_FINDING_TEXT_LEN),
+    severity: f.severity,
+    fix: truncate(f.fix, MAX_FINDING_TEXT_LEN),
+  };
+}
+
 // A bare array, not `{ findings: [...] }`: validating that shape takes a zod object schema built
 // with `z.object`, and this package has no direct dependency on `zod` to build one with (only
 // `@dailies/core` and `@dailies/agent` do). `Finding.array()` reuses the schema already imported
 // from core instead of adding that dependency just for this one call.
-async function visionFindings(client: ModelClient, stills: { sceneId: string; path: string }[]): Promise<Finding[]> {
+async function visionFindings(client: ModelClient, stills: { sceneId: string; path: string }[], validSceneIds: Set<string>): Promise<Finding[]> {
   const findings: Finding[] = [];
   for (let i = 0; i < stills.length; i += STILL_BATCH_SIZE) {
     const batch = stills.slice(i, i + STILL_BATCH_SIZE);
     const { system, user } = reviewerPrompt(batch.map((s) => ({ sceneId: s.sceneId, dataUrl: toDataUrl(s.path) })));
     const reply = await completeJson({ client, role: 'vision', name: 'reviewer', system, user, output: Finding.array() });
-    findings.push(...reply);
+    findings.push(...reply.map((f) => sanitizeVisionFinding(f, validSceneIds)));
   }
   return findings;
 }
@@ -125,7 +141,8 @@ export function buildReviewStage(deps: ReviewStageDeps): Stage<{ pass: boolean; 
         timings: voice.timings,
         outDir: join(ctx.runDir, 'review-stills'),
       });
-      findings.push(...(await visionFindings(deps.client, stills)));
+      const validSceneIds = new Set(ground.storyboard.scenes.map((s) => s.id));
+      findings.push(...(await visionFindings(deps.client, stills, validSceneIds)));
 
       const pass = !findings.some((f) => f.severity === 'high');
       if (!pass) {
