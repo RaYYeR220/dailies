@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureBrowser } from '@remotion/renderer';
 import { buildTimeline, renderReel, renderStills, toSrt } from '../src/index';
+import { stillName } from '../src/render';
 import { fixtureStoryboard, fixtureTimings, shortStoryboard, stressStoryboard, stressTimings } from './fixture';
 
 const RENDER_TIMEOUT = 120_000;
@@ -83,6 +84,18 @@ describe('renderReel', () => {
 
   it('fails before rendering when a line has no timing', async () => {
     await expect(renderReel({ storyboard: fixtureStoryboard(), timings: [], audioPath: null, outDir: scratch() })).rejects.toThrow(/no timing for line l1/);
+  });
+});
+
+describe('stillName', () => {
+  it('numbers stills in scene order and names them after the scene type', () => {
+    expect(stillName(0, 'title')).toBe('01-title.png');
+    expect(stillName(11, 'flag')).toBe('12-flag.png');
+  });
+  it('never lets a scene type it does not know into the file name', () => {
+    // The storyboard reaches the renderer as JSON read back from disk; its types are not checked here.
+    expect(stillName(2, '../../../etc/cron.d/evil')).toBe('03-scene.png');
+    expect(stillName(3, 'diff/../../x')).toBe('04-scene.png');
   });
 });
 

@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundle } from '@remotion/bundler';
 import { ensureBrowser, openBrowser, renderMedia, renderStill, selectComposition } from '@remotion/renderer';
-import type { LineTiming, RenderArtifact, Storyboard } from '@dailies/core';
+import type { LineTiming, RenderArtifact, Scene, Storyboard } from '@dailies/core';
 import { COMPOSITION_ID, NARRATION_FILE, type ReelProps } from './remotion/config';
 import { toSrt } from './srt';
 import { buildTimeline } from './timeline';
@@ -16,6 +16,16 @@ type Composition = Awaited<ReturnType<typeof selectComposition>>;
 interface Stage { serveUrl: string; composition: Composition; browser: Browser }
 
 const middle = (slot: { startFrame: number; durationInFrames: number }) => slot.startFrame + Math.floor(slot.durationInFrames / 2);
+
+const SCENE_TYPES = new Set<string>(['title', 'prompt', 'terminal', 'diff', 'stats', 'flag', 'end'] satisfies Scene['type'][]);
+
+/**
+ * File name of the still for scene `index`. Stills are numbered because scene ids come from a model and need not
+ * be unique; the type is only used when it is one of ours, so nothing read from a storyboard can steer the path.
+ */
+export function stillName(index: number, type: string): string {
+  return `${String(index + 1).padStart(2, '0')}-${SCENE_TYPES.has(type) ? type : 'scene'}.png`;
+}
 
 /** Bundles the composition with `publicDir`, opens one browser for every render in `fn`, and cleans both up. */
 async function withComposition<T>(inputProps: ReelProps, publicDir: string | null, fn: (stage: Stage) => Promise<T>): Promise<T> {
@@ -72,8 +82,7 @@ export async function renderStills(i: { storyboard: Storyboard; timings: LineTim
   return withComposition(inputProps, null, async ({ serveUrl, composition, browser }) => {
     const stills: { sceneId: string; path: string }[] = [];
     for (const [n, slot] of timeline.scenes.entries()) {
-      // Numbered, because scene ids come from a model and need not be unique or safe as file names.
-      const path = join(outDir, `${String(n + 1).padStart(2, '0')}-${i.storyboard.scenes[n]!.type}.png`);
+      const path = join(outDir, stillName(n, i.storyboard.scenes[n]!.type));
       await renderStill({ serveUrl, composition, inputProps, frame: middle(slot), output: path, puppeteerInstance: browser });
       stills.push({ sceneId: slot.sceneId, path });
     }
