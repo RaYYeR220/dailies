@@ -13,7 +13,7 @@ const preview: ReelProps = {
     facts: {},
     scenes: [
       { id: 'title', type: 'title', lines: [], repo: 'owner/repository', windowLabel: 'Last 7 days', sessionCount: 0, commitCount: 0 },
-      { id: 'end', type: 'end', lines: [], repo: 'owner/repository', verified: 0, flagged: 0 },
+      { id: 'end', type: 'end', lines: [], repo: 'owner/repository', verified: 0, flagged: 0, unverified: 0 },
     ],
   },
   timings: [],

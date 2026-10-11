@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Scene, Storyboard } from '@dailies/core';
-import { LIMITS, clampEnd, clampStart, countUp, fitLine, fitSize, parseHunk, tailLines, textUnits, windowRows } from '../src/remotion/text';
+import { BREAKS, LIMITS, boxRoom, clampEnd, clampStart, countUp, decisive, estimateEm, fitText, parseHunk, sourceRef, splitLast, tailLines, textUnits, windowRows, wrap, type Em } from '../src/remotion/text';
 import { fixtureStoryboard, stressStoryboard } from './fixture';
 
 describe('clampEnd', () => {
@@ -105,31 +105,6 @@ describe('countUp', () => {
   });
 });
 
-describe('fitSize', () => {
-  const type = { max: 100, min: 20, advance: 0.5, leading: 1 };
-
-  it('uses the largest size when the text is short', () => {
-    expect(fitSize(4, { width: 1000, height: 100 }, type)).toBe(100);
-  });
-  it('shrinks until the text fits the box with room for ragged line ends', () => {
-    expect(fitSize(20, { width: 1000, height: 100 }, type)).toBe(83);    // 24 columns * 1 row * 0.85 >= 20
-    expect(fitSize(200, { width: 1000, height: 300 }, type)).toBe(50);   // 40 columns * 6 rows * 0.85 >= 200
-  });
-  it('never goes below the minimum', () => {
-    expect(fitSize(100_000, { width: 1000, height: 100 }, type)).toBe(20);
-  });
-});
-
-describe('fitLine', () => {
-  const type = { max: 100, min: 20, advance: 0.5 };
-
-  it('fits a single line to a width', () => {
-    expect(fitLine(10, 1000, type)).toBe(100);
-    expect(fitLine(40, 1000, type)).toBe(46);     // 40 glyphs * 0.5 em * 46 px <= 92% of 1000 px
-    expect(fitLine(400, 1000, type)).toBe(20);
-  });
-});
-
 describe('textUnits', () => {
   it('counts plain lowercase Latin text one unit per character', () => {
     expect(textUnits('retry queue')).toBe(11);
@@ -140,10 +115,130 @@ describe('textUnits', () => {
     expect(textUnits('日本')).toBeCloseTo(4.8);
     expect(textUnits('🎉')).toBeCloseTo(2.4);
   });
+});
+
+// Half an em per character: widths that can be checked by counting.
+const em: Em = (text) => Array.from(text).length * 0.5;
+
+describe('wrap', () => {
+  it('breaks at spaces, filling each line as far as it goes', () => {
+    expect(wrap('add retry with backoff to the sender', () => 8, em)).toEqual(['add retry with', 'backoff to the', 'sender']);
+  });
+  it('gives each line its own width', () => {
+    expect(wrap('aa bb cc dd ee', (i) => [1, 2.5, 4][i] ?? 4, em)).toEqual(['aa', 'bb cc', 'dd ee']);
+  });
+  it('breaks prose after a hyphen or a slash, and a name after a dot or an underscore too', () => {
+    expect(wrap('acme/retry-queue', () => 3, em)).toEqual(['acme/', 'retry-', 'queue']);
+    expect(wrap('with_a.name', () => 3, em)).toEqual(['with_a', '.name']);
+    expect(wrap('with_a.name', () => 3, em, BREAKS.name)).toEqual(['with_', 'a.name']);
+  });
+  it('splits a word that is longer than a line', () => {
+    expect(wrap('abcdefghij kl', () => 2, em)).toEqual(['abcd', 'efgh', 'ij', 'kl']);
+  });
+  it('returns nothing for blank text', () => {
+    expect(wrap('  \n ', () => 10, em)).toEqual([]);
+  });
+});
+
+describe('fitText', () => {
+  const type = { max: 100, min: 40, leading: 1 };
+
+  it('uses the largest size when the text is short', () => {
+    expect(fitText('retry', type, boxRoom(1000, 200), em)).toEqual({ size: 100, lines: ['retry'], cut: false });
+  });
+  it('wraps before it shrinks, and shrinks until the lines fit the room', () => {
+    const two = fitText('retry with backoff', type, boxRoom(600, 200), em);
+    expect(two).toMatchObject({ size: 100, cut: false });
+    expect(two.lines).toHaveLength(2);
+    const one = fitText('retry with backoff', type, boxRoom(600, 100), em);
+    expect(one.lines).toEqual(['retry with backoff']);
+    expect(one.size).toBeLessThanOrEqual(600 / (18 * 0.5));
+    expect(one.size).toBeGreaterThan(60);
+  });
+  it('evens the lines out instead of leaving a short last one', () => {
+    const { lines } = fitText('one two three four five six seven', { max: 40, min: 40, leading: 1 }, boxRoom(400, 80), em);
+    expect(lines).toEqual(['one two three four', 'five six seven']);
+  });
+  it('never sets text below the smallest size: what does not fit is cut with an ellipsis', () => {
+    const fitted = fitText('x'.repeat(40) + ' ' + 'y'.repeat(400), type, boxRoom(400, 80), em);
+    expect(fitted).toMatchObject({ size: 40, cut: true });
+    expect(fitted.lines).toHaveLength(2);
+    expect(fitted.lines[1]!.endsWith('…')).toBe(true);
+    for (const line of fitted.lines) expect(em(line) * fitted.size).toBeLessThanOrEqual(400);
+  });
+  it('honours a cap on the number of lines', () => {
+    const fitted = fitText('a b c d e f g h', { max: 40, min: 40, leading: 1 }, boxRoom(40, 1000), em, { maxLines: 2 });
+    expect(fitted.lines).toHaveLength(2);
+    expect(fitted.cut).toBe(true);
+  });
+  it('fits lines to a room whose width changes from line to line', () => {
+    // A lens: the middle line of three is the widest.
+    const lens = (count: number, lineHeight: number) => (count * lineHeight > 300 ? null : Array.from({ length: count }, (_, i) => (Math.abs(i - (count - 1) / 2) < 0.75 ? 500 : 300)));
+    const fitted = fitText('aaaa bbbb cccc dddd eeee ffff', { max: 50, min: 50, leading: 1 }, lens, em);
+    expect(fitted.cut).toBe(false);
+    fitted.lines.forEach((line, i) => expect(em(line) * 50).toBeLessThanOrEqual(lens(fitted.lines.length, 50)![i]!));
+  });
   it('makes a Cyrillic quote fit at a smaller size than a Latin one of the same length', () => {
-    const type = { max: 92, min: 46, advance: 0.42, leading: 1.2 };
-    const box = { width: 1600, height: 560 };
-    expect(fitSize(textUnits('д'.repeat(280)), box, type)).toBeLessThan(fitSize(textUnits('d'.repeat(280)), box, type));
+    const estimate = estimateEm(0.6);
+    const quote = { max: 92, min: 40, leading: 1.2 };
+    const room = boxRoom(1600, 300);
+    expect(fitText('д'.repeat(8).concat(' ').repeat(30), quote, room, estimate).size).toBeLessThan(fitText('d'.repeat(8).concat(' ').repeat(30), quote, room, estimate).size);
+  });
+  it('returns no lines when there is no room at all', () => {
+    expect(fitText('retry', type, () => null, em)).toEqual({ size: 40, lines: [], cut: true });
+  });
+});
+
+describe('decisive', () => {
+  const failed = ' FAIL  test/queue.test.ts > retries a failed job\nAssertionError: expected 1 to be 3\n\n Test Files  1 failed (1)\n      Tests  1 failed | 4 passed (5)';
+  const passed = ' PASS  test/queue.test.ts (5 tests) 212ms\n\n Test Files  1 passed (1)\n      Tests  5 passed (5)';
+
+  it('leads with the failures of a failing run and keeps what passed as the rest', () => {
+    expect(decisive(failed, false)).toEqual({ kind: 'count', headline: '1 failed', detail: '4 passed' });
+  });
+  it('leads with what passed in a passing run', () => {
+    expect(decisive(passed, true)).toEqual({ kind: 'count', headline: '5 passed', detail: null });
+  });
+  it('reads the totals of other runners', () => {
+    expect(decisive('Tests:       2 failed, 12 passed, 14 total\nSnapshots:   0 total\nTime:        1.2 s', false)).toMatchObject({ headline: '2 failed', detail: '12 passed' });
+    expect(decisive('===== 1 failed, 4 passed in 0.12s =====', false)).toMatchObject({ headline: '1 failed', detail: '4 passed' });
+    expect(decisive('test result: ok. 5 passed; 0 failed; 0 ignored', true)).toMatchObject({ headline: '5 passed', detail: null });
+    expect(decisive('  14 passing (2s)\n  1 pending', true)).toMatchObject({ headline: '14 passing' });
+    expect(decisive('src/a.ts(3,1): error TS2304\nFound 3 errors in 2 files.', false)).toMatchObject({ headline: '3 errors' });
+  });
+  it('falls back to a count of anything when nothing passed or failed', () => {
+    expect(decisive(' ✓ stage-1.test.ts (12 tests) 4ms\n ✓ stage-2.test.ts (12 t', true)).toMatchObject({ kind: 'count', headline: '12 tests' });
+  });
+  it('gives the last line of output that has no count in it', () => {
+    expect(decisive('compiling…\n\nerror: could not   find `Cargo.toml`\n', false)).toEqual({ kind: 'line', headline: 'error: could not find `Cargo.toml`', detail: null });
+  });
+  it('says only what the step itself says when there is no output', () => {
+    expect(decisive(' \n', true)).toEqual({ kind: 'status', headline: 'ok', detail: null });
+    expect(decisive('', false)).toEqual({ kind: 'status', headline: 'failed', detail: null });
+  });
+});
+
+describe('sourceRef', () => {
+  it('names the session and the entry of an entry id', () => {
+    expect(sourceRef('s2:31')).toBe('session s2 · entry 31');
+  });
+  it('shortens a long session id', () => {
+    expect(sourceRef('0f3a9c21-7b54-4e19-a1c3-5d2e8f6b9a70:212')).toBe('session 0f3a9c21… · entry 212');
+  });
+  it('shows an id of another shape as it is', () => {
+    expect(sourceRef('c_7')).toBe('c_7');
+    expect(sourceRef(':4')).toBe(':4');
+  });
+});
+
+describe('splitLast', () => {
+  it('splits a repo into owner and name, and a path into directory and file', () => {
+    expect(splitLast('acme/retry-queue')).toEqual({ head: 'acme/', tail: 'retry-queue' });
+    expect(splitLast('packages/reel/src/theme.ts')).toEqual({ head: 'packages/reel/src/', tail: 'theme.ts' });
+  });
+  it('leaves a name without a slash whole', () => {
+    expect(splitLast('theme.ts')).toEqual({ head: '', tail: 'theme.ts' });
+    expect(splitLast('dir/')).toEqual({ head: '', tail: 'dir/' });
   });
 });
 

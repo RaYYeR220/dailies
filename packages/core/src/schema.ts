@@ -82,7 +82,7 @@ export const Scene = z.discriminatedUnion('type', [
   z.object({ ...spoken, type: z.literal('diff'), sha: z.string(), path: z.string(), hunk: z.string().max(2400), added: z.number().int(), removed: z.number().int() }),
   z.object({ ...spoken, type: z.literal('stats'), items: z.array(z.object({ label: z.string().max(24), value: z.string().max(16), statKey: z.string() })).min(1).max(6) }),
   z.object({ ...spoken, type: z.literal('flag'), claimId: z.string(), quote: z.string().max(240), verdict: z.enum(['contradicted', 'stale']), reality: z.string().max(200) }),
-  z.object({ ...silent, type: z.literal('end'), repo: z.string(), verified: z.number().int(), flagged: z.number().int() }),
+  z.object({ ...silent, type: z.literal('end'), repo: z.string(), verified: z.number().int(), flagged: z.number().int(), unverified: z.number().int().default(0) }),
 ]);
 export type Scene = z.infer<typeof Scene>;
 

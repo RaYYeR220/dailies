@@ -1,48 +1,85 @@
-import React, { createContext, useContext } from 'react';
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Easing, continueRender, delayRender, interpolate } from 'remotion';
 import type { Scene } from '@dailies/core';
-import { theme } from '../theme';
-import { clampStart, fitSize, textUnits } from './text';
+import { fontsReady, theme } from '../theme';
+import type { Span } from './cues';
+import type { Shot } from './lens';
+import { ringAround } from './pencil';
+import { FACE, emOf, faceStyle, forgetMeasures, type Face } from './measure';
+import { BREAKS, clampWidth, fitText, sourceRef, splitLast, type Fitted } from './text';
 
-const { color, font, size, weight, leading, tracking, space, stroke, layout, motion, advance } = theme;
+const { color, motion, pencil, size, leading, space } = theme;
 
 export type SceneOf<T extends Scene['type']> = Extract<Scene, { type: T }>;
 
-export const ReelContext = createContext<{ repo: string; captions: boolean }>({ repo: '', captions: false });
-
-const HEADER_REPO_CHARS = 48;
-
-/** The area a scene may draw in. It is shorter in captions mode so the caption bar never covers content. */
-export function useContentBox(full = false): { width: number; height: number } {
-  const { width, height } = useVideoConfig();
-  const { captions } = useContext(ReelContext);
-  const bottom = captions && !full ? layout.contentBottomCaptions : layout.contentBottom;
-  return { width: width - 2 * layout.marginX, height: height - layout.contentTop - bottom };
+/** The three layers a scene draws: what is on the film, what is under the glass, and what lies over both. */
+export interface SceneParts<T extends Scene['type']> {
+  Film: React.FC<{ scene: SceneOf<T> }>;
+  Glass: React.FC<{ scene: SceneOf<T> }>;
+  Over?: React.FC<{ scene: SceneOf<T> }>;
 }
+
+/** What a scene knows about its own time and place while it is on screen. */
+export interface Clock {
+  /** Frames since the scene's cut: negative while it is still arriving, past `duration` while it leaves. */
+  frame: number;
+  duration: number;
+  fps: number;
+  /** Frames after the cut by which the lens has landed on this scene. */
+  landing: number;
+  /** The spans of the scene's narration lines. */
+  lines: Span[];
+  shot: Shot;
+  /** The y the scene's content has to stay above: the frame's height, or the top of the caption inset. */
+  bottom: number;
+  /** A still: every cue counts as already passed, so the frame shows the scene as it ends up. */
+  settled: boolean;
+}
+
+export const SceneContext = createContext<Clock | null>(null);
 
 const CLAMP = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const ease = Easing.bezier(...motion.ease);
 
-/** Scene-local motion. Every helper has finished by `settle` frames, before the middle of the scene. */
-export function useMotion() {
-  const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
-  const settle = Math.max(1, durationInFrames * motion.settleBy);
+/** The scene's clock, with its motion. Every helper but `drawn` has finished by `settle` frames, before the middle of the scene. */
+export function useScene() {
+  const clock = useContext(SceneContext);
+  if (!clock) throw new Error('a scene layer was drawn outside a scene');
+  const { frame, fps, duration, landing, settled } = clock;
+  const settle = Math.max(1, duration * motion.settleBy);
   const length = Math.max(1, Math.min(motion.enterSec * fps, settle));
   const from = (start: number, frames: number) => interpolate(frame, [start, start + Math.max(1, frames)], [0, 1], { ...CLAMP, easing: ease });
+  // Entrances wait for the lens: they start when it is most of the way there.
+  const arrive = Math.min(landing * 0.5, Math.max(0, settle - length));
   return {
-    frame,
-    fps,
+    ...clock,
     settle,
-    /** Entrance of element `order` in a quick stagger from the top of the scene. */
-    enter: (order = 0) => from(Math.min(order * motion.staggerSec * fps, settle - length), length),
-    /** Entrance of item `index` of `count`, the starts spread across the settle window. */
-    reveal: (index: number, count: number) => from(((settle - length) * index) / Math.max(1, count - 1), length),
-    /** Linear progress through slot `index` when the settle window is cut into `count` equal slots. */
-    slot: (index: number, count: number) => interpolate(frame, [(settle * index) / count, Math.max((settle * index) / count + 1, (settle * (index + 1)) / count)], [0, 1], CLAMP),
-    /** Eased progress between two shares of the settle window. */
-    span: (start: number, end: number) => from(settle * start, settle * (end - start)),
+    arrive,
+    /** Entrance of element `order` in a quick stagger once the lens arrives. */
+    enter: (order = 0) => from(Math.min(arrive + order * motion.staggerSec * fps, settle - length), length),
+    /** Entrance of item `index` of `count`, the starts spread from the arrival to the end of the settle window. */
+    reveal: (index: number, count: number) => from(arrive + ((settle - length - arrive) * index) / Math.max(1, count - 1), length),
+    /** Eased progress between two shares of the stretch from the arrival to the end of the settle window. */
+    span: (start: number, end: number) => from(arrive + (settle - arrive) * start, (settle - arrive) * (end - start)),
+    /** How much of a pencil mark cued at `cue` is drawn, 0..1. */
+    drawn: (cue: number, seconds: number = motion.drawSec) => (settled ? 1 : interpolate(frame, [cue, cue + Math.max(1, seconds * fps)], [0, 1], CLAMP)),
+    /** Frames since `cue`; a still is well past every cue (ten seconds, which any spring has long settled in). */
+    since: (cue: number) => (settled ? 10 * fps : frame - cue),
   };
+}
+
+/** True once every face has loaded. Text is measured to be fitted, so nothing is laid out before that. */
+export function useFonts(): boolean {
+  const [handle] = useState(() => delayRender('Loading the reel fonts'));
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    // A face that fails to load must not hang the render: the fallback family sets the text instead.
+    fontsReady.catch(() => undefined).then(() => { if (live) { forgetMeasures(); setReady(true); } });
+    return () => { live = false; };
+  }, []);
+  useEffect(() => { if (ready) continueRender(handle); }, [ready, handle]);
+  return ready;
 }
 
 /** Fades and lifts its children in as `progress` goes 0..1. */
@@ -50,71 +87,113 @@ export const Rise: React.FC<{ progress: number; style?: React.CSSProperties; chi
   <div style={{ opacity: progress, transform: `translateY(${(1 - progress) * motion.riseBy}px)`, ...style }}>{children}</div>
 );
 
-export const Label: React.FC<{ tone?: string; children: React.ReactNode }> = ({ tone = color.muted, children }) => (
-  <div style={{ fontFamily: font.text, fontSize: size.label, fontWeight: weight.medium, lineHeight: leading.text, letterSpacing: tracking.label, textTransform: 'uppercase', color: tone }}>
-    {children}
-  </div>
-);
-
-/** A hairline that draws itself from the left. */
-export const Rule: React.FC<{ progress?: number; tone?: string }> = ({ progress = 1, tone = color.edge }) => (
-  <div style={{ height: stroke.hair, width: `${progress * 100}%`, background: tone }} />
-);
-
-export const Panel: React.FC<{ style?: React.CSSProperties; children: React.ReactNode }> = ({ style, children }) => (
-  <div style={{ background: color.panel, border: `${stroke.hair}px solid ${color.edge}`, borderRadius: theme.radius.lg, overflow: 'hidden', ...style }}>{children}</div>
-);
-
-/** Pass or fail, told apart by shape as well as colour. */
-export const Mark: React.FC<{ ok: boolean; progress?: number }> = ({ ok, progress = 1 }) => (
-  <svg width={size.icon} height={size.icon} viewBox="0 0 24 24" fill="none" style={{ opacity: progress, transform: `scale(${progress})`, flexShrink: 0 }}>
-    <path
-      d={ok ? 'M4.5 12.5l5 5L19.5 7' : 'M6 6l12 12M18 6L6 18'}
-      stroke={ok ? color.ok : color.bad}
-      strokeWidth={stroke.icon}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-/** A figure with its unit, as on the title and end cards. */
-export const Count: React.FC<{ value: number; unit: string; tone?: string }> = ({ value, unit, tone = color.text }) => (
-  <div style={{ display: 'flex', alignItems: 'baseline', gap: space.sm }}>
-    <div style={{ fontFamily: font.display, fontSize: size.count, lineHeight: leading.display, color: tone }}>{value.toLocaleString('en-US')}</div>
-    <Label>{unit}</Label>
-  </div>
-);
-
-/** The repo name on the title and end cards, as large as two lines of the content box allow. */
-export const Hero: React.FC<{ text: string }> = ({ text }) => {
-  const box = useContentBox(true);
-  const fontSize = fitSize(textUnits(text), { width: box.width, height: size.hero.max * leading.display * 2 }, { ...size.hero, advance: advance.display, leading: leading.display });
-  return (
-    <div style={{ fontFamily: font.display, fontSize, fontWeight: weight.regular, lineHeight: leading.display, letterSpacing: tracking.display, overflowWrap: 'anywhere' }}>{text}</div>
-  );
-};
+const haloOf = (size: number, halo?: string): React.CSSProperties | null => (halo ? { WebkitTextStroke: `${size * pencil.halo}px ${halo}`, paintOrder: 'stroke fill' } : null);
 
 /**
- * The shared scene frame: an optional header naming the scene kind and the repo, and the content box under it.
- * `full` ignores the caption inset, for scenes that are never narrated.
+ * Fitted text, one element per line so it sets exactly as it was measured. With `halo` every glyph keeps an
+ * outline of that colour under it, which is what lets a pencil mark pass behind type.
  */
-export const Frame: React.FC<{ label?: string; full?: boolean; children: React.ReactNode }> = ({ label, full = false, children }) => {
-  const { repo } = useContext(ReelContext);
-  const box = useContentBox(full);
-  const m = useMotion();
-  return (
-    <AbsoluteFill style={{ color: color.text, fontFamily: font.text }}>
-      {label ? (
-        <div style={{ position: 'absolute', top: layout.headerTop, left: layout.marginX, right: layout.marginX, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: m.enter() }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
-            <div style={{ width: space.md, height: stroke.bar, background: color.accent }} />
-            <Label tone={color.text}>{label}</Label>
-          </div>
-          <div style={{ fontFamily: font.mono, fontSize: size.label, lineHeight: leading.text, color: color.faint }}>{clampStart(repo, HEADER_REPO_CHARS)}</div>
-        </div>
-      ) : null}
-      <div style={{ position: 'absolute', top: layout.contentTop, left: layout.marginX, width: box.width, height: box.height, display: 'flex', flexDirection: 'column' }}>{children}</div>
-    </AbsoluteFill>
-  );
-};
+export const Lines: React.FC<{ fitted: Fitted; face: Face; leading: number; align?: 'left' | 'center' | 'right'; tone?: string; halo?: string; style?: React.CSSProperties }> = ({
+  fitted, face, leading, align = 'left', tone = color.white, halo, style,
+}) => (
+  <div
+    style={{
+      ...faceStyle(face, fitted.size, leading),
+      color: tone,
+      textAlign: align,
+      ...haloOf(fitted.size, halo),
+      ...style,
+    }}
+  >
+    {fitted.lines.map((line, i) => (
+      <div key={i}>{line}</div>
+    ))}
+  </div>
+);
+
+/** One line of type at a fixed size. `halo` as for `Lines`. */
+export const Type: React.FC<{ face: Face; size: number; leading?: number; tone?: string; halo?: string; style?: React.CSSProperties; children: React.ReactNode }> = ({
+  face, size, leading = theme.leading.text, tone = color.white, halo, style, children,
+}) => <div style={{ ...faceStyle(face, size, leading), color: tone, ...haloOf(size, halo), ...style }}>{children}</div>;
+
+/** A way of setting a string: a face and the range of sizes it may take. */
+export interface Role { face: Face; type: { max: number; min: number; leading: number } }
+export type Room = (count: number, lineHeight: number) => number[] | null;
+
+/**
+ * `text` fitted in the first of `roles` that takes it whole. A string too long for the display face at its
+ * floor is set in the text face rather than cut; only the last role may shorten it with an ellipsis.
+ */
+export function fitRoles(text: string, roles: Role[], room: Room, opts: { maxLines?: number; soft?: RegExp; fewest?: boolean } = {}): Fitted & { role: Role } {
+  let last: (Fitted & { role: Role }) | null = null;
+  for (const role of roles) {
+    last = { ...fitText(text, role.type, room, emOf(role.face), opts), role };
+    if (!last.cut && last.lines.length > 0) return last;
+  }
+  if (!last) throw new Error('fitRoles needs at least one role');
+  return last;
+}
+
+/** The width in px of the widest line of a fitted text. */
+export const widthOf = (fitted: Fitted, face: Face): number => Math.max(0, ...fitted.lines.map((line) => emOf(face)(line) * fitted.size));
+
+const OWNER_HEIGHT = size.text.detail * leading.text + space.xs;
+const WHOLE_NAME = 0.3;   // a name on one line has to keep this much of its size range, or the owner moves to a line of its own
+
+/**
+ * A repo name: `owner/name` on one line of display when that stays large, otherwise the owner in the text face
+ * over the name in display, broken where a name may break. `room(above)` is the room for the display lines
+ * when `above` px sit over them.
+ */
+export function fitRepo(repo: string, range: { max: number; min: number }, room: (above: number) => Room, maxLines = 3): { owner: string | null; name: Fitted; height: number } {
+  const type = { ...range, leading: leading.display };
+  const whole = fitText(repo, type, room(0), emOf(FACE.heavy), { maxLines: 1, soft: BREAKS.name });
+  const { head, tail } = splitLast(repo);
+  if (!head || (!whole.cut && whole.lines.length > 0 && whole.size >= range.min + (range.max - range.min) * WHOLE_NAME)) {
+    const name = head ? whole : fitText(repo, type, room(0), emOf(FACE.heavy), { maxLines, soft: BREAKS.name, fewest: true });
+    return { owner: null, name, height: name.lines.length * name.size * leading.display };
+  }
+  const name = fitText(tail, type, room(OWNER_HEIGHT), emOf(FACE.heavy), { maxLines, soft: BREAKS.name, fewest: true });
+  return { owner: head, name, height: OWNER_HEIGHT + name.lines.length * name.size * leading.display };
+}
+
+/** The repo name as `fitRepo` set it. */
+export const RepoName: React.FC<{ fit: ReturnType<typeof fitRepo>; align?: 'left' | 'center' }> = ({ fit, align = 'left' }) => (
+  <div style={{ textAlign: align }}>
+    {fit.owner ? (
+      <Type face={FACE.body} size={size.text.detail} tone={color.soft} style={{ height: OWNER_HEIGHT }}>{fit.owner}</Type>
+    ) : null}
+    <Lines fitted={fit.name} face={FACE.heavy} leading={leading.display} align={align} />
+  </div>
+);
+
+/** A column centred on a point of the glass, measured from the centre of the lens. */
+export const GlassBlock: React.FC<{ at: { cx: number; cy: number }; style?: React.CSSProperties; children: React.ReactNode }> = ({ at, style, children }) => (
+  <div style={{ position: 'absolute', left: at.cx, top: at.cy, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', ...style }}>{children}</div>
+);
+
+/** The roles text is fitted in, in the order they are tried. */
+export const ROLES = {
+  /** A human's words: display while they are few, the text face when they run long. */
+  prompt: [{ face: FACE.light, type: { ...size.display.quote, leading: leading.quote } }, { face: FACE.body, type: { ...size.text.quote, leading: leading.text } }],
+  claim: [{ face: FACE.semi, type: { ...size.display.quote, leading: leading.quote } }, { face: FACE.text, type: { ...size.text.quote, leading: leading.tight } }],
+  result: [{ face: FACE.heavy, type: { ...size.display.result, leading: leading.display } }, { face: FACE.text, type: { ...size.text.value, leading: leading.text } }],
+  output: [{ face: FACE.codeStrong, type: { max: size.code.command, min: size.code.ref, leading: leading.code } }],
+  figure: [{ face: FACE.figure, type: { ...size.display.figure, leading: leading.display } }, { face: FACE.text, type: { ...size.text.value, leading: leading.text } }],
+  value: [{ face: FACE.heavy, type: { ...size.display.value, leading: leading.display } }, { face: FACE.text, type: { ...size.text.value, leading: leading.text } }],
+  reality: [{ face: FACE.text, type: { ...size.text.reality, leading: leading.tight } }],
+} satisfies Record<string, Role[]>;
+
+/** The height in px of a fitted text. */
+export const heightOf = (fitted: Fitted & { role: Role }): number => fitted.lines.length * fitted.size * fitted.role.type.leading;
+
+/** The reference of an entry in the longest form that fits `width` px: with the word `session`, without it, or cut. */
+export function fitRef(entryId: string, width: number): string {
+  const em = emOf(FACE.code);
+  const forms = [sourceRef(entryId), sourceRef(entryId, true)];
+  return forms.find((form) => em(form) * size.code.ref <= width) ?? clampWidth(forms[1]!, width / size.code.ref, em);
+}
+
+/** The box of a pencil ring round a fitted, centred text, standing `pad` px off it. */
+export const ringOf = (fitted: Fitted, face: Face, leading: number, pad: { x: number; y: number }) =>
+  ringAround(fitted.lines.map((line) => emOf(face)(line) * fitted.size), fitted.size * leading, pad);
