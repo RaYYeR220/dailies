@@ -82,6 +82,37 @@
         "label": "Skill: superpowers:test-driven-development",
         "default_collapsed": true
       }
+    },
+    {
+      "id": "claude-skill-toolu_01T6PJ4nh5zgatq8zKmTtfKo",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "code-review"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "73498c381307",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 1155,
+        "end": 1156,
+        "entry_ids": [
+          "94846022-ceca-4b6d-a9f0-3edd37d9da59"
+        ],
+        "tool_use_id": "toolu_01T6PJ4nh5zgatq8zKmTtfKo"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01T6PJ4nh5zgatq8zKmTtfKo"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: code-review",
+        "default_collapsed": true
+      }
     }
   ]
 }
