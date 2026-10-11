@@ -109,14 +109,13 @@ function fixedError(claim: Claim, session: Session): Verdicted {
   if (!lastResult) return unverifiable('the later run has no recorded result');
 
   const outcome = parseOutcome(cls, lastResult.text, lastResult.isError ?? false);
-  if (outcome === 'unknown') return unverifiable('the later run output was not recognised');
-
   const stillPresent = normalize(lastResult.text).includes(subject);
   const evidence: EvidenceRef[] = [entryRef(errorResult.id), entryRef(lastCall.id), entryRef(lastResult.id)];
 
   if (stillPresent || outcome === 'fail') {
     return { verdict: 'contradicted', reason: 'the error is still present in a later run', evidence };
   }
+  if (outcome === 'unknown') return unverifiable('the later run output was not recognised');
   return { verdict: 'verified', reason: 'a later run no longer shows the error', evidence };
 }
 

@@ -248,6 +248,24 @@ describe('fixed_error', () => {
     });
     expect(verifyClaim(c, unknownOutput).verdict).toBe('unverifiable');
   });
+
+  it('is contradicted, not unverifiable, when the later output is unrecognised but still contains the error', () => {
+    const stillThere = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't1', text: "FAIL Cannot find module 'foo'", isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't2', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't2', text: "still seeing: Cannot find module 'foo'", isError: false },
+      { kind: 'assistant', text: "I fixed the 'foo' module error." },
+    ]);
+    const c = claim({
+      sessionId: 's1',
+      entryId: stillThere.entries[4]!.id,
+      quote: "I fixed the 'foo' module error.",
+      kind: 'fixed_error',
+      subject: "Cannot find module 'foo'",
+    });
+    expect(verifyClaim(c, stillThere).verdict).toBe('contradicted');
+  });
 });
 
 describe('empty or whitespace-only subject', () => {
