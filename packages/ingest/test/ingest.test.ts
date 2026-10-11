@@ -167,6 +167,24 @@ describe('ingest', () => {
     expect(resultEntry.text).not.toContain(secret);
   });
 
+  it('redacts a secret near the tail of a multi-megabyte output without scanning the whole thing', () => {
+    const secret = `sk-${'Q'.repeat(30)}`;
+    const output = `${'x'.repeat(3_000_000)} ${secret} ${'x'.repeat(10)}`;
+    const startedAt = Date.now();
+    const { entries } = parseTranscript(
+      's1',
+      JSON.stringify({
+        type: 'assistant',
+        ts: '2026-10-10T07:00:00Z',
+        content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'pnpm test' }, result: { output, status: 'success' } }],
+      }),
+    );
+    expect(Date.now() - startedAt).toBeLessThan(2000);
+    const resultEntry = entries.find((e) => e.kind === 'tool_result')!;
+    expect(resultEntry.text).not.toMatch(/Q{6,}/);
+    expect(resultEntry.text).not.toContain(secret);
+  });
+
   it('skips malformed lines and image blocks', () => {
     const { entries } = parseTranscript(
       's1',

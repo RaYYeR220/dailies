@@ -5,6 +5,9 @@ const TOOL_OUTPUT_LIMIT = 8000;
 const TOOL_OUTPUT_HEAD = 3000;
 const TOOL_OUTPUT_TAIL = 5000;
 const TOOL_INPUT_LIMIT = 4000;
+// Larger than any realistic single secret match (a PEM block included), so a secret sitting
+// right at a truncation cut is still fully visible to redact() before that cut is made.
+const SAFETY_MARGIN = 8192;
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /\u001b\[[0-9;]*[A-Za-z]/g;
 
@@ -12,9 +15,31 @@ function stripAnsi(text: string): string {
   return text.replace(ANSI_RE, '');
 }
 
-function truncateToolOutput(text: string): string {
-  if (text.length <= TOOL_OUTPUT_LIMIT) return text;
-  return `${text.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${text.slice(-TOOL_OUTPUT_TAIL)}`;
+/** Redacts, then truncates to head+tail — redacting first so a secret can't survive by straddling
+ * the cut; bounding the pre-redaction window first so redact() never scans an unbounded string. */
+function redactAndTruncateOutput(text: string): { text: string; hits: number } {
+  if (text.length <= TOOL_OUTPUT_LIMIT) return redact(text);
+
+  const windowSize = TOOL_OUTPUT_HEAD + SAFETY_MARGIN + TOOL_OUTPUT_TAIL + SAFETY_MARGIN;
+  if (text.length <= windowSize) {
+    const r = redact(text);
+    return { text: `${r.text.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${r.text.slice(-TOOL_OUTPUT_TAIL)}`, hits: r.hits };
+  }
+
+  const headWindow = text.slice(0, TOOL_OUTPUT_HEAD + SAFETY_MARGIN);
+  const tailWindow = text.slice(-(TOOL_OUTPUT_TAIL + SAFETY_MARGIN));
+  const redactedHead = redact(headWindow);
+  const redactedTail = redact(tailWindow);
+  return {
+    text: `${redactedHead.text.slice(0, TOOL_OUTPUT_HEAD)}\n…[truncated]…\n${redactedTail.text.slice(-TOOL_OUTPUT_TAIL)}`,
+    hits: redactedHead.hits + redactedTail.hits,
+  };
+}
+
+function redactAndTruncateInput(inputJson: string): { text: string; hits: number } {
+  const bounded = inputJson.length <= TOOL_INPUT_LIMIT + SAFETY_MARGIN ? inputJson : inputJson.slice(0, TOOL_INPUT_LIMIT + SAFETY_MARGIN);
+  const r = redact(bounded);
+  return { text: r.text.slice(0, TOOL_INPUT_LIMIT), hits: r.hits };
 }
 
 interface ToolUseBlock {
@@ -89,9 +114,9 @@ export function parseTranscript(sessionId: string, jsonl: string): { entries: En
           if (redactedCommand) redactions += redactedCommand.hits;
 
           const inputJson = JSON.stringify(input);
-          const redactedInput = redact(inputJson);
+          const redactedInput = redactAndTruncateInput(inputJson);
           redactions += redactedInput.hits;
-          const text = redactedInput.text.slice(0, TOOL_INPUT_LIMIT);
+          const text = redactedInput.text;
 
           pushEntry({
             ts,
@@ -105,9 +130,9 @@ export function parseTranscript(sessionId: string, jsonl: string): { entries: En
 
           if (toolUse.result) {
             const stripped = stripAnsi(toolUse.result.output ?? '');
-            const redactedOutput = redact(stripped);
+            const redactedOutput = redactAndTruncateOutput(stripped);
             redactions += redactedOutput.hits;
-            const text = truncateToolOutput(redactedOutput.text);
+            const text = redactedOutput.text;
             pushEntry({
               ts,
               kind: 'tool_result',

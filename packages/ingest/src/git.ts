@@ -1,3 +1,4 @@
+import { redact } from '@dailies/core';
 import { execFile } from 'node:child_process';
 import { access, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -61,9 +62,13 @@ export async function cloneOrUpdate(repoUrlOrPath: string, dataDir: string): Pro
 
 const MAX_DIFF_FILES = 40;
 const MAX_PATCH_CHARS = 6000;
+// Larger than any realistic single secret match, so a secret sitting right at the truncation
+// cut is still fully visible to redact() before that cut is made; bounds the pre-redaction
+// window so redact() never scans an arbitrarily large patch from an untrusted clone.
+const SAFETY_MARGIN = 8192;
 const SHA_RE = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
 
-/** Returns the patch text for every file changed by `sha`, keyed by path, each capped at 6000 characters. */
+/** Returns the redacted patch text for every file changed by `sha`, keyed by path, each capped at 6000 characters. */
 export async function getDiff(repoDir: string, sha: string): Promise<Record<string, string>> {
   if (!SHA_RE.test(sha)) return {};
   let out: string;
@@ -79,7 +84,8 @@ export async function getDiff(repoDir: string, sha: string): Promise<Record<stri
     const headerMatch = /^diff --git a\/(.+?) b\/(.+?)$/m.exec(chunk);
     const path = headerMatch?.[2];
     if (!path) continue;
-    result[path] = chunk.slice(0, MAX_PATCH_CHARS);
+    const bounded = chunk.length <= MAX_PATCH_CHARS + SAFETY_MARGIN ? chunk : chunk.slice(0, MAX_PATCH_CHARS + SAFETY_MARGIN);
+    result[path] = redact(bounded).text.slice(0, MAX_PATCH_CHARS);
   }
   return result;
 }
