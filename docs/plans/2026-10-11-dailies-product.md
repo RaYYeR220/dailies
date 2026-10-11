@@ -284,4 +284,44 @@ Reference mock-ups of all seven frames exist as static HTML outside the reposito
 
 ### Task 14: Web interface
 
-Depends on Task 11 and on the chosen visual direction. Its steps are written once that direction is fixed; the routes it renders are listed in spec section 7 and the data comes only from the Task 11 API.
+Depends on Task 11. Visual direction: "Loupe", the same language as the reel (Task 16): green-black emulsion `#0d1211` to `#1a2421`, cool white `#eef3f1`, grease-pencil yellow `#ffd60a`; Unbounded, Figtree, Martian Mono; a film strip, one loupe, and four pencil marks (ring = verified, cross = contradicted, dashed ring = stale, question mark = unverified).
+
+**Files:** `apps/web/src/app/**` except `api/**` and `media/**`, `apps/web/src/ui/**`, `apps/web/public/**`, `apps/web/test/ui/**`
+
+**Interfaces:**
+- Consumes: only the HTTP API of Task 11 (`/api/runs`, `/api/runs/[id]`, `/api/runs/[id]/events`, `/api/reels/[id]`, `/api/reels`, `/api/reels/[id]/approve`, `/api/reels/[id]/feedback`, `/media/[id]/[file]`). No direct database or filesystem access from pages or components.
+- Produces: the pages below, and these pure helpers with tests:
+```ts
+// apps/web/src/ui/model.ts
+export type Mark = 'ring' | 'cross' | 'dashed' | 'question';
+export function markFor(verdict: 'verified' | 'contradicted' | 'stale' | 'unverifiable'): Mark
+export function stageStates(stages: { name: string; status: string }[]): { name: string; state: 'done' | 'running' | 'waiting' | 'failed' }[]   // always the nine stages, in pipeline order
+export function lineAt(timings: { lineId: string; startSec: number; endSec: number }[], t: number, audioOffsetSec: number): string | null
+export function evidenceHref(ref: EvidenceRef, repoUrl: string): string | null   // GitHub commit URL for a diff ref, null for entry and stat refs
+export function formatCost(usd: number, budgetUsd: number): string               // "$0.31 of $0.60"
+```
+
+Pages:
+
+| Route | Content |
+|---|---|
+| `/` | Landing. Hero with the claim `Your agents worked all night. Watch the cut.`, the sub line, and a repository input with the button `Paste a repo` that posts to `/api/runs` and navigates to the run page; a 429 or 400 is shown inline in words. Then: a sample reel player (the video of the run named by `NEXT_PUBLIC_FEATURED_RUN` when set, otherwise the section is omitted); how it reads the night, in three steps drawn as frames on a strip, not as cards; one narration line with its evidence opened; the four verdicts with their marks; the command `entire dailies run .`; a footer with the repository link and the line `Verification rests on what the session recorded.` |
+| `/r/[id]` | A run in progress. The nine stages as frames on a strip with done, running, waiting and failed states; the live event log fed by the event stream, reconnecting with `Last-Event-ID`; cost so far against the budget; the gate's four checks as empty mark sockets that fill when the gate stage reports. When the run reaches `needs_approval` a link to the reel page appears; `blocked` and `failed` show the reason in words. |
+| `/reel/[id]` | The player (HTML video with the subtitles track and the poster), and the evidence panel: every narration line with its time, the current one highlighted while the video plays, each line opening to its sources (the quoted transcript entry, or the patch with a link to the commit on GitHub); the flags with their marks and the recorded reality; duration, cost against budget and the run id. Two buttons, `Approve` and `Request changes` (a text box); both ask once for the owner token and keep it in session storage. |
+| `/gallery` | Approved reels, newest first: poster, repository, date. Empty state in words. |
+
+Rules:
+
+- Server components fetch through the API with `fetch`; the event stream and the player are client components. No UI library, no CSS framework: one global stylesheet with the tokens as custom properties, and CSS modules per component.
+- The loupe on the web is how something opens: on the landing it sits over the evidence example, on the reel page the open narration line is "under the glass". It is drawn in SVG by one component.
+- Every page works at 390 px wide without horizontal scroll and is usable by keyboard; marks have text alternatives; motion respects `prefers-reduced-motion`.
+- No table above the fold on the landing. No three-card feature row. No icons in rounded squares.
+
+Reference mock-ups of the landing, the reel page and the run page exist as static HTML outside the repository (path given in the task prompt). They are the visual target; rebuild them as components on real data, and do not import anything from that directory.
+
+- [ ] **Step 1: Write failing tests** for the five helpers in `model.ts` with concrete values (all four verdicts; a run with three done stages, one running and five waiting; a time before the first line, inside a line and after the last; a diff ref, an entry ref; the cost string).
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement** the helpers, the tokens, the loupe, the strip and the marks, then the four pages.
+- [ ] **Step 4: Run the tests, `pnpm typecheck` and `pnpm --filter @dailies/web build`.** Expected: PASS.
+- [ ] **Step 5: Look at it.** Start the app against a temp data directory seeded with one finished run's artifacts (write a small seed script under `apps/web/test/ui/seed.ts` that creates the rows and artifact files from fixtures), open each page at 1440 and 390 wide, screenshot, compare with the reference mock-ups, and fix what is weaker. Repeat until the pages hold up.
+- [ ] **Step 6: Commit.**
