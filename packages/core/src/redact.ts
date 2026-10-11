@@ -1,0 +1,22 @@
+const RULES: [string, RegExp][] = [
+  ['private_key', /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g],
+  ['jwt', /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g],
+  ['bearer', /(Bearer\s+)[A-Za-z0-9._~+/-]{20,}/g],
+  ['provider_key', /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/g],
+  ['github_token', /\bgh[pousr]_[A-Za-z0-9]{20,}/g],
+  ['aws_key_id', /\bAKIA[0-9A-Z]{16}\b/g],
+  ['google_key', /\bAIza[0-9A-Za-z_-]{30,}/g],
+  ['slack_token', /\bxox[baprs]-[A-Za-z0-9-]{10,}/g],
+  ['assignment', /\b([A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD)[A-Z0-9_]*\s*[=:]\s*["']?)([^\s"'\[]{8,})/g],
+];
+export function redact(input: string): { text: string; hits: number } {
+  let hits = 0; let text = input;
+  for (const [kind, re] of RULES) {
+    text = text.replace(re, (...m) => {
+      hits += 1;
+      const keep = kind === 'bearer' || kind === 'assignment' ? (m[1] as string) : '';
+      return `${keep}[REDACTED:${kind}]`;
+    });
+  }
+  return { text, hits };
+}

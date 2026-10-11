@@ -13,6 +13,7 @@ build/
 __pycache__/
 .venv/
 *.pyc
+.dailies/
 
 # local tooling
 .DS_Store

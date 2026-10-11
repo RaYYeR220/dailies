@@ -1,0 +1,17 @@
+{
+  "name": "dailies",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dailies": "tsx packages/cli/src/index.ts"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "vitest": "latest",
+    "tsx": "latest",
+    "@types/node": "latest"
+  }
+}

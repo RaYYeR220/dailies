@@ -1,0 +1,20 @@
+{
+  "name": "@dailies/pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run --dir test" },
+  "dependencies": {
+    "better-sqlite3": "latest",
+    "@dailies/core": "workspace:*",
+    "@dailies/ingest": "workspace:*",
+    "@dailies/agent": "workspace:*",
+    "@dailies/verify": "workspace:*",
+    "@dailies/voice": "workspace:*",
+    "@dailies/reel": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "latest"
+  }
+}

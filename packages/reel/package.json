@@ -1,0 +1,21 @@
+{
+  "name": "@dailies/reel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run --dir test" },
+  "dependencies": {
+    "remotion": "latest",
+    "@remotion/bundler": "latest",
+    "@remotion/renderer": "latest",
+    "@remotion/media": "latest",
+    "@remotion/google-fonts": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "@dailies/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "latest"
+  }
+}
