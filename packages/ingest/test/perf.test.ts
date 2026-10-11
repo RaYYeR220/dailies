@@ -121,7 +121,7 @@ describe('getDiffsBatched', () => {
 });
 
 describe('readCheckpointMetadata', () => {
-  it('caps the number of session indexes read from one checkpoint', async () => {
+  it('caps the number of session indexes read, keeping the lowest-numbered ones, and reports the drop', async () => {
     const repoDir = await makeRepo({
       layout: 'refs',
       checkpoints: [
@@ -139,7 +139,64 @@ describe('readCheckpointMetadata', () => {
     const reader = new ObjectBatchReader(repoDir);
     try {
       const result = await readCheckpointMetadata(repoDir, refs[0]!, reader, 2);
-      expect(result.sessions).toHaveLength(2);
+      expect(result.sessions.map((s) => s.sessionId)).toEqual(['s0', 's1']);
+      expect(result.skipped).toEqual([
+        { ref: refs[0]!.treeish, reason: '1 session index(es) dropped past the 2-per-checkpoint cap' },
+      ]);
+    } finally {
+      reader.close();
+    }
+  });
+
+  it('rejects a zero-padded session index instead of letting it collide with the canonical one', async () => {
+    const repoDir = await mkdtemp(join(tmpdir(), 'dailies-alias-'));
+    await run(repoDir, ['init', '-q', '-b', 'main']);
+    const legitMeta = JSON.stringify({ session_id: 'legit', created_at: '2026-10-10T07:00:00Z' });
+    const aliasMeta = JSON.stringify({ session_id: 'alias', created_at: '2026-10-10T07:00:00Z' });
+
+    async function hashBlob(content: string): Promise<string> {
+      return new Promise((resolvePromise, reject) => {
+        const child = execFile('git', ['hash-object', '-w', '--stdin'], { cwd: repoDir }, (err, stdout) => {
+          if (err) reject(err);
+          else resolvePromise(stdout.toString().trim());
+        });
+        child.stdin!.end(content);
+      });
+    }
+
+    const legitMetaSha = await hashBlob(legitMeta);
+    const aliasMetaSha = await hashBlob(aliasMeta);
+
+    async function mktree(lines: string[]): Promise<string> {
+      return new Promise((resolvePromise, reject) => {
+        const child = execFile('git', ['mktree'], { cwd: repoDir }, (err, stdout) => {
+          if (err) reject(err);
+          else resolvePromise(stdout.toString().trim());
+        });
+        child.stdin!.end(lines.join('\n') + '\n');
+      });
+    }
+
+    const legitDirSha = await mktree([`100644 blob ${legitMetaSha}\tmetadata.json`]);
+    const aliasDirSha = await mktree([`100644 blob ${aliasMetaSha}\tmetadata.json`]);
+    const treeSha = await mktree([`040000 tree ${legitDirSha}\t7`, `040000 tree ${aliasDirSha}\t007`]);
+    const commitSha = await new Promise<string>((resolvePromise, reject) => {
+      execFile(
+        'git',
+        ['commit-tree', treeSha, '-m', 'checkpoint'],
+        { cwd: repoDir, env: { ...process.env, GIT_AUTHOR_NAME: 'f', GIT_AUTHOR_EMAIL: 'f@f.com', GIT_COMMITTER_NAME: 'f', GIT_COMMITTER_EMAIL: 'f@f.com' } },
+        (err, stdout) => (err ? reject(err) : resolvePromise(stdout.toString().trim())),
+      );
+    });
+    await run(repoDir, ['update-ref', 'refs/entire/checkpoints/aa/aaaaaaaa', commitSha]);
+
+    const refs = await listCheckpointRefs(repoDir);
+    const reader = new ObjectBatchReader(repoDir);
+    try {
+      const result = await readCheckpointMetadata(repoDir, refs[0]!, reader);
+      // Only the canonical "7" is a session; "007" is not a valid index at all, so it neither
+      // collides with "7" nor appears as a session of its own.
+      expect(result.sessions.map((s) => s.sessionId)).toEqual(['legit']);
     } finally {
       reader.close();
     }

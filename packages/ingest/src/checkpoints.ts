@@ -77,18 +77,18 @@ export interface SessionMetaOnly {
   transcriptOid: string | null;
 }
 
-const SESSION_FILE_RE = /^(\d+)\/(metadata\.json|transcript\.jsonl)$/;
+// Canonical form only (`0`, or a non-zero digit then digits, up to 7 of them): a zero-padded or
+// otherwise non-canonical spelling of the same integer (`007`, `7`) would parse to the same
+// Number key and silently collide with — or let an attacker overwrite — the real session at that
+// index. Capping at 7 digits also keeps the key itself far below where Number loses precision.
+const SESSION_FILE_RE = /^(0|[1-9]\d{0,6})\/(metadata\.json|transcript\.jsonl)$/;
 // A real checkpoint has a handful of sessions; this only exists to bound how many session
 // indexes a single crafted checkpoint tree (from an untrusted cloned repo) can make the ingest
 // attempt to read, fetch, or report in `skipped`.
 const MAX_SESSIONS_PER_CHECKPOINT = 1000;
 
 /** One recursive `ls-tree` walk of the checkpoint's tree, giving the blob id of every session's metadata and transcript. */
-async function listSessionBlobs(
-  repoDir: string,
-  ref: CheckpointRef,
-  maxSessions = MAX_SESSIONS_PER_CHECKPOINT,
-): Promise<Map<number, { metaOid?: string; transcriptOid?: string }>> {
+async function listSessionBlobs(repoDir: string, ref: CheckpointRef): Promise<Map<number, { metaOid?: string; transcriptOid?: string }>> {
   const out = await git(repoDir, ['ls-tree', '-r', ref.treeish]);
   const byIndex = new Map<number, { metaOid?: string; transcriptOid?: string }>();
 
@@ -103,7 +103,6 @@ async function listSessionBlobs(
     const m = SESSION_FILE_RE.exec(path);
     if (!m || !sha) continue;
     const n = Number(m[1]);
-    if (!byIndex.has(n) && byIndex.size >= maxSessions) continue;
     const entry = byIndex.get(n) ?? {};
     if (m[2] === 'metadata.json') entry.metaOid = sha;
     else entry.transcriptOid = sha;
@@ -134,15 +133,30 @@ export async function readCheckpointMetadata(
   reader: ObjectBatchReader,
   maxSessions = MAX_SESSIONS_PER_CHECKPOINT,
 ): Promise<CheckpointMetadataResult> {
-  const byIndex = await listSessionBlobs(repoDir, ref, maxSessions);
+  const byIndex = await listSessionBlobs(repoDir, ref);
   const sessions: SessionMetaOnly[] = [];
   const skipped: { ref: string; reason: string }[] = [];
 
-  for (const [n, entry] of Array.from(byIndex.entries()).sort((a, b) => a[0] - b[0])) {
-    if (!entry.metaOid) continue;
+  // The cap applies only to indexes that actually carry a metadata.json — the only ones that can
+  // ever produce a session — and in canonical numeric order, not raw `ls-tree` line order: an
+  // attacker could otherwise spend the whole budget on indexes that have only a transcript.jsonl
+  // (and so could never produce a session anyway) ordered ahead of real ones, silently dropping
+  // legitimate sessions instead of the junk entries the cap exists to bound.
+  const eligible = Array.from(byIndex.entries())
+    .filter(([, entry]) => entry.metaOid)
+    .sort((a, b) => a[0] - b[0]);
+  const candidates = eligible.slice(0, maxSessions);
+  if (eligible.length > maxSessions) {
+    skipped.push({
+      ref: ref.treeish,
+      reason: `${eligible.length - maxSessions} session index(es) dropped past the ${maxSessions}-per-checkpoint cap`,
+    });
+  }
+
+  for (const [n, entry] of candidates) {
     let metaBuf: Buffer;
     try {
-      metaBuf = await readBlobOrFetch(repoDir, reader, entry.metaOid);
+      metaBuf = await readBlobOrFetch(repoDir, reader, entry.metaOid!); // filtered to entries with metaOid above
     } catch (err) {
       skipped.push({ ref: `${ref.treeish}#${n}`, reason: err instanceof Error ? err.message : String(err) });
       continue;
