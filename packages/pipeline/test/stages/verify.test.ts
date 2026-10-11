@@ -292,4 +292,35 @@ describe('verify stage', () => {
 
     expect(artifact).toEqual({ claims: [], counts: { verified: 0, contradicted: 0, stale: 0, unverifiable: 0 } });
   });
+
+  it('verify leaves the remaining implemented claims unverifiable once its share of the budget is spent', async () => {
+    const implementedSession = (id: string) =>
+      session(id, [
+        { kind: 'user', text: 'Add a --json flag to the status command.' },
+        { kind: 'assistant', text: 'Added the --json flag to the status command.' },
+      ], { commits: [SHA_B] });
+    const ingest: IngestArtifact = { ...twoSessions(), sessions: [implementedSession('s1'), implementedSession('s2'), implementedSession('s3')], diffs: { [`${SHA_B}:src/status.ts`]: STATUS_PATCH } };
+    const h = harness({
+      artifacts: { ingest },
+      budget: { maxCostPerReelUsd: 1.5, maxTtsCalls: 3, maxRenderSec: 300 },   // verify's share is 30% = $0.45
+      costPerCall: 0.1,
+      reply: (req) => {
+        if (req.role === 'judge') return json({ supported: true, path: 'src/status.ts', quote: PATCH_LINE });
+        const sessionId = givenEntryIds(req)[0]!.split(':')[0]!;
+        return json({ claims: [{ entryId: `${sessionId}:1`, quote: 'Added the --json flag to the status command.', kind: 'implemented' }] });
+      },
+    });
+
+    const { artifact } = await verifyStage(h.deps).run(h.ctx());
+
+    // 3 extractor calls at 0.1 each bring spend to 0.30 (under the 0.45 share). The judge call for
+    // s1's claim passes its check at 0.30 and brings spend to 0.40; s2's claim's check still passes
+    // at 0.40 and brings spend to 0.50. s3's claim's check then sees 0.50 > 0.45 and is skipped.
+    expect(artifact.claims.map((c) => c.verdict)).toEqual(['verified', 'verified', 'unverifiable']);
+    expect(artifact.claims[0]!.sessionId).toBe('s1');
+    expect(artifact.claims[1]!.sessionId).toBe('s2');
+    expect(artifact.claims[2]).toMatchObject({ sessionId: 's3', reason: 'not checked: verification budget reached' });
+    expect(h.calls.filter((c) => c.role === 'judge')).toHaveLength(2);
+    expect(h.events.join('\n')).toContain('verification budget reached');
+  });
 });

@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { completeJson } from '@dailies/agent';
+import { completeJson, type ModelClient } from '@dailies/agent';
 import { ClaimKind, type Claim, type DiffIndex, type Entry, type IngestArtifact, type Session } from '@dailies/core';
 import { normalize, quoteMatches, verifyClaims } from '@dailies/verify';
 import { extractorPrompt } from '../prompts/extractor';
 import { judgePrompt } from '../prompts/judge';
 import type { Stage } from '../types';
 import { cut, oneLine } from './edit';
+import { StageBudgetError, stageMeter } from '../budget';
 import type { StageDeps } from './index';
 
 type Verdict = NonNullable<Claim['verdict']>;
@@ -20,6 +21,8 @@ const JUDGE_BUDGET_CHARS = 24000;
 const MIN_JUDGE_QUOTE_CHARS = 8;
 const SUBJECT_CHARS = 200;
 const MAX_NOT_SHOWN = 40;
+const VERIFY_BUDGET_SHARE = 0.3;
+const BUDGET_REASON = 'not checked: verification budget reached';
 
 const ExtractorReply = z.object({
   claims: z.array(z.object({ entryId: z.string(), quote: z.string(), kind: ClaimKind, subject: z.string().nullish() })),
@@ -58,7 +61,7 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
   const unverifiable = (claim: Claim, reason: string): Claim => ({ ...claim, verdict: 'unverifiable', reason, evidence: [] });
 
   /** Claims the extractor found in one session. One whose quote is not in the entry it names is not a claim. */
-  async function extract(session: Session, nextId: () => string, seen: Set<string>): Promise<{ kept: Claim[]; dropped: number }> {
+  async function extract(session: Session, nextId: () => string, seen: Set<string>, client: ModelClient): Promise<{ kept: Claim[]; dropped: number }> {
     const ends = turnEnds(session);
     const kept: Claim[] = [];
     let dropped = 0;
@@ -68,7 +71,7 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
         sessionId: session.id,
         messages: [...batch.values()].map((e) => ({ entryId: e.id, text: cut(e.text, MESSAGE_CHARS) })),
       });
-      const reply = await completeJson({ client: deps.client, role: 'extractor', name: 'extractor', system, user, output: ExtractorReply });
+      const reply = await completeJson({ client, role: 'extractor', name: 'extractor', system, user, output: ExtractorReply });
       for (const raw of reply.claims) {
         const entry = batch.get(raw.entryId);
         const key = `${raw.entryId}|${raw.kind}|${normalize(raw.quote)}`;
@@ -88,7 +91,7 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
    * `verified` only when the judge quotes one added or removed line of the file it names, out of the patch text
    * it was actually shown. Anything else is unverifiable.
    */
-  async function judgeImplemented(claim: Claim, session: Session | undefined, diffs: DiffIndex): Promise<Claim> {
+  async function judgeImplemented(claim: Claim, session: Session | undefined, diffs: DiffIndex, client: ModelClient): Promise<Claim> {
     const patches = session ? sessionPatches(session, diffs) : [];
     if (patches.length === 0) return unverifiable(claim, 'no commit diff is linked to this session');
 
@@ -101,7 +104,7 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
       room -= patch.length;
     }
     const { system, user } = judgePrompt({ quote: claim.quote, subject: claim.subject, patches: shown, notShown: patches.slice(shown.length, shown.length + MAX_NOT_SHOWN).map((p) => p.path) });
-    const reply = await completeJson({ client: deps.client, role: 'judge', name: 'judge', system, user, output: JudgeReply });
+    const reply = await completeJson({ client, role: 'judge', name: 'judge', system, user, output: JudgeReply });
 
     if (!reply.supported) return unverifiable(claim, 'the judge found no supporting change in the diff');
     const quote = reply.quote ?? '';
@@ -118,22 +121,50 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
       const ingest = ctx.read<IngestArtifact>('ingest');
       const sessions = new Map(ingest.sessions.map((s) => [s.id, s]));
 
+      const budget = stageMeter(deps.meter, ctx.run.budget.maxCostPerReelUsd * VERIFY_BUDGET_SHARE);
+      const checkedClient: ModelClient = { complete: async (req) => { budget.check(); return deps.client.complete(req); } };
+
       let n = 0;
       const nextId = () => `c_${(n += 1)}`;
       const seen = new Set<string>();
       const extracted: Claim[] = [];
       let dropped = 0;
+      let budgetReached = false;
       for (const session of ingest.sessions) {
-        const found = await extract(session, nextId, seen);
-        extracted.push(...found.kept);
-        dropped += found.dropped;
+        try {
+          const found = await extract(session, nextId, seen, checkedClient);
+          extracted.push(...found.kept);
+          dropped += found.dropped;
+        } catch (err) {
+          if (!(err instanceof StageBudgetError)) throw err;
+          budgetReached = true;
+          ctx.log(`verify budget reached while extracting claims: ${err.message}`);
+          break;
+        }
       }
 
       const claims: Claim[] = [];
+      let notChecked = 0;
       for (const claim of verifyClaims(extracted, ingest.sessions)) {
-        const judged = claim.kind === 'implemented' ? await judgeImplemented(claim, sessions.get(claim.sessionId), ingest.diffs) : claim;
-        claims.push(judged.verdict ? judged : unverifiable(judged, 'no rule judged this claim'));
+        if (claim.kind !== 'implemented') {
+          claims.push(claim.verdict ? claim : unverifiable(claim, 'no rule judged this claim'));
+          continue;
+        }
+        if (budgetReached) {
+          claims.push(unverifiable(claim, BUDGET_REASON));
+          notChecked += 1;
+          continue;
+        }
+        try {
+          claims.push(await judgeImplemented(claim, sessions.get(claim.sessionId), ingest.diffs, checkedClient));
+        } catch (err) {
+          if (!(err instanceof StageBudgetError)) throw err;
+          budgetReached = true;
+          claims.push(unverifiable(claim, BUDGET_REASON));
+          notChecked += 1;
+        }
       }
+      if (notChecked > 0) ctx.log(`${notChecked} implemented claim(s) not checked: verification budget reached`);
 
       const counts: Record<Verdict, number> = { verified: 0, contradicted: 0, stale: 0, unverifiable: 0 };
       for (const claim of claims) counts[claim.verdict!] += 1;
