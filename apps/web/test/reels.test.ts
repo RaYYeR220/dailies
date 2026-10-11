@@ -183,6 +183,10 @@ describe('POST /api/reels/[id]/feedback', () => {
     expect((await sendFeedback(id, 'x'.repeat(1001))).status).toBe(400);
   });
 
+  it('returns 404 for an unknown run', async () => {
+    expect((await sendFeedback('run_doesnotexist', 'hello')).status).toBe(404);
+  });
+
   it('stores feedback without an owner token and does not recut', async () => {
     const db = getDb();
     const id = createRun(db, runInput);

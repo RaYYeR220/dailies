@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { loadEnv } from '@dailies/core';
-import { recut } from '@dailies/pipeline';
+import { getRun, recut } from '@dailies/pipeline';
 import { getDb } from '../../../../../server/db';
 import { addFeedback } from '../../../../../server/store';
 
@@ -29,6 +29,11 @@ export async function POST(
 
   const { id } = await params;
   const db = getDb();
+  try {
+    getRun(db, id);
+  } catch {
+    return NextResponse.json({ error: 'run not found' }, { status: 404 });
+  }
   addFeedback(db, id, body.text);
 
   const token = process.env.DAILIES_OWNER_TOKEN;
