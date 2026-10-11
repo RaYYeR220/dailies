@@ -1,24 +1,18 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { Readable } from 'node:stream';
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { loadEnv } from '@dailies/core';
 import { getDataDir, getDb } from '../../../../server/db';
 import { getReel } from '../../../../server/store';
 import { mediaFilePath } from '../../../../server/artifacts';
 import { RUN_ID_PATTERN, MEDIA_FILES } from '../../../../server/validate';
+import { hasValidOwnerToken } from '../../../../server/owner-token';
 
 const CONTENT_TYPES: Record<string, string> = {
   'reel.mp4': 'video/mp4',
   'reel.srt': 'application/x-subrip',
   'poster.png': 'image/png',
 };
-
-function constantTimeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
-}
 
 export async function GET(
   request: Request,
@@ -32,9 +26,7 @@ export async function GET(
   loadEnv();
   const db = getDb();
   const reel = getReel(db, id);
-  const ownerToken = process.env.DAILIES_OWNER_TOKEN;
-  const providedToken = request.headers.get('x-owner-token');
-  const hasOwnerToken = !!ownerToken && !!providedToken && constantTimeEqual(providedToken, ownerToken);
+  const hasOwnerToken = hasValidOwnerToken(request);
   const hasCapability = new URL(request.url).searchParams.get('k') === id;
   const approved = reel?.status === 'approved';
 
@@ -52,8 +44,18 @@ export async function GET(
   const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get('range') ?? '');
 
   if (range) {
-    const start = range[1] ? Number(range[1]) : 0;
-    const end = range[2] ? Number(range[2]) : size - 1;
+    const hasStart = range[1] !== '';
+    const hasEnd = range[2] !== '';
+    let start: number;
+    let end: number;
+    if (!hasStart) {
+      // "bytes=-500" is a suffix range: the last 500 bytes.
+      start = Math.max(size - Number(range[2]), 0);
+      end = size - 1;
+    } else {
+      start = Number(range[1]);
+      end = hasEnd ? Number(range[2]) : size - 1;
+    }
     if (start <= end && end < size) {
       const stream = Readable.toWeb(createReadStream(path, { start, end })) as ReadableStream<Uint8Array>;
       return new Response(stream, {

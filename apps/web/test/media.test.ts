@@ -67,6 +67,12 @@ describe('GET /media/[id]/[file]', () => {
     expect(ranged.headers.get('content-range')).toBe('bytes 2-5/10');
     expect(ranged.headers.get('content-length')).toBe('4');
     expect(new Uint8Array(await ranged.arrayBuffer())).toEqual(Uint8Array.from([2, 3, 4, 5]));
+
+    // A suffix range ("bytes=-N") means the last N bytes, per RFC 7233.
+    const suffix = await media(id, 'reel.mp4', { headers: { Range: 'bytes=-3' } });
+    expect(suffix.status).toBe(206);
+    expect(suffix.headers.get('content-range')).toBe('bytes 7-9/10');
+    expect(new Uint8Array(await suffix.arrayBuffer())).toEqual(Uint8Array.from([7, 8, 9]));
   });
 
   it('serves an approved reel to anyone, and a draft reel only with the owner token or ?k=', async () => {

@@ -1,15 +1,9 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { loadEnv } from '@dailies/core';
 import { getRun, recut } from '@dailies/pipeline';
 import { getDb } from '../../../../../server/db';
 import { addFeedback } from '../../../../../server/store';
-
-function constantTimeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
-}
+import { hasValidOwnerToken } from '../../../../../server/owner-token';
 
 export async function POST(
   request: Request,
@@ -29,19 +23,20 @@ export async function POST(
 
   const { id } = await params;
   const db = getDb();
+  let run;
   try {
-    getRun(db, id);
+    run = getRun(db, id);
   } catch {
     return NextResponse.json({ error: 'run not found' }, { status: 404 });
   }
   addFeedback(db, id, body.text);
 
-  const token = process.env.DAILIES_OWNER_TOKEN;
-  const provided = request.headers.get('x-owner-token');
-  const isOwner = !!token && !!provided && constantTimeEqual(provided, token);
+  const isOwner = hasValidOwnerToken(request);
 
+  // A run still 'running' may be mid-flight in the worker process right
+  // now; recutting it concurrently would race its stage/artifact writes.
   let didRecut = false;
-  if (isOwner) {
+  if (isOwner && run.status !== 'running') {
     try {
       recut(db, id, body.text);
       didRecut = true;

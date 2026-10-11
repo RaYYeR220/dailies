@@ -216,4 +216,23 @@ describe('POST /api/reels/[id]/feedback', () => {
     expect(body.recut).toBe(true);
     expect(getRun(db, id).status).toBe('running');
   });
+
+  it('with the owner token does not recut a run that is still running', async () => {
+    process.env.DAILIES_OWNER_TOKEN = 'secret-token';
+    const db = getDb();
+    const id = createRun(db, runInput); // status 'running' by default
+    // verify is done but the run itself is still 'running' -- e.g. the
+    // worker is mid-flight on 'script' in another process right now.
+    for (const name of ['ingest', 'edit', 'verify']) {
+      db.prepare(
+        "INSERT INTO stages (run_id, name, status, attempt) VALUES (?, ?, 'done', 1)",
+      ).run(id, name);
+    }
+
+    const res = await sendFeedback(id, 'make it punchier', { 'x-owner-token': 'secret-token' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { recut: boolean };
+    expect(body.recut).toBe(false);
+    expect(getRun(db, id).status).toBe('running');
+  });
 });
