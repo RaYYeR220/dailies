@@ -6,7 +6,7 @@ import { entailPrompt } from '../prompts/entail';
 import { recorded } from '../prompts/judge';
 import { rewritePrompt } from '../prompts/writer';
 import type { Stage, StageResult } from '../types';
-import { cut } from './edit';
+import { cut, oneLine } from './edit';
 import type { StageDeps } from './index';
 import type { ScriptArtifact } from './script';
 
@@ -18,6 +18,7 @@ const MAX_REWRITES = 2;
 const MIN_SPOKEN_SCENES = 2;
 const EVIDENCE_CHARS = 2000;
 const REASON_CHARS = 1500;
+const ONE_REASON_CHARS = 200;
 const NOT_ENTAILED = 'not entailed by its evidence';
 const INVALID_REWRITE = 'the rewrite was not a valid line';
 
@@ -31,7 +32,16 @@ const Rewrite = z.object({ text: z.string(), evidence: z.array(z.unknown()).null
  * holds digits that check does not find in the very entry the quote was taken from.
  */
 export function evidenceResolves(line: Line, record: LineContext): { ok: boolean; reasons: string[] } {
-  return checkLine({ ...line, text: '-' }, record, { skipStyle: true });
+  return checked({ ...line, text: '-' }, record, { skipStyle: true });
+}
+
+/**
+ * `checkLine`, with each reason as one bounded line. A reason names the reference that failed, in the words a
+ * model chose for it, and it travels on: into the rewrite prompt, the loop-back feedback and the run record.
+ */
+export function checked(line: Line, record: LineContext, o: { skipStyle?: boolean } = {}): { ok: boolean; reasons: string[] } {
+  const result = checkLine(line, record, o);
+  return { ok: result.ok, reasons: result.reasons.map((reason) => oneLine(reason, ONE_REASON_CHARS)) };
 }
 
 /** `text` in at most `max` characters, around `quote` when the quote is in it. */
@@ -64,8 +74,8 @@ export function groundStage(deps: StageDeps): Stage<GroundArtifact> {
 
       /** Why a line may not be spoken: what the checks in code found, or, when they pass, the entailment judge's no. */
       const failures = async (line: Line): Promise<string[]> => {
-        const checked = checkLine(line, record);
-        if (!checked.ok) return checked.reasons;
+        const inCode = checked(line, record);
+        if (!inCode.ok) return inCode.reasons;
         const { system, user } = entailPrompt({ line: line.text, evidence: cited(line) });
         const { entailed } = await completeJson({ client: deps.client, role: 'judge', name: 'entailment', system, user, output: Entailment });
         return entailed ? [] : [NOT_ENTAILED];

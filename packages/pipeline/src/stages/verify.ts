@@ -5,7 +5,7 @@ import { normalize, quoteMatches, verifyClaims } from '@dailies/verify';
 import { extractorPrompt } from '../prompts/extractor';
 import { judgePrompt } from '../prompts/judge';
 import type { Stage } from '../types';
-import { cut } from './edit';
+import { cut, oneLine } from './edit';
 import type { StageDeps } from './index';
 
 type Verdict = NonNullable<Claim['verdict']>;
@@ -46,10 +46,6 @@ function changedLines(patch: string): string[] {
   return patch.split('\n').filter((line) => (line.startsWith('+') && !line.startsWith('+++')) || (line.startsWith('-') && !line.startsWith('---')));
 }
 
-// The subject is model output about untrusted text and is passed on to the judge: one bounded line, nothing else.
-// eslint-disable-next-line no-control-regex
-const oneLine = (text: string, max: number) => cut(text.replace(/[\u0000-\u001f\u007f\s]+/g, ' ').trim(), max);
-
 function sessionPatches(session: Session, diffs: DiffIndex): { sha: string; path: string; patch: string }[] {
   return session.commits.flatMap((sha) =>
     Object.entries(diffs)
@@ -79,7 +75,9 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
         if (!entry || normalize(raw.quote) === '' || !quoteMatches(raw.quote, entry.text)) dropped += 1;
         else if (!seen.has(key)) {
           seen.add(key);
-          kept.push({ id: nextId(), sessionId: session.id, entryId: entry.id, quote: raw.quote, kind: raw.kind, subject: raw.subject ? oneLine(raw.subject, SUBJECT_CHARS) : undefined, evidence: [] });
+          // The subject is model output about untrusted text and is passed on to the judge: one bounded line, nothing else.
+          const subject = raw.subject ? oneLine(raw.subject, SUBJECT_CHARS) : undefined;
+          kept.push({ id: nextId(), sessionId: session.id, entryId: entry.id, quote: raw.quote, kind: raw.kind, subject, evidence: [] });
         }
       }
     }

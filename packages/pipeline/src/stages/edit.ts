@@ -26,6 +26,12 @@ export function cut(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
+/** `text` as one line of at most `max` characters: line breaks and control characters become single spaces. */
+export function oneLine(text: string, max: number): string {
+  // eslint-disable-next-line no-control-regex
+  return cut(text.replace(/[\u0000-\u001f\u007f\u0085\u2028\u2029\s]+/g, ' ').trim(), max);
+}
+
 /** Added and removed line counts of one file's patch, headers excluded. */
 export function patchCounts(patch: string): { added: number; removed: number } {
   let added = 0;
