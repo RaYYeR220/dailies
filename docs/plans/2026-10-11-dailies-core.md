@@ -1034,3 +1034,30 @@ Behaviour:
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run all pipeline and agent tests.** Expected: PASS.
 - [ ] **Step 5: Commit.** The maintainer measures the real cost after merge; the target is under $0.20 for the edit stage on the same 12 sessions.
+
+---
+
+### Task 8c: Findings from the first real run
+
+The first complete pass over real data (12 sessions of this repository) produced 55 claims: 20 verified, 35 unverifiable, none contradicted; a 9-scene storyboard of 16 lines, one of which the grounding gate dropped; and a narration 133 seconds long against a 75-second target. Reading the artifacts showed five concrete defects. Each is fixed here with a test built from the real case.
+
+**Files:** `packages/verify/src/{commands,results,rules}.ts` and tests; `packages/ingest/src/**` and tests (diff cap and turn count only); `packages/core/src/schema.ts` (one optional field); `packages/pipeline/src/stages/script.ts`, `packages/pipeline/src/prompts/writer.ts` and tests; `packages/voice/src/index.ts` and its test (narration prefix only)
+
+**Interfaces:**
+- `parseOutcome(cls, output, isError, o?: { exitTrusted?: boolean })` — one optional argument added. `collectRuns` sets `exitTrusted` for a run.
+- New in `@dailies/verify`: `export function headlineFor(cls: CommandClass, output: string): string | null` — the decisive fragment of a run's output in at most 24 characters (`14 passed`, `2 failed`, `0 errors`, `3 errors`), or null.
+- `Storyboard`: a terminal step gains `headline: z.string().max(24).optional()`.
+
+Defects and fixes:
+
+1. **`pnpm typecheck` is not seen as a type check.** Nine `build_passes` claims were unverifiable with the reason "no build, typecheck or lint run is recorded". Add `<npm|pnpm|yarn|bun> [run] typecheck`, `type-check`, `check-types` and `tsc` scripts to the typecheck class.
+2. **A clean type check prints nothing recognisable.** The output of a passing `pnpm typecheck` is the echoed script line and nothing else, which parsed as `unknown`. For the typecheck, lint and build classes: when the exit status can be trusted and the output has no error marker, the outcome is `pass`. The exit status is trusted only when the command line contains no `|`, no `;` and no `||`, because a pipe or a chained command reports the status of its last part. With an untrusted exit status the existing text rules apply unchanged. The test class is not changed: a test run still needs a recognised summary.
+3. **Sessions without diffs.** Twenty-one `implemented` claims were unverifiable with "no commit diff is linked to this session": the 60-commit cap is global and the run had 78 linked commits, so older sessions lost all their diffs. Cap per session instead: the 8 most recent linked commits of each session, and 120 in total.
+4. **Zero turns.** Session metadata of headless sessions carries no turn count, so the stats scene showed `Turns 0`. When the metadata has none, count the session's user entries. The script stage leaves out any stats item whose value is zero.
+5. **A monotonous, over-long script.** Five terminal scenes, and 133 seconds of speech. The writer is given hard limits, enforced by code after it replies: at most 11 lines in total and 18 words per line; at most 2 terminal scenes and 2 diff scenes; lines beyond the limits are dropped from the end and scenes left empty are removed. The narration prefix sent to the voice asks for a short pause between paragraphs, not a full second. Every terminal step the script stage builds gets its `headline` from `headlineFor`.
+
+- [ ] **Step 1: Write failing tests** from the real cases: `classifyCommand('pnpm typecheck')` and `classifyCommand('pnpm run type-check')` are `typecheck`; a `pnpm typecheck` run with output `$ tsc --noEmit` and a successful status is `pass`, the same output for `pnpm typecheck 2>&1 | tail -40` is `unknown`, and any output containing `error TS2322` is `fail` whatever the status; `headlineFor` on vitest, jest, pytest, go and tsc outputs; a 3-session fixture with 10 commits each keeps 8 diffs' worth of commits per session; a session without a turn count reports its user-entry count; the script stage trims a 15-line writer reply to 11, removes the third terminal scene and omits a zero stat.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run every package's tests and the type check.** The mutation benchmark tests in `eval/` must still pass: the trusted-exit rule must not let a mutated failing result read as a pass.
+- [ ] **Step 5: Commit.**
