@@ -113,7 +113,11 @@ it('recut resets script and later stages and passes the feedback to the script s
 
 ### Task 12: Evaluation harness
 
-**Files:** `eval/**` (package `@dailies/eval`, added to `pnpm-workspace.yaml` as `eval`)
+**Files:** `eval/**` (package `@dailies/eval`); also `pnpm-workspace.yaml` (add `eval`), root
+`tsconfig.json` (add `eval/src/**/*.ts` and `eval/test/**/*.ts` to `include`) and root
+`vitest.config.ts` (add `eval/test/**/*.test.ts` to `include`) — without these three, `tsc` and
+`vitest` never look inside `eval/` at all, so `pnpm typecheck` and `pnpm --filter @dailies/eval
+test` silently see nothing to check.
 
 **Interfaces:**
 - Consumes: `ingest` (`@dailies/ingest`); `collectRuns`, `verifyClaim`, `parseOutcome`, `checkLine` (`@dailies/verify`); schemas from `@dailies/core`.
