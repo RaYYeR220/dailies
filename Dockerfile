@@ -28,7 +28,6 @@ COPY . .
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @dailies/web build
-RUN cd packages/reel && npx remotion browser ensure
 
 ENV DAILIES_DATA_DIR=/data
 
