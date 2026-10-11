@@ -20,7 +20,7 @@ const SPOKEN_QUOTE_CHARS = 120;
 // What the scene schema allows on screen.
 const ON_SCREEN = { promptQuote: 280, command: 200, output: 600, hunk: 2400, steps: 4, statValue: 16, flagQuote: 240, flagReality: 200 };
 // What the writer is shown of each beat.
-const MATERIAL = { entries: 24, entriesFromStart: 8, entryChars: 400, patches: 3, patchChars: 1500, claims: 12, quoteChars: 200 };
+const MATERIAL = { entries: 24, entriesFromStart: 8, entryChars: 400, patches: 3, patchChars: 1500, claims: 12, quoteChars: 200, feedbackChars: 2000 };
 
 const STATS: [key: string, label: string][] = [
   ['sessions.count', 'Sessions'],
@@ -189,7 +189,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
           .slice(0, MATERIAL.claims)
           .map((c) => ({ kind: c.kind, quote: cut(flat(c.quote), MATERIAL.quoteChars), entryId: c.entryId })),
         flagged: flagged.map((c) => ({ quote: cut(flat(c.quote), MATERIAL.quoteChars), sessionId: c.sessionId })),
-        feedback: ctx.feedback,
+        feedback: ctx.feedback === null ? null : cut(ctx.feedback, MATERIAL.feedbackChars),
       });
       const reply = await completeJson({ client: deps.client, role: 'writer', name: 'writer', system, user, output: WriterReply });
 
