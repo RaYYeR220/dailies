@@ -65,8 +65,13 @@ export function ingestStage(): Stage<IngestArtifact> {
       }
       const artifact: IngestArtifact = {
         ...found,
-        // `dir` too: ingest names the clone after the URL, and a one-part path puts the userinfo into that name.
-        repo: { ...found.repo, url: scrub(found.repo.url, credentials), dir: scrub(found.repo.dir, credentials) },
+        // `dir` too: ingest names the clone after the URL, and a one-part path puts the end of the userinfo into
+        // that name. Whatever stands before the last "@" of the name is dropped, only for a URL that has userinfo.
+        repo: {
+          ...found.repo,
+          url: scrub(found.repo.url, credentials),
+          dir: OWN_USERINFO.test(repoUrl) ? scrub(found.repo.dir.replace(/[^/]*@(?=[^/]*$)/, ''), credentials) : found.repo.dir,
+        },
         skipped: found.skipped.map((skip) => ({ ...skip, reason: scrubbedError(skip.reason, credentials) })),
       };
 

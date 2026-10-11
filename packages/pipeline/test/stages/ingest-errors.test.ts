@@ -94,7 +94,26 @@ describe('ingest stage, what it passes on', () => {
 
     const { artifact } = await ingestStage().run(h.ctx());
 
-    expect(artifact.repo).toEqual({ url: 'https://example.com/solo.git', dir: '/data/repos/[REDACTED]@example.com__solo', headSha: 'abc' });
+    expect(artifact.repo).toEqual({ url: 'https://example.com/solo.git', dir: '/data/repos/example.com__solo', headSha: 'abc' });
     expect(JSON.stringify(artifact)).not.toContain(TOKEN);
+  });
+
+  it('ingest keeps out the piece of a password that a colon leaves in the directory name', async () => {
+    const url = 'https://bot:pa:ss-fragment@example.com/solo.git';
+    scripted.artifact = { ...twoSessions(), repo: { url, dir: '/data/repos/ss-fragment@example.com__solo', headSha: 'abc' } };
+    const h = harness({ repoUrl: url });
+
+    const { artifact } = await ingestStage().run(h.ctx());
+
+    expect(artifact.repo.dir).toBe('/data/repos/example.com__solo');
+  });
+
+  it('ingest leaves a local path with an @ in it as it is', async () => {
+    scripted.artifact = { ...twoSessions(), repo: { url: '/work/repo@v2', dir: '/work/repo@v2', headSha: 'abc' } };
+    const h = harness({ repoUrl: '/work/repo@v2' });
+
+    const { artifact } = await ingestStage().run(h.ctx());
+
+    expect(artifact.repo).toEqual({ url: '/work/repo@v2', dir: '/work/repo@v2', headSha: 'abc' });
   });
 });
