@@ -25,7 +25,6 @@ import { Title } from './scenes/Title';
 const { color, size, leading, radius, space, layout, motion, film, loupe } = theme;
 
 const BLUR_FROM = 0.75;          // px of blur below which content under the glass is left sharp
-const OVER_PARALLAX = 0.25;      // how much of the film's travel the titles lying over it follow
 const MAX_DRIFT = 40;            // px the picture may drift from where a scene rests
 
 /** The three layers of a scene. */
@@ -145,10 +144,11 @@ export const Reel: React.FC<ReelProps> = ({ storyboard, timings, audio, settled 
         })}
       </Loupe>
 
+      {/* What lies over the film (titles, the verdict pill) is on the lightbox too, and travels with it. */}
       {drawn.map(({ take, clock: value, parts }) =>
         parts.over ? (
           <SceneContext.Provider key={take.index} value={value}>
-            <AbsoluteFill style={{ opacity: take.presence, transform: `translateX(${drift + (take.shot.at - take.focus) * perf * OVER_PARALLAX}px)` }}>{parts.over}</AbsoluteFill>
+            <AbsoluteFill style={{ opacity: take.presence, transform: `translateX(${drift + (take.shot.at - take.focus) * perf}px)` }}>{parts.over}</AbsoluteFill>
           </SceneContext.Provider>
         ) : null,
       )}

@@ -1,4 +1,3 @@
-import React from 'react';
 import { theme } from '../../theme';
 import { glassRoom } from '../lens';
 import { FACE, emOf, type Face } from '../measure';

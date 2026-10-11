@@ -1,4 +1,3 @@
-import React from 'react';
 import { theme } from '../../theme';
 import { glassRoom, linesRoom } from '../lens';
 import { FACE } from '../measure';

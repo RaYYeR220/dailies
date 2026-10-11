@@ -1,7 +1,6 @@
-import React from 'react';
 import { theme } from '../../theme';
 import { OnFrame } from '../Film';
-import { endStrip, glassRoom, linesRoom } from '../lens';
+import { glassRoom, linesRoom } from '../lens';
 import { Mark } from '../marks';
 import { FACE, emOf } from '../measure';
 import { endMarks, type EndMark } from '../pencil';
@@ -12,7 +11,7 @@ import { GlassBlock, Lines, RepoName, Rise, Type, fitRepo, useScene, type SceneP
 const { color, size, leading, space, layout, loupe, dim, motion, film } = theme;
 
 const REPO_CHARS = 80;
-const HERO_LINES = 2;
+const HERO_LINES = 3;
 // The size of each mark as a share of the pitch of its frame, and its stroke.
 const SHAPE: Record<EndMark, { width: number; height: number }> = { ring: { width: 0.6, height: 0.76 }, cross: { width: 0.72, height: 1 }, question: { width: 0.5, height: 0.8 } };
 const STROKE = { share: 0.062, min: 4, max: 9 };
@@ -59,9 +58,8 @@ export const End: SceneParts<'end'> = {
 
   Over: ({ scene }) => {
     const m = useScene();
-    const { marks, overflow } = endMarks(scene);
     const strip = stripOf(m.shot.unit, m.shot.half);
-    const width = endStrip(marks.length, overflow > 0).marksEnd - layout.margin;
+    const width = m.shot.lens.x - loupe.skirt.outer * m.shot.lens.scale - layout.margin - space.xxl;
     // The name sits in the room above the strip and the counts in the room under it. The strip is tilted, so at
     // the left of the frame, where both of them are, it lies lower than at the lens.
     const drop = Math.tan((-film.tilt * Math.PI) / 180) * (m.shot.lens.x - layout.margin);

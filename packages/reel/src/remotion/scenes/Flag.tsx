@@ -1,4 +1,3 @@
-import React from 'react';
 import { spring } from 'remotion';
 import { theme } from '../../theme';
 import { cueFrame, itemSpans } from '../cues';

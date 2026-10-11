@@ -1,4 +1,3 @@
-import React from 'react';
 import { theme } from '../../theme';
 import { OnFrame } from '../Film';
 import { glassRoom, linesRoom } from '../lens';

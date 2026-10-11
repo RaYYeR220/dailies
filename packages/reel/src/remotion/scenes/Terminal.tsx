@@ -1,4 +1,3 @@
-import React from 'react';
 import { theme } from '../../theme';
 import { MAX_STEPS, cueFrame, stepAt, stepSpans } from '../cues';
 import { OnFrame } from '../Film';
