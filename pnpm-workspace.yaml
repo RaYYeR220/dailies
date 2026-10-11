@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+  - "eval"
 allowBuilds:
   esbuild: true
   protobufjs: true

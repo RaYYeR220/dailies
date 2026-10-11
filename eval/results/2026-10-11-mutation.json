@@ -1,0 +1,1825 @@
+{
+  "cases": [
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:mise",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:mise",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:python3",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:python3",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:python3",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:python3",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:grep",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:python3",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:mise",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:other",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:git",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "53aa8a48-c58b-4b77-9f62-406a46324e57",
+      "command": "test:perl",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "build:other",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "build:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "unverifiable",
+      "verdictAfter": "unverifiable",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "build:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "93833a17-c2c6-4cb0-85b2-663c867b105f",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "fail",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "99f0d90a-6e31-4c60-ba62-aa2dccd29033",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "1dcb66d1-6f40-466c-8d0d-8919653da730",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "1dcb66d1-6f40-466c-8d0d-8919653da730",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "1dcb66d1-6f40-466c-8d0d-8919653da730",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "1dcb66d1-6f40-466c-8d0d-8919653da730",
+      "command": "test:cd",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "dd0563ee-7267-469e-85b8-f43a5a0f3315",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "a0ee725e-d283-45b5-9d98-d8f7b0be6c82",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "contradicted",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "a0ee725e-d283-45b5-9d98-d8f7b0be6c82",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "50e3afb2-c325-45e7-aec5-3f54b10a12e7",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "50e3afb2-c325-45e7-aec5-3f54b10a12e7",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:git",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "fail",
+      "verdictBefore": "contradicted",
+      "verdictAfter": "verified",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:other",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "verified",
+      "flipped": false
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:go",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:mise",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    },
+    {
+      "repo": "307ba609",
+      "sessionId": "e58f9710-b989-430f-85d9-848c55561c35",
+      "command": "test:other",
+      "original": "pass",
+      "verdictBefore": "verified",
+      "verdictAfter": "contradicted",
+      "flipped": true
+    }
+  ],
+  "recognised": 255,
+  "unknown": 60,
+  "flipRate": 0.693069306930693
+}
