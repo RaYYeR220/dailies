@@ -69,7 +69,7 @@ Reply with JSON only, no commentary and no code fence: { "scenes": [ ... ] }`;
       const entries = beat.entries
         .map((e) => `[${e.id} ${e.kind}${e.command !== undefined ? ' command' : ''}${e.errored ? ' errored' : ''}]\n${recorded(e.command ?? e.text)}`)
         .join('\n');
-      const patches = beat.patches.map((p) => `--- commit ${p.sha} · file ${p.path} · +${p.added} -${p.removed}\n${recorded(p.patch)}`).join('\n\n');
+      const patches = beat.patches.map((p) => `--- commit ${p.sha} · file ${JSON.stringify(p.path)} · +${p.added} -${p.removed}\n${recorded(p.patch)}`).join('\n\n');
       return `## Beat ${n + 1} (${beat.kind}): ${flat(beat.title)}
 ${flat(beat.summary)}
 
