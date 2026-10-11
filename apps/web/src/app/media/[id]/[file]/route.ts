@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { Readable } from 'node:stream';
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { loadEnv } from '@dailies/core';
@@ -54,20 +55,21 @@ export async function GET(
     const start = range[1] ? Number(range[1]) : 0;
     const end = range[2] ? Number(range[2]) : size - 1;
     if (start <= end && end < size) {
-      const chunk = readFileSync(path).subarray(start, end + 1);
-      return new Response(chunk, {
+      const stream = Readable.toWeb(createReadStream(path, { start, end })) as ReadableStream<Uint8Array>;
+      return new Response(stream, {
         status: 206,
         headers: {
           'Content-Type': contentType,
           'Content-Range': `bytes ${start}-${end}/${size}`,
-          'Content-Length': String(chunk.length),
+          'Content-Length': String(end - start + 1),
           'Accept-Ranges': 'bytes',
         },
       });
     }
   }
 
-  return new Response(readFileSync(path), {
+  const stream = Readable.toWeb(createReadStream(path)) as ReadableStream<Uint8Array>;
+  return new Response(stream, {
     status: 200,
     headers: {
       'Content-Type': contentType,
