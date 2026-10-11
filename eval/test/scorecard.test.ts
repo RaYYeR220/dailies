@@ -42,81 +42,80 @@ describe('buildScorecard', () => {
     expect(md).toContain('20');
   });
 
-  it('scrubs the repository URL out of free-text command and reason fields', () => {
-    const url = 'https://github.com/acme/widgets';
+  it('never prints the raw command: a session-local path, username or repo slug it carries cannot leak', () => {
+    // Real transcripts record commands like these verbatim, straight from the agent's shell
+    // calls — full local filesystem paths (with the operator's username in them) and bare
+    // "github.com/owner/repo" module paths with no scheme for scrubRepo's URL match to catch.
+    const leakyCommand =
+      "cd /Users/peytonmontei/Documents/entire/devenv/entireio/cli/.worktrees/review-child-context && " +
+      'perl -0pi -e \'s/"github.com\\/entireio\\/cli\\/internal\\/coreapi"//\' foo.go && go test ./...';
     const cases: MutationCase[] = [
       {
-        repo: url,
-        sessionId: 's9',
-        command: `git clone ${url} repo && pnpm test`,
-        original: 'pass',
-        verdictBefore: 'verified',
-        verdictAfter: 'verified',
-        flipped: false,
-      },
-    ];
-    const md = buildScorecard({
-      date: '2026-10-12',
-      mutation: { cases, recognised: 1, unknown: 0, flipRate: 0 },
-      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
-      // NoCheckpointsError's message literally embeds the repo URL this way.
-      skipped: [{ repo: url, reason: `no checkpoint refs found in ${url}` }],
-    });
-    expect(md).not.toContain(url);
-    expect(md.match(new RegExp(repoKey(url), 'g'))!.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('neutralises markdown-breaking characters in untrusted command, reason and tail text', () => {
-    const cases: MutationCase[] = [
-      {
-        repo: 'https://github.com/acme/widgets',
+        repo: 'https://github.com/entireio/cli',
         sessionId: 's1',
-        command: 'echo "a | b"\nand more',
+        command: leakyCommand,
         original: 'pass',
         verdictBefore: 'verified',
         verdictAfter: 'verified',
         flipped: false,
       },
     ];
-    const md = buildScorecard({
-      date: '2026-10-12',
-      mutation: { cases, recognised: 1, unknown: 0, flipRate: 0 },
-      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
-      skipped: [{ repo: 'https://github.com/other/repo', reason: 'line one\nline two' }],
-      tails: [{ tail: 'weird `output`\nwith a newline', count: 3 }],
-    });
 
-    expect(md).toContain('a \\| b');
-    expect(md.split('\n').some((l) => l.trim() === 'and more')).toBe(false);
-    expect(md.split('\n').some((l) => l.trim() === 'line two')).toBe(false);
-    expect(md).not.toContain('`output`');
-    expect(md.split('\n').some((l) => l.trim() === 'with a newline')).toBe(false);
-  });
-
-  it('escapes a pre-existing backslash before escaping a pipe, so the two cannot cancel out', () => {
-    // If `|` were escaped before `\`, a pre-existing "\|" would become "\\|" — markdown reads the
-    // first two backslashes as one escaped backslash, leaving the pipe unescaped and breaking the
-    // table out from under the cell it was meant to stay inside of. Splitting the row on raw `|`
-    // characters can't tell an escaped pipe from a bare one, so this asserts the exact escaped
-    // form markdown needs: "\\" (-> literal "\") immediately followed by "\|" (-> literal "|").
-    const cases: MutationCase[] = [
-      {
-        repo: 'https://github.com/acme/widgets',
-        sessionId: 's1',
-        command: 'echo a\\|b', // one backslash, then a pipe
-        original: 'pass',
-        verdictBefore: 'verified',
-        verdictAfter: 'verified',
-        flipped: false,
-      },
-    ];
     const md = buildScorecard({
       date: '2026-10-12',
       mutation: { cases, recognised: 1, unknown: 0, flipRate: 0 },
       grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
       skipped: [],
     });
-    const expectedCommand = `echo a${'\\'.repeat(3)}|b`;
-    expect(md).toContain(expectedCommand);
+
+    expect(md).not.toContain('peytonmontei');
+    expect(md).not.toContain('entireio');
+    expect(md).not.toContain('/Users/');
+    expect(md).not.toContain(leakyCommand);
+    // Still carries a little signal: the command's class and its first (program-name) token.
+    expect(md).toContain('test:cd');
+  });
+
+  it('scrubs the repository URL out of the skipped-repo reason field', () => {
+    const url = 'https://github.com/acme/widgets';
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: { cases: [], recognised: 0, unknown: 0, flipRate: 0 },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      // NoCheckpointsError's message literally embeds the repo URL this way.
+      skipped: [{ repo: url, reason: `no checkpoint refs found in ${url}` }],
+    });
+    expect(md).not.toContain(url);
+    expect(md.match(new RegExp(repoKey(url), 'g'))!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('neutralises markdown-breaking characters in untrusted reason and tail text', () => {
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: { cases: [], recognised: 0, unknown: 0, flipRate: 0 },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      skipped: [{ repo: 'https://github.com/other/repo', reason: 'line one\nline two | three' }],
+      tails: [{ tail: 'weird `output`\nwith a newline', count: 3 }],
+    });
+
+    expect(md).toContain('line one line two \\| three');
+    expect(md.split('\n').some((l) => l.trim() === 'line two | three')).toBe(false);
+    expect(md).not.toContain('`output`');
+    expect(md.split('\n').some((l) => l.trim() === 'with a newline')).toBe(false);
+  });
+
+  it('escapes a pre-existing backslash before escaping a pipe, so the two cannot cancel out', () => {
+    // If `|` were escaped before `\`, a pre-existing "\|" would become "\\|" — markdown reads the
+    // first two backslashes as one escaped backslash, leaving the pipe unescaped. Reason text is
+    // still rendered raw (unlike command, which is reduced to a safe class:programName form), so
+    // it still needs this protection.
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: { cases: [], recognised: 0, unknown: 0, flipRate: 0 },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      skipped: [{ repo: 'https://github.com/other/repo', reason: 'path a\\|b' }],
+    });
+    const expectedReason = `path a${'\\'.repeat(3)}|b`;
+    expect(md).toContain(expectedReason);
   });
 });

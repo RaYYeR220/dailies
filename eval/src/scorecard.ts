@@ -1,3 +1,4 @@
+import { classifyCommand } from '@dailies/verify';
 import type { MutationCase } from './mutation';
 import { repoKey } from './repoKey';
 import type { TailCount } from './tails';
@@ -27,11 +28,21 @@ function sanitizeCell(text: string): string {
     .replace(/`/g, "'");
 }
 
-// Error messages from @dailies/ingest (e.g. NoCheckpointsError) embed the repo URL verbatim;
-// command text can too (a recorded `git clone <url>`). Scrub it wherever it appears, not just
-// in the dedicated `repo` field.
+// Error messages from @dailies/ingest (e.g. NoCheckpointsError) embed the repo URL verbatim.
+// Scrub it wherever it appears, not just in the dedicated `repo` field.
 function scrubRepo(text: string, repo: string): string {
   return repo ? text.split(repo).join(repoKey(repo)) : text;
+}
+
+// A recorded command is arbitrary agent-authored shell text: it can carry a bare
+// "github.com/owner/repo" module path (no scheme, so scrubRepo's exact-URL match misses it) or
+// an operator's local filesystem path with their username in it (seen verbatim in real data —
+// a recorded `cd /Users/<name>/...`). There is no bounded set of patterns to scrub for that, so
+// the command is never published raw: only its deterministic class and first (program-name)
+// token survive, which carries no path, slug or argument content.
+export function safeCommand(command: string): string {
+  const programName = command.trim().split(/\s+/)[0] || '(empty)';
+  return `${classifyCommand(command)}:${programName}`;
 }
 
 /** Renders the mutation/grounding totals and every non-flipping case as Markdown, identifying
@@ -59,7 +70,7 @@ export function buildScorecard(input: ScorecardInput): string {
     lines.push('| repo | session | command | original | before | after |');
     lines.push('|---|---|---|---|---|---|');
     for (const c of nonFlipping) {
-      const command = sanitizeCell(scrubRepo(c.command, c.repo));
+      const command = sanitizeCell(scrubRepo(safeCommand(c.command), c.repo));
       const sessionId = sanitizeCell(c.sessionId);
       lines.push(`| ${repoKey(c.repo)} | ${sessionId} | ${command} | ${c.original} | ${c.verdictBefore} | ${c.verdictAfter} |`);
     }
