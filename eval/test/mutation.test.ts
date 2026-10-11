@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { collectRuns, verifyClaim } from '@dailies/verify';
-import { mutateRun, syntheticClaim } from '../src/index';
+import { isEvidencingRun, mutateRun, syntheticClaim } from '../src/index';
 import { runMutationBenchmark } from '../src/index';
 import { session } from './helpers';
+
+function clusterSession() {
+  return session(
+    [
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't1', text: 'Tests  3 failed | 11 passed', isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't2', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't2', text: 'Tests  3 failed | 11 passed', isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't3', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't3', text: 'Tests  14 passed (14)', isError: false },
+      { kind: 'assistant', text: 'All tests pass now.' },
+    ],
+    { id: 'cluster-1' },
+  );
+}
 
 describe('mutateRun', () => {
   it('flips only the targeted run and leaves the original session untouched', () => {
@@ -97,5 +112,31 @@ describe('runMutationBenchmark', () => {
       },
     ]);
     expect(result.flipRate).toBe(1);
+  });
+});
+
+describe('runMutationBenchmark version 2', () => {
+  it('a cluster of three same-class runs before one message yields one case and two ineligible', () => {
+    const result = runMutationBenchmark([{ repo: 'https://github.com/acme/widgets', session: clusterSession() }]);
+    expect(result.version).toBe(2);
+    expect(result.recognised).toBe(3);
+    expect(result.unknown).toBe(0);
+    expect(result.cases).toHaveLength(1);
+    expect(result.eligible).toBe(1);
+    expect(result.ineligible).toBe(2);
+    expect(result.ineligibleReasons).toEqual({ 'not the last run before the next message': 2 });
+  });
+
+  it('an eligible passing run flips to contradicted and back', () => {
+    const sess = clusterSession();
+    const lastRun = collectRuns(sess)[2]!;
+    const claim = syntheticClaim(sess, lastRun)!;
+    expect(isEvidencingRun(sess, lastRun, claim)).toBe(true);
+
+    expect(verifyClaim(claim, sess).verdict).toBe('verified');
+    const toFail = mutateRun(sess, lastRun, 'fail');
+    expect(verifyClaim(claim, toFail).verdict).toBe('contradicted');
+    const backToPass = mutateRun(sess, lastRun, 'pass');
+    expect(verifyClaim(claim, backToPass).verdict).toBe('verified');
   });
 });

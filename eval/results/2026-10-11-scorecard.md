@@ -1,77 +1,27 @@
 # Dailies evaluation scorecard — 2026-10-11
 
-## Mutation benchmark
-- recognised: 255
-- unknown: 60
-- recognition rate: 0.810
-- cases: 202
-- flip rate: 0.693
+## Mutation benchmark — version 1 vs version 2
+|  | version 1 (2026-10-11) | version 2 |
+| --- | --- | --- |
+| runs seen | 315 | 461 |
+| recognised | 255 | 365 |
+| unknown | 60 | 96 |
+| recognition rate | 0.810 | 0.792 |
+| cases | 202 | 235 |
+| flipped | 140 | 235 |
+| flip rate | 0.693 | 1.000 |
 
-### Non-flipping cases
-| repo | session | command | original | before | after |
-|---|---|---|---|---|---|
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | contradicted | contradicted |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | fail | contradicted | contradicted |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:perl | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:perl | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:perl | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:perl | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:other | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:python3 | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:python3 | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:grep | fail | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:python3 | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:go | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:other | fail | contradicted | contradicted |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:perl | pass | verified | verified |
-| 307ba609 | 53aa8a48-c58b-4b77-9f62-406a46324e57 | test:other | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | contradicted | contradicted |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | contradicted | contradicted |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | unverifiable | unverifiable |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | contradicted | contradicted |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | pass | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 93833a17-c2c6-4cb0-85b2-663c867b105f | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | pass | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | contradicted | contradicted |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | pass | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | contradicted | contradicted |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | 99f0d90a-6e31-4c60-ba62-aa2dccd29033 | test:cd | fail | verified | verified |
-| 307ba609 | a0ee725e-d283-45b5-9d98-d8f7b0be6c82 | test:go | fail | contradicted | contradicted |
-| 307ba609 | e58f9710-b989-430f-85d9-848c55561c35 | test:go | pass | verified | verified |
-| 307ba609 | e58f9710-b989-430f-85d9-848c55561c35 | test:git | pass | verified | verified |
-| 307ba609 | e58f9710-b989-430f-85d9-848c55561c35 | test:other | pass | verified | verified |
+Version 1 counted a case for every recognised run and mutated that run in isolation, but the verifier always rests a `tests_pass`/`build_passes` claim on the last run of its class before the next message. When several runs of the same class preceded one message, mutating an earlier one could never change the verdict — version 1 was measuring its own anchoring, not the verifier. Version 2 counts a case only for the run that actually evidences the claim, so its flip rate reflects the verifier alone.
+
+### Ineligible runs (version 2)
+- a source edit in between: 53
+- not the last run before the next message: 73
+- no following assistant entry: 4
+
+The version 1 numbers are in [2026-10-11-mutation.json](2026-10-11-mutation.json); the version 1 scorecard as first published is this file at commit `8cd2b21`.
+
+### Eligible cases that did not flip
+None.
 
 ## Grounding benchmark
 - fabricated: 20, rejected: 20

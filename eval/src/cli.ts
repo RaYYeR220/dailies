@@ -1,12 +1,40 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Session } from '@dailies/core';
 import { ingest, NoCheckpointsError } from '@dailies/ingest';
-import { buildScorecard, safeCommand } from './scorecard';
+import { buildScorecard, safeCommand, type VersionSummary } from './scorecard';
 import { runGroundingBenchmark } from './grounding';
 import { runMutationBenchmark } from './mutation';
 import { repoKey } from './repoKey';
 import { unrecognisedTails } from './tails';
+
+const V1_MUTATION_FILE_RE = /^(\d{4}-\d{2}-\d{2})-mutation\.json$/;
+
+// Version 1's result stays in the repository exactly as the first run produced it; the version-2
+// scorecard reads it back, rather than recomputing version 1, to compare against.
+async function loadV1Baseline(resultsDir: string): Promise<{ v1: VersionSummary; v1Date: string } | null> {
+  const files = (await readdir(resultsDir).catch(() => [] as string[]))
+    .filter((f) => V1_MUTATION_FILE_RE.test(f))
+    .sort();
+  const file = files[0];
+  if (!file) return null;
+
+  const v1Date = file.match(V1_MUTATION_FILE_RE)![1]!;
+  const raw = JSON.parse(await readFile(resolve(resultsDir, file), 'utf8')) as {
+    cases: { flipped: boolean }[];
+    recognised: number;
+    unknown: number;
+    flipRate: number;
+  };
+  const v1: VersionSummary = {
+    recognised: raw.recognised,
+    unknown: raw.unknown,
+    cases: raw.cases.length,
+    flipped: raw.cases.filter((c) => c.flipped).length,
+    flipRate: raw.flipRate,
+  };
+  return { v1, v1Date };
+}
 
 interface DatasetEntry {
   url: string;
@@ -67,6 +95,7 @@ async function main(): Promise<void> {
   const date = new Date().toISOString().slice(0, 10);
   const resultsDir = resolve(import.meta.dirname, '../results');
   await mkdir(resultsDir, { recursive: true });
+  const baseline = await loadV1Baseline(resultsDir);
 
   // Evaluation results never name a repository (Global Constraint): hash the repo and reduce
   // the command to a safe class:programName form before anything touches disk, even though
@@ -80,18 +109,26 @@ async function main(): Promise<void> {
   };
   const sanitizedSkipped = skipped.map((s) => ({ ...s, repo: repoKey(s.repo) }));
 
-  await writeFile(resolve(resultsDir, `${date}-mutation.json`), `${JSON.stringify(sanitizedMutation, null, 2)}\n`);
+  // The first run's `<date>-mutation.json` and `<date>-scorecard.md` are not touched: this is
+  // the corrected (version 2) run, written beside them under their own names.
+  await writeFile(resolve(resultsDir, `${date}-mutation-v2.json`), `${JSON.stringify(sanitizedMutation, null, 2)}\n`);
   await writeFile(resolve(resultsDir, `${date}-grounding.json`), `${JSON.stringify(grounding, null, 2)}\n`);
   await writeFile(
     resolve(resultsDir, `${date}-scorecard.md`),
-    buildScorecard({ date, mutation, grounding, skipped }),
+    buildScorecard({ date, mutation, grounding, skipped, versions: baseline ?? undefined }),
   );
 
   const total = mutation.recognised + mutation.unknown;
   const rate = total === 0 ? 0 : mutation.recognised / total;
   const flipped = mutation.cases.filter((c) => c.flipped).length;
   console.log(`recognition rate: ${rate.toFixed(3)} (${mutation.recognised}/${total})`);
-  console.log(`flip rate: ${mutation.flipRate.toFixed(3)} (${flipped}/${mutation.cases.length})`);
+  console.log(`flip rate (version 2): ${mutation.flipRate.toFixed(3)} (${flipped}/${mutation.cases.length})`);
+  console.log(`eligible: ${mutation.eligible}, ineligible: ${mutation.ineligible} (${JSON.stringify(mutation.ineligibleReasons)})`);
+  if (baseline) {
+    console.log(
+      `flip rate (version 1, from ${baseline.v1Date}): ${baseline.v1.flipRate.toFixed(3)} (${baseline.v1.flipped}/${baseline.v1.cases})`,
+    );
+  }
   console.log(`grounding: ${grounding.rejected}/${grounding.fabricated} rejected, ${grounding.accepted}/${grounding.genuine} accepted`);
   if (sanitizedSkipped.length > 0) {
     console.log(`skipped ${sanitizedSkipped.length} repositor${sanitizedSkipped.length === 1 ? 'y' : 'ies'}`);

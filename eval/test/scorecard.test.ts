@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScorecard } from '../src/index';
 import { repoKey } from '../src/index';
-import type { MutationCase } from '../src/index';
+import type { MutationCase, VersionSummary } from '../src/index';
 
 describe('buildScorecard', () => {
   it('lists non-flipping cases by repoKey and never contains a repository URL', () => {
@@ -152,5 +152,43 @@ describe('buildScorecard', () => {
     });
     const expectedReason = `path a${'\\'.repeat(3)}|b`;
     expect(md).toContain(expectedReason);
+  });
+
+  it('contains both versions numbers and no repository URL', () => {
+    const url = 'https://github.com/acme/widgets';
+    const v1: VersionSummary = { recognised: 255, unknown: 60, cases: 202, flipped: 140, flipRate: 0.693 };
+    const v2Cases: MutationCase[] = [
+      {
+        repo: url,
+        sessionId: 's1',
+        command: 'pnpm test',
+        original: 'pass',
+        verdictBefore: 'verified',
+        verdictAfter: 'verified',
+        flipped: false,
+      },
+    ];
+
+    const md = buildScorecard({
+      date: '2026-10-12',
+      mutation: {
+        cases: v2Cases,
+        recognised: 255,
+        unknown: 60,
+        flipRate: 0.5,
+        ineligibleReasons: { 'not the last run before the next message': 112 },
+      },
+      grounding: { fabricated: 20, rejected: 20, genuine: 20, accepted: 20 },
+      skipped: [],
+      versions: { v1, v1Date: '2026-10-11' },
+    });
+
+    expect(md).not.toContain(url);
+    expect(md).toContain('202'); // version 1 cases
+    expect(md).toContain('0.693'); // version 1 flip rate
+    expect(md).toContain('0.500'); // version 2 flip rate
+    expect(md).toContain('112'); // ineligible reason count
+    expect(md).toContain('not the last run before the next message');
+    expect(md).toContain('2026-10-11'); // links back to the version 1 date
   });
 });
