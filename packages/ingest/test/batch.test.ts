@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ObjectBatchReader } from '../src/git';
+import { assertBlobWithinFetchLimit, ObjectBatchReader } from '../src/git';
 
 function run(cwd: string, args: string[], input?: string): Promise<string> {
   return new Promise((resolvePromise, reject) => {
@@ -53,5 +53,25 @@ describe('ObjectBatchReader', () => {
     } finally {
       reader.close();
     }
+  });
+
+  it('rejects a pending read instead of hanging when the process dies unexpectedly', async () => {
+    // A directory that is not a git repository makes `git cat-file --batch` exit immediately
+    // with an error, before ever producing a valid reply header.
+    const notARepo = await mkdtemp(join(tmpdir(), 'dailies-notrepo-'));
+    const reader = new ObjectBatchReader(notARepo);
+    await expect(reader.read('a'.repeat(40))).rejects.toThrow();
+    reader.close();
+  });
+});
+
+describe('assertBlobWithinFetchLimit', () => {
+  it('passes for a blob within the limit and throws for one over it', async () => {
+    const repoDir = await initRepo();
+    const smallOid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'tiny')).trim();
+    const bigOid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'x'.repeat(5000))).trim();
+
+    await expect(assertBlobWithinFetchLimit(repoDir, smallOid, 1000)).resolves.toBeUndefined();
+    await expect(assertBlobWithinFetchLimit(repoDir, bigOid, 1000)).rejects.toThrow(/over the 1000-byte fetch limit/);
   });
 });

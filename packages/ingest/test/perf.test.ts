@@ -4,7 +4,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getDiff, ingest } from '../src/index';
-import { getDiffsBatched, ObjectBatchReader } from '../src/git';
+import { getDiffsBatched, getDiffsPerCommit, ObjectBatchReader } from '../src/git';
 import { selectCandidateSessionIds } from '../src/window';
 import { makeRepo } from './fixture';
 
@@ -80,6 +80,23 @@ describe('getDiffsBatched', () => {
     const batched = await getDiffsBatched(repoDir, shas);
     expect(batched.diffs).toEqual(individually);
     expect(batched.droppedCount).toBe(0);
+  });
+
+  it('the per-commit fallback agrees with the batched path (the safety net it falls back to)', async () => {
+    const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
+    const shas: string[] = [];
+    for (const name of ['a.txt', 'b.txt', 'c.txt']) {
+      await writeFile(join(repoDir, name), `${name} line one\n`);
+      await run(repoDir, ['add', name]);
+      await run(repoDir, ['commit', '-q', '-m', `add ${name}`]);
+      shas.push(await run(repoDir, ['rev-parse', 'HEAD']));
+    }
+
+    const batched = await getDiffsBatched(repoDir, shas);
+    const fallback = await getDiffsPerCommit(repoDir, shas, 60);
+
+    expect(fallback.diffs).toEqual(batched.diffs);
+    expect(fallback.droppedCount).toBe(batched.droppedCount);
   });
 
   it('caps at the most recent 60 commits and reports the dropped count', async () => {

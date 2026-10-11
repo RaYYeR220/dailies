@@ -30,7 +30,7 @@ async function buildSession(
   commits: string[],
 ): Promise<{ session: Session; redactions: number }> {
   const { ref, meta } = record;
-  const cachePath = sessionCachePath(dataDir, ref.id, meta.sessionIndex);
+  const cachePath = sessionCachePath(dataDir, repoDir, ref.id, meta.sessionIndex);
   const cached = await readSessionCache(cachePath, meta.transcriptOid);
 
   let entries: Session['entries'];
