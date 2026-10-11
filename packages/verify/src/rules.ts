@@ -64,6 +64,7 @@ function ranCommand(claim: Claim, session: Session): Verdicted {
   if (!claimEntry || !claim.subject) return unverifiable('no matching command is recorded before this message');
 
   const subject = normalize(claim.subject);
+  if (!subject) return unverifiable('no matching command is recorded before this message');
   const calls = session.entries.filter(
     (e) => e.kind === 'tool_call' && e.index < claimEntry.index && e.command && normalize(e.command).includes(subject)
   );
@@ -83,6 +84,7 @@ function fixedError(claim: Claim, session: Session): Verdicted {
   if (!claimEntry || !claim.subject) return unverifiable('no error text is recorded for this claim');
 
   const subject = normalize(claim.subject);
+  if (!subject) return unverifiable('no error text is recorded for this claim');
   const errorResult = session.entries.find(
     (e) => e.kind === 'tool_result' && e.index < claimEntry.index && normalize(e.text).includes(subject)
   );
@@ -104,11 +106,11 @@ function fixedError(claim: Claim, session: Session): Verdicted {
 
   const lastCall = laterCalls[laterCalls.length - 1]!;
   const lastResult = session.entries.find((e) => e.kind === 'tool_result' && e.toolUseId === lastCall.toolUseId);
-  const outcome = lastResult ? parseOutcome(cls, lastResult.text, lastResult.isError ?? false) : 'unknown';
-  const stillPresent = lastResult ? normalize(lastResult.text).includes(subject) : false;
+  if (!lastResult) return unverifiable('the later run has no recorded result');
 
-  const evidence: EvidenceRef[] = [entryRef(errorResult.id), entryRef(lastCall.id)];
-  if (lastResult) evidence.push(entryRef(lastResult.id));
+  const outcome = parseOutcome(cls, lastResult.text, lastResult.isError ?? false);
+  const stillPresent = normalize(lastResult.text).includes(subject);
+  const evidence: EvidenceRef[] = [entryRef(errorResult.id), entryRef(lastCall.id), entryRef(lastResult.id)];
 
   if (stillPresent || outcome === 'fail') {
     return { verdict: 'contradicted', reason: 'the error is still present in a later run', evidence };

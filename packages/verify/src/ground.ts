@@ -4,6 +4,14 @@ import { lintStyle } from './style';
 
 const NUMBER_RE = /\d+(?:\.\d+)?/g;
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function containsNumber(haystack: string, n: string): boolean {
+  return new RegExp(`(?<![\\d.])${escapeRegex(n)}(?![\\d.])`).test(haystack);
+}
+
 export function checkLine(
   line: Line,
   ctx: { sessions: Session[]; facts: Facts; diffs: DiffIndex },
@@ -26,7 +34,7 @@ export function checkLine(
       if (ref.quote && !quoteMatches(ref.quote, entry.text)) {
         reasons.push(`quote not found in entry ${ref.entryId}`);
       }
-      for (const n of numbersInText) if (entry.text.includes(n)) groundedNumbers.add(n);
+      for (const n of numbersInText) if (containsNumber(entry.text, n)) groundedNumbers.add(n);
     } else if (ref.type === 'diff') {
       const key = `${ref.sha}:${ref.path}`;
       const patch = ctx.diffs[key];
@@ -37,9 +45,9 @@ export function checkLine(
       if (ref.quote && !quoteMatches(ref.quote, patch)) {
         reasons.push(`quote not found in diff ${key}`);
       }
-      for (const n of numbersInText) if (patch.includes(n)) groundedNumbers.add(n);
+      for (const n of numbersInText) if (containsNumber(patch, n)) groundedNumbers.add(n);
     } else {
-      if (!(ref.key in ctx.facts)) {
+      if (!Object.hasOwn(ctx.facts, ref.key)) {
         reasons.push(`unknown stat: ${ref.key}`);
         continue;
       }

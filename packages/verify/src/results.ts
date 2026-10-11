@@ -19,8 +19,9 @@ function stripAnsi(text: string): string {
 }
 
 function parseTestOutcome(text: string): RunOutcome {
-  const failCount = /(\d+)\s+(?:failed|failing)/.exec(text);
-  if (failCount && Number(failCount[1]) > 0) return 'fail';
+  for (const m of text.matchAll(/(\d+)\s+(?:failed|failing)/g)) {
+    if (Number(m[1]) > 0) return 'fail';
+  }
   if (/Tests?:\s+\d+\s+failed/.test(text)) return 'fail';
   if (/^FAIL\b/m.test(text)) return 'fail';
   if (/AssertionError/.test(text)) return 'fail';

@@ -213,6 +213,59 @@ describe('fixed_error', () => {
     });
     expect(verifyClaim(noLaterClaim, noLaterRun).verdict).toBe('unverifiable');
   });
+
+  it('is unverifiable, not verified, when the later run has no recorded result', () => {
+    const noResult = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't1', text: "FAIL Cannot find module 'foo'", isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't2', command: 'pnpm test' },
+      { kind: 'assistant', text: "I fixed the 'foo' module error." },
+    ]);
+    const c = claim({
+      sessionId: 's1',
+      entryId: noResult.entries[3]!.id,
+      quote: "I fixed the 'foo' module error.",
+      kind: 'fixed_error',
+      subject: "Cannot find module 'foo'",
+    });
+    expect(verifyClaim(c, noResult).verdict).toBe('unverifiable');
+  });
+});
+
+describe('empty or whitespace-only subject', () => {
+  it('ran_command is unverifiable rather than matching every command', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm run deploy' },
+      { kind: 'tool_result', toolUseId: 't1', text: 'Deployed', isError: false },
+      { kind: 'assistant', text: 'I did the thing.' },
+    ]);
+    const c = claim({
+      sessionId: 's1',
+      entryId: sess.entries[2]!.id,
+      quote: 'I did the thing.',
+      kind: 'ran_command',
+      subject: '   ',
+    });
+    expect(verifyClaim(c, sess).verdict).toBe('unverifiable');
+  });
+
+  it('fixed_error is unverifiable rather than matching every tool result', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't1', text: 'FAIL something broke', isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't2', command: 'pnpm test' },
+      { kind: 'tool_result', toolUseId: 't2', text: 'Tests 14 passed', isError: false },
+      { kind: 'assistant', text: 'I fixed it.' },
+    ]);
+    const c = claim({
+      sessionId: 's1',
+      entryId: sess.entries[4]!.id,
+      quote: 'I fixed it.',
+      kind: 'fixed_error',
+      subject: '   ',
+    });
+    expect(verifyClaim(c, sess).verdict).toBe('unverifiable');
+  });
 });
 
 describe('quote safety net', () => {

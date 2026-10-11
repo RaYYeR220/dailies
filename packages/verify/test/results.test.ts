@@ -18,6 +18,10 @@ describe('parseOutcome', () => {
     expect(parseOutcome('test', '0 failed, 14 passed', false)).toBe('pass');
   });
 
+  it('still detects a failure count that appears after an earlier zero count', () => {
+    expect(parseOutcome('test', '0 failed, 14 passed\nSuite 2: 3 failing', false)).toBe('fail');
+  });
+
   it('recognises typecheck pass and fail markers', () => {
     expect(parseOutcome('typecheck', 'Found 0 errors', false)).toBe('pass');
     expect(parseOutcome('typecheck', '', false)).toBe('pass');

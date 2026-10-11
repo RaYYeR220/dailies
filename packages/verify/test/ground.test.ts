@@ -67,6 +67,29 @@ describe('checkLine', () => {
     expect(checkLine(line, { sessions: [sess], facts, diffs }).ok).toBe(false);
   });
 
+  it('does not ground a number via an unrelated larger number containing it as a substring', () => {
+    const noisySess = session([{ kind: 'assistant', text: 'Session id 31 started the run.' }]);
+    const line: Line = {
+      id: 'l8',
+      text: 'Fixed issue 3 in the backlog.',
+      evidence: [{ type: 'entry', entryId: noisySess.entries[0]!.id, quote: 'Session id 31 started the run.' }],
+    };
+    const result = checkLine(line, { sessions: [noisySess], facts, diffs });
+    expect(result.ok).toBe(false);
+    expect(result.reasons.some((r) => r.includes('3'))).toBe(true);
+  });
+
+  it('does not treat an inherited object property as a known stat', () => {
+    const line: Line = {
+      id: 'l9',
+      text: 'Touched 1 files.',
+      evidence: [{ type: 'stat', key: 'constructor' }],
+    };
+    const result = checkLine(line, { sessions: [sess], facts, diffs });
+    expect(result.ok).toBe(false);
+    expect(result.reasons.some((r) => r.includes('constructor'))).toBe(true);
+  });
+
   it('skips the style lint when skipStyle is set', () => {
     const line: Line = {
       id: 'l7',
