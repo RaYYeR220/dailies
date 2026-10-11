@@ -70,7 +70,7 @@ export function ingestStage(): Stage<IngestArtifact> {
         repo: {
           ...found.repo,
           url: scrub(found.repo.url, credentials),
-          dir: OWN_USERINFO.test(repoUrl) ? scrub(found.repo.dir.replace(/[^/]*@(?=[^/]*$)/, ''), credentials) : found.repo.dir,
+          dir: scrub(OWN_USERINFO.test(repoUrl) ? found.repo.dir.replace(/[^/]*@(?=[^/]*$)/, '') : found.repo.dir, credentials),
         },
         skipped: found.skipped.map((skip) => ({ ...skip, reason: scrubbedError(skip.reason, credentials) })),
       };
