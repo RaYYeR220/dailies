@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "d19b354004f7",
+  "strategy": "manual-commit",
+  "branch": "task/4-verify",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/plans/2026-10-11-dailies-core.md",
+    "packages/verify/src/commands.ts",
+    "packages/verify/src/ground.ts",
+    "packages/verify/src/index.ts",
+    "packages/verify/src/quote.ts",
+    "packages/verify/src/results.ts",
+    "packages/verify/src/rules.ts",
+    "packages/verify/src/style.ts",
+    "packages/verify/test/commands.test.ts",
+    "packages/verify/test/ground.test.ts",
+    "packages/verify/test/helpers.ts",
+    "packages/verify/test/quote.test.ts",
+    "packages/verify/test/results.test.ts",
+    "packages/verify/test/rules.test.ts",
+    "packages/verify/test/style.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/d1/9b354004f7/0/metadata.json",
+      "transcript": "/d1/9b354004f7/0/full.jsonl",
+      "compact_transcript": "/d1/9b354004f7/0/transcript.jsonl",
+      "content_hash": "/d1/9b354004f7/0/content_hash.txt",
+      "prompt": "/d1/9b354004f7/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 74,
+    "cache_creation_tokens": 137015,
+    "cache_read_tokens": 4684022,
+    "output_tokens": 64899,
+    "api_call_count": 37
+  }
+}

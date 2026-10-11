@@ -1,0 +1,13 @@
+Implement Task 4 ("Verification rules and the grounding gate") from docs/plans/2026-10-11-dailies-core.md.
+
+Read first: the plan's header (Global Constraints, Review Focus, File Structure) and Task 4 in full, then sections 4.3, 4.5 and 9 of docs/specs/2026-10-11-dailies-design.md. The shared types you need are already implemented in packages/core; read packages/core/src/schema.ts before writing anything.
+
+Work test-first, in the order the task lists its steps. Where the task gives a test only by name, write a full test that pins the behaviour described under "Behaviour" or "Rules" with concrete values. Keep every exported name and signature in the task's "Produces" block exactly as written: other packages are being built against them in parallel right now. Edit only the directories listed under the task's Files.
+
+This package decides whether Dailies accuses someone's agent of a false claim. When a rule is ambiguous, choose the reading that returns unverifiable. The mutation test (flip a recorded result, the verdict must flip) is the most important test in the package.
+
+There is no `.env` and there are no API keys in this checkout, by design. Do not look for any; tests that need a key must skip themselves when it is absent.
+
+Commit after each green test cycle. Finish by running this package's tests and `pnpm typecheck` at the repo root.
+
+End with a short report: what exists now, test counts, and every deviation from the plan with the reason. If the plan is wrong somewhere, implement the correct thing, fix the plan file too, and say so.
