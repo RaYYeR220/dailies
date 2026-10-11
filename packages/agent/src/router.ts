@@ -60,9 +60,13 @@ function isRetryableStatus(status: unknown): boolean {
   return status === 429 || (typeof status === 'number' && status >= 500);
 }
 
-function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const table = COST_PER_MILLION_TOKENS[model];
-  if (!table) return 0;
+// Unpriced models (e.g. a Venice fallback model) must not be costed at zero: that would let spend
+// past the budget go uncounted. Price them as the most expensive known tier instead, so the meter
+// fails closed rather than open.
+const FALLBACK_COST_PER_MILLION = { input: 3, output: 15 };
+
+export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const table = COST_PER_MILLION_TOKENS[model] ?? FALLBACK_COST_PER_MILLION;
   return (inputTokens / 1_000_000) * table.input + (outputTokens / 1_000_000) * table.output;
 }
 
@@ -101,7 +105,11 @@ export function createRouter(env: Env, meter: CostMeter): ModelClient {
 
   const wrap = (client: OpenAI): OpenAI => (isTracingInitialized() ? wrapOpenAI(client) : client);
 
-  const gatewayClient = wrap(new OpenAI({ baseURL: env.gatewayBaseUrl, apiKey: env.gatewayKey ?? 'unset', fetch: costFetch }));
+  // maxRetries: 0 — our own loop below owns the 1s/2s/4s retry schedule; the SDK's default of 2
+  // would otherwise retry silently underneath it, multiplying attempts and breaking that timing.
+  const gatewayClient = wrap(
+    new OpenAI({ baseURL: env.gatewayBaseUrl, apiKey: env.gatewayKey ?? 'unset', fetch: costFetch, maxRetries: 0 }),
+  );
 
   async function requestOnce(
     client: OpenAI,
@@ -129,23 +137,34 @@ export function createRouter(env: Env, meter: CostMeter): ModelClient {
     const model = MODEL_BY_ROLE[req.role];
 
     let lastErr: unknown;
+    let retriesExhausted = false;
     for (let attempt = 0; attempt <= RETRY_WAITS_MS.length; attempt++) {
       try {
         const { raw, costUsd } = await requestOnce(gatewayClient, model, req.messages, req.tools, req.maxTokens);
         return toCompletion(raw, model, 'gateway', costUsd, meter);
       } catch (err) {
-        lastErr = err;
         const status = (err as { status?: unknown } | null)?.status;
-        if (!isRetryableStatus(status) || attempt === RETRY_WAITS_MS.length) break;
+        if (!isRetryableStatus(status)) throw err; // not a 429/5xx: fail fast, never contact Venice with it
+        lastErr = err;
+        if (attempt === RETRY_WAITS_MS.length) {
+          retriesExhausted = true;
+          break;
+        }
         await sleep(RETRY_WAITS_MS[attempt]!);
       }
     }
 
-    const veniceModel = process.env[`VENICE_MODEL_${req.role.toUpperCase()}`];
-    if (env.veniceKey && veniceModel) {
-      const veniceClient = wrap(new OpenAI({ baseURL: 'https://api.venice.ai/api/v1', apiKey: env.veniceKey, fetch: costFetch }));
-      const { raw, costUsd } = await requestOnce(veniceClient, veniceModel, req.messages, req.tools, req.maxTokens);
-      return toCompletion(raw, veniceModel, 'venice', costUsd, meter);
+    // Only reachable once the 429/5xx retry schedule above is exhausted — "if they fail" in the spec
+    // refers to those retries, not to a non-retryable error, which already threw above.
+    if (retriesExhausted) {
+      const veniceModel = process.env[`VENICE_MODEL_${req.role.toUpperCase()}`];
+      if (env.veniceKey && veniceModel) {
+        const veniceClient = wrap(
+          new OpenAI({ baseURL: 'https://api.venice.ai/api/v1', apiKey: env.veniceKey, fetch: costFetch, maxRetries: 0 }),
+        );
+        const { raw, costUsd } = await requestOnce(veniceClient, veniceModel, req.messages, req.tools, req.maxTokens);
+        return toCompletion(raw, veniceModel, 'venice', costUsd, meter);
+      }
     }
     throw lastErr;
   }

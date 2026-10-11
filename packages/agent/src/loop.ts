@@ -12,9 +12,17 @@ function extractText(content: ChatMessage['content']): string {
   return '';
 }
 
+// Scans with indexOf rather than a `\s*([\s\S]*?)\s*` regex: that shape backtracks catastrophically
+// on long, close-but-not-quite-fenced model output, which is attacker-reachable via prompt injection.
 function stripFences(text: string): string {
-  const match = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(text.trim());
-  return (match ? match[1]! : text).trim();
+  const trimmed = text.trim();
+  const openIdx = trimmed.indexOf('```');
+  if (openIdx === -1) return trimmed;
+  const afterLangTag = trimmed.indexOf('\n', openIdx + 3);
+  const bodyStart = afterLangTag === -1 ? openIdx + 3 : afterLangTag + 1;
+  const closeIdx = trimmed.indexOf('```', bodyStart);
+  if (closeIdx === -1) return trimmed;
+  return trimmed.slice(bodyStart, closeIdx).trim();
 }
 
 function tryParseJson<T>(message: ChatMessage, schema: z.ZodType<T>): { ok: true; value: T } | { ok: false; error: string } {
