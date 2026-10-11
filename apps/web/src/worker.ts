@@ -1,5 +1,6 @@
 import { runPipeline, unfinishedRuns } from '@dailies/pipeline';
 import type { Database, Stage } from '@dailies/pipeline';
+import { beat } from './server/heartbeat';
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
@@ -29,17 +30,22 @@ export async function workerLoop(o: {
   const pollMs = o.pollMs ?? 2000;
 
   while (!o.signal?.aborted) {
+    beat(o.dataDir);
     const runId = unfinishedRuns(o.db)[0];
     if (runId === undefined) {
       await sleep(pollMs, o.signal);
       continue;
     }
 
+    const heartbeatTimer = setInterval(() => beat(o.dataDir), pollMs);
     try {
       const stages = o.makeStages();
       await runPipeline(o.db, runId, stages, { dataDir: o.dataDir });
     } catch (err) {
       console.error(`worker: run ${runId} failed unexpectedly`, err);
+    } finally {
+      clearInterval(heartbeatTimer);
+      beat(o.dataDir);
     }
   }
 }
