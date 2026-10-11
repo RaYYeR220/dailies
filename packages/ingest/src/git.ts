@@ -111,6 +111,25 @@ async function sortByRecency(repoDir: string, shas: string[]): Promise<string[]>
   return out.split('\n').map((s) => s.trim()).filter((s) => SHA_RE.test(s));
 }
 
+/**
+ * Among the commits linked to each session, keeps the `perSessionCap` most recent of that
+ * session's own commits, from one recency query over their union. A session whose commits are
+ * mostly older than another session's no longer loses all of them to a single global cutoff.
+ */
+export async function capCommitsPerSession(repoDir: string, sessions: { commits: string[] }[], perSessionCap: number): Promise<string[]> {
+  const allShas = Array.from(new Set(sessions.flatMap((s) => s.commits).filter((sha) => SHA_RE.test(sha))));
+  if (allShas.length === 0) return [];
+  const ranked = await sortByRecency(repoDir, allShas);
+  const rank = new Map(ranked.map((sha, i) => [sha, i]));
+
+  const kept = new Set<string>();
+  for (const session of sessions) {
+    const bySessionRecency = session.commits.filter((sha) => rank.has(sha)).sort((a, b) => rank.get(a)! - rank.get(b)!);
+    for (const sha of bySessionRecency.slice(0, perSessionCap)) kept.add(sha);
+  }
+  return Array.from(kept);
+}
+
 /** The one-process-per-commit fallback `getDiffsBatched` uses when its batched parse looks untrustworthy. */
 export async function getDiffsPerCommit(
   repoDir: string,

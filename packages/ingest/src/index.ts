@@ -1,7 +1,7 @@
 import type { IngestArtifact, Session } from '@dailies/core';
 import { readSessionCache, sessionCachePath, writeSessionCache } from './cache';
 import { listCheckpointRefs, readCheckpointMetadata, readSessionTranscriptText, type CheckpointRef, type SessionMetaOnly } from './checkpoints';
-import { cloneOrUpdate, getDiffsBatched, git, ObjectBatchReader } from './git';
+import { capCommitsPerSession, cloneOrUpdate, getDiffsBatched, git, ObjectBatchReader } from './git';
 import { mapCheckpointCommits } from './trailers';
 import { parseTranscript } from './transcript';
 import { mergeSessions, selectCandidateSessionIds, selectWindow } from './window';
@@ -13,7 +13,8 @@ export { parseTranscript } from './transcript';
 export { mapCheckpointCommits } from './trailers';
 
 const DEFAULT_MAX_SESSIONS = 12;
-const MAX_DIFF_COMMITS = 60;
+const PER_SESSION_DIFF_COMMITS = 8;
+const MAX_DIFF_COMMITS = 120;
 
 export class NoCheckpointsError extends Error {}
 
@@ -133,9 +134,15 @@ export async function ingest(opts: {
     const windowed = selectWindow(merged, opts.since, opts.until, maxSessions);
 
     const commitShas = Array.from(new Set(windowed.flatMap((s) => s.commits)));
-    const cappedCount = Math.min(commitShas.length, MAX_DIFF_COMMITS);
+    const perSessionShas = await capCommitsPerSession(repoDir, windowed, PER_SESSION_DIFF_COMMITS);
+    const perSessionDroppedCount = commitShas.length - perSessionShas.length;
+    if (perSessionDroppedCount > 0) {
+      skipped.push({ ref: 'diffs', reason: `${perSessionDroppedCount} commit diff(s) dropped past the ${PER_SESSION_DIFF_COMMITS}-per-session cap` });
+    }
+
+    const cappedCount = Math.min(perSessionShas.length, MAX_DIFF_COMMITS);
     onProgress(`diffs for ${cappedCount} commits`);
-    const { diffs, droppedCount } = await getDiffsBatched(repoDir, commitShas, MAX_DIFF_COMMITS);
+    const { diffs, droppedCount } = await getDiffsBatched(repoDir, perSessionShas, MAX_DIFF_COMMITS);
     if (droppedCount > 0) skipped.push({ ref: 'diffs', reason: `${droppedCount} commit diff(s) dropped past the ${MAX_DIFF_COMMITS}-commit cap` });
 
     const headSha = await git(repoDir, ['rev-parse', 'HEAD']).then((s) => s.trim()).catch(() => '');

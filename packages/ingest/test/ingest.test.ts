@@ -281,6 +281,34 @@ describe('ingest', () => {
     expect(hits).toBeGreaterThan(0);
   });
 
+  it('caps diffs to the 8 most recent commits of each session, not one global cutoff', async () => {
+    const sessionIds = ['s1', 's2', 's3'];
+    const checkpoints = sessionIds.flatMap((sessionId) =>
+      Array.from({ length: 10 }, (_, i) => ({
+        id: `${sessionId}-c${i}`,
+        sessions: [
+          {
+            sessionId,
+            createdAt: `2026-10-10T07:${String(i).padStart(2, '0')}:00Z`,
+            lines: [{ type: 'user' as const, ts: `2026-10-10T07:${String(i).padStart(2, '0')}:00Z`, content: [{ id: 'u1', text: `${sessionId} turn ${i}` }] }],
+          },
+        ],
+      })),
+    );
+
+    const repoDir = await makeRepo({ layout: 'refs', checkpoints });
+    const artifact = await ingest({ repoUrl: repoDir, dataDir: repoDir, since: '2026-10-01T00:00:00Z', until: '2026-10-20T00:00:00Z' });
+
+    expect(artifact.sessions).toHaveLength(3);
+    for (const session of artifact.sessions) {
+      // all 10 commits are still linked to the session...
+      expect(session.commits).toHaveLength(10);
+      // ...but only the 8 most recent of them have a diff, not a single run dropped to zero
+      const keptDiffCount = session.commits.filter((sha) => Object.keys(artifact.diffs).some((k) => k.startsWith(`${sha}:`))).length;
+      expect(keptDiffCount).toBe(8);
+    }
+  }, 30000);
+
   it('returns a patch for a modified file, keyed by sha:path, capped at 6000 characters', async () => {
     const repoDir = await makeRepo({ layout: 'refs', checkpoints: [] });
     await writeFile(join(repoDir, 'a.txt'), 'line one\n');
