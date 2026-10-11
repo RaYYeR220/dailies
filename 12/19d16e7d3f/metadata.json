@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "1219d16e7d3f",
+  "strategy": "manual-commit",
+  "branch": "task/12-eval",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "eval/results/2026-10-11-grounding.json",
+    "eval/results/2026-10-11-mutation.json",
+    "eval/results/2026-10-11-scorecard.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/12/19d16e7d3f/0/metadata.json",
+      "transcript": "/12/19d16e7d3f/0/full.jsonl",
+      "compact_transcript": "/12/19d16e7d3f/0/transcript.jsonl",
+      "content_hash": "/12/19d16e7d3f/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 8,
+    "cache_creation_tokens": 4343,
+    "cache_read_tokens": 1443558,
+    "output_tokens": 1127,
+    "api_call_count": 4
+  }
+}
