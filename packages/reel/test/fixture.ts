@@ -99,3 +99,58 @@ export function shortStoryboard(): Storyboard {
   const sb = fixtureStoryboard();
   return { ...sb, scenes: [sb.scenes[0]!, sb.scenes[1]!, sb.scenes.at(-1)!] };
 }
+
+/** Text of exactly `length` characters that closes with END, so a still shows at a glance whether anything was cut. */
+const fill = (phrase: string, length: number) => `${phrase.repeat(Math.ceil(length / phrase.length)).slice(0, length - 4).trimEnd()} END`.padEnd(length, '.');
+
+/** Every field at the limit the schema allows, and the unbounded ones long: the worst case a scene has to lay out. */
+export function stressStoryboard(): Storyboard {
+  const repo = 'a-rather-long-organisation-name/monorepo-with-a-very-descriptive-name';
+  const line = (id: string) => ({ id, text: fill('The narration for this scene runs to the full length a line may have. ', 220), evidence: entry('s1:0') });
+  const output = Array.from({ length: 14 }, (_, n) => ` ✓ packages/pipeline/test/stages/stage-${n}.test.ts (12 tests) ${n}ms`).join('\n').slice(0, 600);
+  const hunk = ['@@ -120,58 +120,71 @@ export async function runStage(ctx: StageContext, stage: Stage): Promise<StageResult> {']
+    .concat(Array.from({ length: 60 }, (_, n) => `${n % 5 === 0 ? '-' : n % 3 === 0 ? '+' : ' '}  const value${n} = await ctx.read('artifact-${n}');`))
+    .join('\n').slice(0, 2400);
+  return {
+    runId: 'run_stress',
+    repo,
+    targetSec: 75,
+    facts: {},
+    scenes: [
+      { id: 'sc_title', type: 'title', lines: [], repo, windowLabel: '11 September 2026 – 11 October 2026', sessionCount: 128, commitCount: 1047 },
+      {
+        id: 'sc_prompt', type: 'prompt', sessionId: '0f3a9c21-7b54-4e19-a1c3-5d2e8f6b9a70', entryId: 's1:0',
+        quote: fill('Refactor the ingestion pipeline so that every checkpoint is read exactly once, and keep the old behaviour behind a flag. ', 280),
+        lines: [line('l1')],
+      },
+      {
+        id: 'sc_terminal', type: 'terminal',
+        steps: [true, false, true, false].map((ok, n) => ({
+          command: fill(`pnpm --filter @dailies/pipeline exec vitest run --reporter verbose test/stages/stage-${n}.test.ts `, 200), output, ok, entryId: `s1:${n}`,
+        })),
+        lines: [line('l2')],
+      },
+      {
+        id: 'sc_diff', type: 'diff', sha: '3f9c2ab71d0e4c55a1b2c3d4e5f60718293a4b5c', hunk, added: 148, removed: 97,
+        path: 'packages/pipeline/src/stages/some/deeply/nested/directory/structure/with-a-long-file-name.ts',
+        lines: [line('l3')],
+      },
+      {
+        id: 'sc_stats', type: 'stats',
+        items: Array.from({ length: 6 }, (_, n) => ({ label: fill('Tool calls recorded ', 24), value: `1,234,56${n} tokens`, statKey: `k${n}` })),
+        lines: [line('l4')],
+      },
+      {
+        id: 'sc_flag', type: 'flag', claimId: 'c_1', verdict: 'stale',
+        quote: fill('Everything is implemented, all of the tests pass and the build is green, so this is ready to merge. ', 240),
+        reality: fill('Three source files were edited after the last passing test run, and no run was recorded after those edits. ', 200),
+        lines: [line('l5')],
+      },
+      { id: 'sc_end', type: 'end', lines: [], repo, verified: 128, flagged: 0 },
+    ],
+  };
+}
+
+export function stressTimings(): LineTiming[] {
+  return ['l1', 'l2', 'l3', 'l4', 'l5'].map((lineId, n) => ({ lineId, startSec: n * 6, endSec: n * 6 + 6 }));
+}

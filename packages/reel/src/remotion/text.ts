@@ -91,10 +91,24 @@ export function countUp(value: string, progress: number): string {
   return prefix + grouped + (fraction === undefined ? '' : `.${fraction}`) + suffix;
 }
 
+const WIDE = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]|\p{Extended_Pictographic}/u;
+const NARROW = /[\p{Ll}\p{N}\p{P}\p{Z}]/u;
+
+/**
+ * The width of `text` counted in average lowercase Latin glyphs, for `fitSize` and `fitLine`.
+ * Capitals and other scripts set broader than that average, full-width glyphs and emoji broader still;
+ * counting characters alone would let a Cyrillic or CJK quote overflow its box.
+ */
+export function textUnits(text: string): number {
+  let units = 0;
+  for (const ch of text) units += WIDE.test(ch) ? 2.4 : ch.charCodeAt(0) < 0x250 && NARROW.test(ch) ? 1 : 1.3;
+  return units;
+}
+
 const WRAP_FILL = 0.85;   // share of a wrapped block that holds glyphs; the rest is ragged line ends
 const LINE_FILL = 0.92;   // margin for glyphs wider than the average advance
 
-/** Largest font size, in whole pixels, at which `chars` characters wrap inside `box`. `advance` is the mean glyph width in em. */
+/** Largest font size, in whole pixels, at which `chars` glyphs (see `textUnits`) wrap inside `box`. `advance` is the mean glyph width in em. */
 export function fitSize(chars: number, box: { width: number; height: number }, type: { max: number; min: number; advance: number; leading: number }): number {
   for (let size = type.max; size > type.min; size--) {
     const cols = Math.floor(box.width / (size * type.advance));

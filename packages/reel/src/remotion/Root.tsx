@@ -1,11 +1,8 @@
 import React from 'react';
 import { Composition, type CalculateMetadataFunction } from 'remotion';
 import { FPS, buildTimeline } from '../timeline';
-import { Reel, type ReelProps } from './Reel';
-
-export const COMPOSITION_ID = 'Reel';
-export const WIDTH = 1920;
-export const HEIGHT = 1080;
+import { COMPOSITION_ID, HEIGHT, WIDTH, type ReelProps } from './config';
+import { Reel } from './Reel';
 
 // What the Studio shows before real props arrive; a render always passes its own.
 const preview: ReelProps = {

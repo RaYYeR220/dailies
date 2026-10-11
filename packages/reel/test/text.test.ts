@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { clampEnd, clampStart, countUp, fitLine, fitSize, parseHunk, tailLines, windowRows } from '../src/remotion/text';
-import { fixtureStoryboard } from './fixture';
+import { Scene, Storyboard } from '@dailies/core';
+import { LIMITS, clampEnd, clampStart, countUp, fitLine, fitSize, parseHunk, tailLines, textUnits, windowRows } from '../src/remotion/text';
+import { fixtureStoryboard, stressStoryboard } from './fixture';
 
 describe('clampEnd', () => {
   it('leaves text within the limit untouched', () => {
@@ -126,5 +127,62 @@ describe('fitLine', () => {
     expect(fitLine(10, 1000, type)).toBe(100);
     expect(fitLine(40, 1000, type)).toBe(46);     // 40 glyphs * 0.5 em * 46 px <= 92% of 1000 px
     expect(fitLine(400, 1000, type)).toBe(20);
+  });
+});
+
+describe('textUnits', () => {
+  it('counts plain lowercase Latin text one unit per character', () => {
+    expect(textUnits('retry queue')).toBe(11);
+  });
+  it('weighs capitals and non-Latin letters as broader, and full-width glyphs and emoji as wider still', () => {
+    expect(textUnits('ABC')).toBeCloseTo(3.9);
+    expect(textUnits('тест')).toBeCloseTo(5.2);
+    expect(textUnits('日本')).toBeCloseTo(4.8);
+    expect(textUnits('🎉')).toBeCloseTo(2.4);
+  });
+  it('makes a Cyrillic quote fit at a smaller size than a Latin one of the same length', () => {
+    const type = { max: 92, min: 46, advance: 0.42, leading: 1.2 };
+    const box = { width: 1600, height: 560 };
+    expect(fitSize(textUnits('д'.repeat(280)), box, type)).toBeLessThan(fitSize(textUnits('d'.repeat(280)), box, type));
+  });
+});
+
+describe('LIMITS', () => {
+  const [, prompt, terminal, diff, stats, flag] = fixtureStoryboard().scenes as [unknown, any, any, any, any, any];
+  const cases: [keyof typeof LIMITS, (text: string) => unknown][] = [
+    ['promptQuote', (quote) => ({ ...prompt, quote })],
+    ['command', (command) => ({ ...terminal, steps: [{ ...terminal.steps[0], command }] })],
+    ['output', (output) => ({ ...terminal, steps: [{ ...terminal.steps[0], output }] })],
+    ['hunk', (hunk) => ({ ...diff, hunk })],
+    ['statLabel', (label) => ({ ...stats, items: [{ ...stats.items[0], label }] })],
+    ['statValue', (value) => ({ ...stats, items: [{ ...stats.items[0], value }] })],
+    ['flagQuote', (quote) => ({ ...flag, quote })],
+    ['flagReality', (reality) => ({ ...flag, reality })],
+    ['line', (text) => ({ ...prompt, lines: [{ ...prompt.lines[0], text }] })],
+  ];
+
+  it('mirrors the limits the core schema enforces', () => {
+    expect(cases.map(([key]) => key).sort()).toEqual(Object.keys(LIMITS).sort());
+    for (const [key, scene] of cases) {
+      expect(Scene.safeParse(scene('x'.repeat(LIMITS[key]))).success, `${key} at the limit`).toBe(true);
+      expect(Scene.safeParse(scene('x'.repeat(LIMITS[key] + 1))).success, `${key} past the limit`).toBe(false);
+    }
+  });
+
+  it('is what the stress fixture is filled to', () => {
+    const sb = stressStoryboard();
+    expect(Storyboard.parse(sb)).toEqual(sb);
+    const [, p, t, d, s, f] = sb.scenes as [unknown, any, any, any, any, any];
+    expect(p.quote).toHaveLength(LIMITS.promptQuote);
+    expect(t.steps).toHaveLength(4);
+    expect(t.steps[0].command).toHaveLength(LIMITS.command);
+    expect(t.steps[0].output).toHaveLength(LIMITS.output);
+    expect(d.hunk).toHaveLength(LIMITS.hunk);
+    expect(s.items).toHaveLength(6);
+    expect(s.items[0].label).toHaveLength(LIMITS.statLabel);
+    expect(s.items[0].value).toHaveLength(LIMITS.statValue);
+    expect(f.quote).toHaveLength(LIMITS.flagQuote);
+    expect(f.reality).toHaveLength(LIMITS.flagReality);
+    expect(p.lines[0].text).toHaveLength(LIMITS.line);
   });
 });

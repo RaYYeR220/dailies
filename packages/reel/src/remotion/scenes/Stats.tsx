@@ -1,6 +1,6 @@
 import React from 'react';
 import { theme } from '../../theme';
-import { LIMITS, clampEnd, countUp, fitLine } from '../text';
+import { LIMITS, clampEnd, countUp, fitLine, textUnits } from '../text';
 import { Frame, Label, Rise, Rule, useContentBox, useMotion, type SceneOf } from '../ui';
 
 const { font, size, leading, tracking, space, advance } = theme;
@@ -15,7 +15,7 @@ export const Stats: React.FC<{ scene: SceneOf<'stats'> }> = ({ scene }) => {
   // One row up to three values, two by two for four, three across for five and six.
   const columns = items.length <= 3 ? Math.max(1, items.length) : items.length === 4 ? 2 : 3;
   const cellWidth = (box.width - (columns - 1) * space.xl) / columns;
-  const longest = Math.max(1, ...items.map((item) => Array.from(item.value).length));
+  const longest = Math.max(1, ...items.map((item) => textUnits(item.value)));
   const fontSize = fitLine(longest, cellWidth, { ...size.stat, advance: advance.figure });
 
   return (

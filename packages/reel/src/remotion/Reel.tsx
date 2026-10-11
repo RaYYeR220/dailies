@@ -2,9 +2,10 @@ import React, { useMemo } from 'react';
 import { AbsoluteFill, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Audio } from '@remotion/media';
 import type { LineTiming, Scene, Storyboard } from '@dailies/core';
+import { NARRATION_FILE, type ReelProps } from './config';
 import { theme } from '../theme';
 import { buildTimeline, lineAt } from '../timeline';
-import { LIMITS, clampEnd } from './text';
+import { LIMITS, clampEnd, fitSize, textUnits } from './text';
 import { ReelContext } from './ui';
 import { Diff } from './scenes/Diff';
 import { End } from './scenes/End';
@@ -15,11 +16,6 @@ import { Terminal } from './scenes/Terminal';
 import { Title } from './scenes/Title';
 
 const { color, font, size, weight, leading, radius, space, stroke, layout, motion } = theme;
-
-/** `audio` says whether `narration.wav` is in the public folder. Without it the reel is a captions cut. */
-export type ReelProps = { storyboard: Storyboard; timings: LineTiming[]; audio: boolean };
-
-export const NARRATION_FILE = 'narration.wav';
 
 const SceneView: React.FC<{ scene: Scene }> = ({ scene }) => {
   switch (scene.type) {
@@ -39,6 +35,10 @@ const CaptionBar: React.FC<{ storyboard: Storyboard; timings: LineTiming[]; audi
   const { fps } = useVideoConfig();
   const line = lineAt(storyboard, timings, (frame - audioStartFrame) / fps);
   if (!line) return null;
+  const text = clampEnd(line.text, LIMITS.line);
+  // The scenes keep room for three lines at the caption size; a longer line is set smaller rather than taller.
+  const room = { width: layout.captionWidth - 2 * space.lg, height: 3 * size.caption * leading.text };
+  const fontSize = fitSize(textUnits(text), room, { max: size.caption, min: size.label, advance: theme.advance.text, leading: leading.text });
   const since = frame - (audioStartFrame + line.startSec * fps);
   const shown = interpolate(since, [0, motion.enterSec * fps * 0.5], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   return (
@@ -52,14 +52,14 @@ const CaptionBar: React.FC<{ storyboard: Storyboard; timings: LineTiming[]; audi
           borderRadius: radius.md,
           color: color.text,
           fontFamily: font.text,
-          fontSize: size.caption,
+          fontSize,
           fontWeight: weight.medium,
           lineHeight: leading.text,
           textAlign: 'center',
           opacity: shown,
         }}
       >
-        {clampEnd(line.text, LIMITS.line)}
+        {text}
       </div>
     </AbsoluteFill>
   );

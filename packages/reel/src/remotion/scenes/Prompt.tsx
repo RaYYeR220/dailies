@@ -1,7 +1,7 @@
 import React from 'react';
 import { interpolate } from 'remotion';
 import { theme } from '../../theme';
-import { LIMITS, clampEnd, fitSize } from '../text';
+import { LIMITS, clampEnd, fitSize, textUnits } from '../text';
 import { Frame, Label, Rise, useContentBox, useMotion, type SceneOf } from '../ui';
 
 const { color, font, size, leading, tracking, space, stroke, advance } = theme;
@@ -14,7 +14,7 @@ export const Prompt: React.FC<{ scene: SceneOf<'prompt'> }> = ({ scene }) => {
   const box = useContentBox();
   const chars = Array.from(clampEnd(scene.quote.trim(), LIMITS.promptQuote));
   const footer = size.label * leading.text + space.lg;
-  const fontSize = fitSize(chars.length, { width: box.width - space.lg - stroke.bar, height: box.height - footer }, { ...size.quote, advance: advance.display, leading: leading.quote });
+  const fontSize = fitSize(textUnits(chars.join('')), { width: box.width - space.lg - stroke.bar, height: box.height - footer }, { ...size.quote, advance: advance.display, leading: leading.quote });
 
   // Typed on over the settle window. The untyped rest is laid out but invisible, so lines never re-wrap mid-word.
   const typed = Math.floor(interpolate(m.frame, [0, m.settle], [0, chars.length], CLAMP));

@@ -1,14 +1,14 @@
 import React from 'react';
 import { spring } from 'remotion';
 import { theme } from '../../theme';
-import { LIMITS, clampEnd, fitSize } from '../text';
+import { LIMITS, clampEnd, fitSize, textUnits } from '../text';
 import { Frame, Label, Rise, Rule, useContentBox, useMotion, type SceneOf } from '../ui';
 
 const { color, font, size, weight, leading, tracking, radius, space, stroke, advance, motion } = theme;
 
 // Shares of the content box the two texts may fill; the stamp row and the labels take the rest.
-const QUOTE_SHARE = 0.38;
-const REALITY_SHARE = 0.24;
+const QUOTE_SHARE = 0.33;
+const REALITY_SHARE = 0.21;
 
 export const Flag: React.FC<{ scene: SceneOf<'flag'> }> = ({ scene }) => {
   const m = useMotion();
@@ -18,8 +18,8 @@ export const Flag: React.FC<{ scene: SceneOf<'flag'> }> = ({ scene }) => {
   const reality = clampEnd(scene.reality.trim(), LIMITS.flagReality);
 
   const quoteWidth = box.width - space.lg - stroke.bar;
-  const quoteSize = fitSize(Array.from(quote).length + 2, { width: quoteWidth, height: box.height * QUOTE_SHARE }, { ...size.claim, advance: advance.display, leading: leading.quote });
-  const realitySize = fitSize(Array.from(reality).length, { width: box.width, height: box.height * REALITY_SHARE }, { ...size.reality, advance: advance.text, leading: leading.text });
+  const quoteSize = fitSize(textUnits(quote) + 2, { width: quoteWidth, height: box.height * QUOTE_SHARE }, { ...size.claim, advance: advance.display, leading: leading.quote });
+  const realitySize = fitSize(textUnits(reality), { width: box.width, height: box.height * REALITY_SHARE }, { ...size.reality, advance: advance.text, leading: leading.text });
 
   // The claim, then the record, then the stamp drops on the pair.
   const stampAt = m.settle * 0.6;
@@ -27,14 +27,14 @@ export const Flag: React.FC<{ scene: SceneOf<'flag'> }> = ({ scene }) => {
 
   return (
     <Frame label="Claim against the record">
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: space.md }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: space.lg }}>
         <Rise progress={m.span(0, 0.3)} style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
           <Label>The agent wrote</Label>
           <div style={{ borderLeft: `${stroke.bar}px solid ${color.edge}`, paddingLeft: space.lg, fontFamily: font.display, fontStyle: 'italic', fontSize: quoteSize, lineHeight: leading.quote, letterSpacing: tracking.display, overflowWrap: 'anywhere' }}>
             “{quote}”
           </div>
         </Rise>
-        <div style={{ display: 'flex', alignItems: 'center', gap: space.md }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: space.md, padding: `${space.sm}px 0` }}>
           <div
             style={{
               opacity: m.frame >= stampAt ? 1 : 0,
