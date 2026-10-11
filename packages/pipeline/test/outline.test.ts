@@ -66,6 +66,24 @@ describe('outlineSession', () => {
     const s = session('silent', [{ kind: 'assistant', text: 'hello?' }]);
     expect(outlineSession(s).firstPrompt).toBe('');
   });
+
+  it('bounds every string field a session supplies, not only the first prompt and last message', () => {
+    const s = session('huge', [{ kind: 'user', text: 'go' }], {
+      agent: 'a'.repeat(5000),
+      model: 'm'.repeat(5000),
+      startedAt: `2026-10-10T00:00:00Z${'z'.repeat(5000)}`,
+      commits: ['f'.repeat(5000)],
+      filesTouched: ['src/' + 'x'.repeat(5000)],
+    });
+
+    const outline = outlineSession(s);
+
+    expect(outline.agent.length).toBeLessThan(100);
+    expect(outline.model!.length).toBeLessThan(100);
+    expect(outline.startedAt.length).toBeLessThan(100);
+    expect(outline.commits[0]!.length).toBeLessThan(100);
+    expect(outline.files[0]!.length).toBeLessThan(1000);
+  });
 });
 
 describe('outlinesWithin', () => {

@@ -8,6 +8,11 @@ const MAX_FILES = 8;
 const MAX_RUNS = 12;
 const BEAT_TITLE_CHARS = 80;
 const BEAT_SUMMARY_CHARS = 400;
+const ID_CHARS = 80;
+const NAME_CHARS = 80;
+const DATE_CHARS = 40;
+const COMMIT_CHARS = 40;
+const FILE_PATH_CHARS = 300;
 
 /** `text` in at most `max` characters; a cut is marked with an ellipsis that counts towards the limit. */
 export function cut(text: string, max: number): string {
@@ -56,17 +61,17 @@ export function outlineSession(session: Session): SessionOutline {
   const lastAssistant = [...session.entries].reverse().find((e) => e.kind === 'assistant' && e.text.trim() !== '');
   const edits = session.entries.filter((e) => e.kind === 'tool_call' && e.filePath !== undefined).length;
   return {
-    id: session.id,
-    agent: session.agent,
-    model: session.model,
-    startedAt: session.startedAt,
+    id: oneLine(session.id, ID_CHARS),
+    agent: oneLine(session.agent, NAME_CHARS),
+    model: session.model === null ? null : oneLine(session.model, NAME_CHARS),
+    startedAt: oneLine(session.startedAt, DATE_CHARS),
     minutes: minutesBetween(session.startedAt, session.endedAt),
     turns: session.turnCount,
     entries: session.entries.length,
     firstPrompt: oneLine(firstPrompt, PROMPT_CHARS),
     lastMessage: oneLine(lastAssistant?.text ?? '', MESSAGE_CHARS),
-    commits: session.commits.slice(0, MAX_COMMITS),
-    files: session.filesTouched.slice(0, MAX_FILES),
+    commits: session.commits.slice(0, MAX_COMMITS).map((c) => oneLine(c, COMMIT_CHARS)),
+    files: session.filesTouched.slice(0, MAX_FILES).map((f) => oneLine(f, FILE_PATH_CHARS)),
     runs: runLines(session, MAX_RUNS),
     edits,
   };
@@ -78,7 +83,10 @@ function trimmedTo(outline: SessionOutline, cap: number): SessionOutline {
 
 /**
  * Every session's outline, `firstPrompt` and `lastMessage` trimmed evenly, as far as needed, so the
- * JSON fits `maxChars`. No session is ever dropped.
+ * JSON fits `maxChars`. No session is ever dropped: every other field is already bounded in
+ * `outlineSession`, so for a realistic session count the fixed cost of those fields plus fully
+ * trimmed text still fits; an unrealistic number of sessions can still exceed `maxChars` even at
+ * cap zero, which is accepted here rather than dropping a session to force the fit.
  */
 export function outlinesWithin(sessions: Session[], maxChars: number): SessionOutline[] {
   const full = sessions.map(outlineSession);
