@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "102d6102a532",
+  "session_id": "b3993674-9c85-467f-ae72-94752b5aab4a",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T23:46:26.977158Z",
+  "branch": "task/8c-first-run",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/verify/src/results.ts",
+    "packages/verify/test/results.test.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "644a8b75a998",
+  "checkpoint_transcript_start": 464,
+  "transcript_lines_at_start": 464,
+  "compact_transcript_start": 56,
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 11302,
+    "cache_read_tokens": 2103775,
+    "output_tokens": 7921,
+    "api_call_count": 8
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01HCzH5dcrWqUsZdpUkioAAk",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:executing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "644a8b75a998",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 30,
+        "end": 31,
+        "entry_ids": [
+          "e08929c8-0641-44db-a3d6-1b9520871c59"
+        ],
+        "tool_use_id": "toolu_01HCzH5dcrWqUsZdpUkioAAk"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01HCzH5dcrWqUsZdpUkioAAk"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:executing-plans",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T23:46:26.945527Z",
+    "agent_lines": 24,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 24,
+    "total_lines_changed": 25,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
