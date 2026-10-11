@@ -55,6 +55,17 @@ describe('ObjectBatchReader', () => {
     }
   });
 
+  it('rejects a read of an object over the size cap, even when the object is already local', async () => {
+    const repoDir = await initRepo();
+    const oid = (await run(repoDir, ['hash-object', '-w', '--stdin'], 'x'.repeat(5000))).trim();
+    const reader = new ObjectBatchReader(repoDir, 1000);
+    try {
+      await expect(reader.read(oid)).rejects.toThrow(/over the 1000-byte read limit/);
+    } finally {
+      reader.close();
+    }
+  });
+
   it('rejects a pending read instead of hanging when the process dies unexpectedly', async () => {
     // A directory that is not a git repository makes `git cat-file --batch` exit immediately
     // with an error, before ever producing a valid reply header.

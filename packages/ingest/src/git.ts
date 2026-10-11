@@ -204,11 +204,14 @@ export class ObjectBatchReader {
   private buffer: Buffer = Buffer.alloc(0);
   private closed = false;
   // Set once the reply stream can no longer be trusted to line up with pending requests (a
-  // process exit or an unparseable header); every read from this point on fails fast instead of
-  // risking a later reply being resolved against the wrong pending request.
+  // process exit, an unparseable header, or an object over the size cap); every read from this
+  // point on fails fast instead of risking a later reply being resolved against the wrong
+  // pending request.
   private desynced = false;
+  private readonly maxObjectSize: number;
 
-  constructor(repoDir: string) {
+  constructor(repoDir: string, maxObjectSize = MAX_FETCHED_BLOB_SIZE) {
+    this.maxObjectSize = maxObjectSize;
     this.proc = spawn('git', ['cat-file', '--batch'], {
       cwd: repoDir,
       // Promisor objects outside a partial clone's filter would otherwise be fetched one at a
@@ -260,6 +263,13 @@ export class ObjectBatchReader {
         return;
       }
       const size = Number(m[1]);
+      if (size > this.maxObjectSize) {
+        // Caught from the header, before any of the body has necessarily arrived: this object is
+        // never buffered, fetched-and-capped or not — a caller that skips the fetch-time check
+        // (or a blob that was simply already local) is still bounded here.
+        this.poison(new Error(`git cat-file --batch reported an object of ${size} bytes, over the ${this.maxObjectSize}-byte read limit`));
+        return;
+      }
       const need = nl + 1 + size + 1;
       if (this.buffer.length < need) return;
       const data = Buffer.from(this.buffer.subarray(nl + 1, nl + 1 + size));
