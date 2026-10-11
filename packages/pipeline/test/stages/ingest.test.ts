@@ -82,6 +82,15 @@ describe('ingest stage', () => {
     expect(JSON.stringify(error, Object.getOwnPropertyNames(error))).not.toContain(token);
   });
 
+  it('ingest strips the whole userinfo when the password itself holds an @', async () => {
+    const h = harness({ repoUrl: 'https://deploy:p@ss-w0rd-long@127.0.0.1:1/acme/unreachable.git' });
+
+    const error = await ingestStage().run(h.ctx()).then(() => null, (err: Error) => err);
+
+    expect(error!.message).toContain('https://127.0.0.1:1/acme/unreachable.git');
+    expect(error!.message).not.toMatch(/p@ss|ss-w0rd-long|deploy/);
+  });
+
   it('ingest keeps credentials out of the artifact as well', async () => {
     const h = harness({ repoUrl: 'file://deploy:hunter2hunter2@fileserver/acme/nothing-here' });
 
