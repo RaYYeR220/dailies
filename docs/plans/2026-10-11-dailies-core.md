@@ -948,3 +948,38 @@ dailies verify <repo-url|path> [--since 24h|<ISO>] [--json]
 - [ ] **Step 6: Real run.** `pnpm dailies run https://github.com/entireio/cli --since 30d --max-sessions 4`. Watch the reel. Record in the commit body: status, cost, duration, verdict counts, lines dropped by the grounding gate.
 - [ ] **Step 7: Write `README.md`:** what it is, the quick start above, the environment table from `.env.example`, the stage diagram from the spec, and a short "Limits" section copied from spec section 12.
 - [ ] **Step 8: Commit.**
+
+---
+
+### Task 2b: Ingest performance
+
+Measured on real repositories after Task 2: ingesting 12 sessions of a public repository with 89 checkpoints took 248 seconds; a one-session ingest of another took 79 seconds. Both are dominated by one network round trip per lazily fetched blob and one `git` process per file read. The target is an ingest a person will wait for.
+
+**Files:** `packages/ingest/src/**`, `packages/ingest/test/**`
+
+**Interfaces:**
+- Consumes and produces: unchanged. Every exported name and signature of `@dailies/ingest` stays as it is. One addition: `ingest` accepts an optional `onProgress?: (message: string) => void`.
+
+Required changes:
+
+- **Clone filter.** Clone with `--filter=blob:limit=3m` instead of `blob:none`. Ordinary source blobs and compact transcripts then arrive in the first pack; only the multi-megabyte `full.jsonl` files stay remote, and they are never read.
+- **Batched object reads.** Read checkpoint files through one long-lived `git cat-file --batch` process per ingest (write object names, read sized replies) instead of one `git show` per file. A blob that is missing locally and larger than the filter is fetched once with `git fetch origin <oid>`; a failure marks that session as skipped with the reason.
+- **Read metadata before transcripts.** For every checkpoint read only the small metadata files first, decide which sessions fall inside the window and survive the `maxSessions` cap, and read transcripts only for those.
+- **Batched diffs.** Produce the patches for all linked commits with one `git log -p --no-walk --format=...` call (NUL-separated, as the trailer parsing already does) instead of one call per commit. Cap at the 60 most recent linked commits; report the number dropped in `skipped`.
+- **Parsed-session cache.** After parsing and redacting a session, store it as `<dataDir>/cache/sessions/<checkpointId>-<n>.json` keyed additionally by the transcript blob's object id. A later ingest reuses it when the object id matches.
+- **Progress.** Call `onProgress` at each phase with a short message (`cloning`, `read 89 checkpoints`, `12 sessions in window`, `parsing 4/12`, `diffs for 60 commits`).
+
+Acceptance, measured on this machine and written into the commit message:
+
+| Case | Target |
+|---|---|
+| Cold ingest of `https://github.com/HighnessAtharva/firstrun`, 12 sessions | under 60 s |
+| The same again, repository and cache present | under 8 s |
+| All existing ingest tests | still pass unchanged |
+
+- [ ] **Step 1: Write failing tests:** the batch reader returns the same bytes as `git show` for several objects including an empty file; metadata-first reading does not open the transcript of a session outside the window (assert through a counting wrapper); the batched diff output equals the per-commit output for a three-commit fixture; a second ingest with a warm cache parses zero transcripts; a changed transcript object id invalidates the cached session; `onProgress` receives the phases in order.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run all ingest tests.** Expected: PASS.
+- [ ] **Step 5: Measure** the two cases above with a clean `--dataDir` in the system temp directory, and record the numbers.
+- [ ] **Step 6: Commit.**
