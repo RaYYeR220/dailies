@@ -119,7 +119,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
       const commits = knownCommits(ingest);
       const facts = computeFacts(ingest.sessions);
       const repo = repoLabel(ctx.run.repoUrl);
-      const window = [...new Set([day(ctx.run.since), day(ctx.run.until)])].join(' – ');
+      const windowLabel = [...new Set([day(ctx.run.since), day(ctx.run.until)])].join(' – ');
 
       const runs = new Map<string, ToolRun[]>();
       const runsOf = (session: Session): ToolRun[] => {
@@ -180,7 +180,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
 
       const { system, user } = writerPrompt({
         repo,
-        window,
+        window: windowLabel,
         targetSec: TARGET_SEC,
         facts,
         beats: beats.map((beat) => beatMaterial(beat, ingest, sessions)),
@@ -223,7 +223,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
         anchor: validations.find((s) => s.steps.some((step) => entries.get(step.entryId)?.sessionId === claim.sessionId))?.id,
       }));
       const loose = flags.filter((f) => f.anchor === undefined).map((f) => f.scene);
-      const scenes: Scene[] = [{ id: 'title', type: 'title', lines: [], repo, windowLabel: window, sessionCount: ingest.sessions.length, commitCount: Number(facts['commits.count']) }];
+      const scenes: Scene[] = [{ id: 'title', type: 'title', lines: [], repo, windowLabel, sessionCount: ingest.sessions.length, commitCount: Number(facts['commits.count']) }];
       for (const scene of body) {
         if (scene.type === 'stats') scenes.push(...loose.splice(0));
         scenes.push(scene, ...flags.filter((f) => f.anchor === scene.id).map((f) => f.scene));
