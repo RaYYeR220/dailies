@@ -20,8 +20,10 @@ const safeLabel = (id: string): string => {
 };
 
 export function reviewerPrompt(stills: { sceneId: string; dataUrl: string }[]): { system: string; user: ContentPart[] } {
+  // JSON.stringify, not manual quoting: it escapes any quote or control character the label
+  // carries, so the label can never break out of its own delimiters.
   const user: ContentPart[] = stills.flatMap((s) => [
-    { type: 'text', text: `Still for scene "${safeLabel(s.sceneId)}":` },
+    { type: 'text', text: `Still for scene ${JSON.stringify(safeLabel(s.sceneId))}:` },
     { type: 'image_url', image_url: { url: s.dataUrl } },
   ]);
   return { system: RUBRIC, user };

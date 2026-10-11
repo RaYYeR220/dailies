@@ -85,7 +85,13 @@ function toDataUrl(path: string): string {
 }
 
 const MAX_FINDING_TEXT_LEN = 240;
-const truncate = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
+const MAX_FINDINGS = 50;
+const MAX_REASON_LEN = 2000;
+const stripControlChars = (s: string): string => s.replace(/[\r\n\t]+/g, ' ');
+const truncate = (s: string, max: number): string => {
+  const flat = stripControlChars(s);
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+};
 
 // The vision model reads the rendered stills, which ultimately carry content derived from the
 // repository under review; treat its reply as untrusted. A `sceneId` it did not get handed back
@@ -144,12 +150,13 @@ export function buildReviewStage(deps: ReviewStageDeps): Stage<{ pass: boolean; 
       const validSceneIds = new Set(ground.storyboard.scenes.map((s) => s.id));
       findings.push(...(await visionFindings(deps.client, stills, validSceneIds)));
 
-      const pass = !findings.some((f) => f.severity === 'high');
+      const bounded = findings.slice(0, MAX_FINDINGS);
+      const pass = !bounded.some((f) => f.severity === 'high');
       if (!pass) {
-        const reason = findings.map((f) => `${f.sceneId ?? 'reel'}: ${f.issue}`).join('; ');
-        return { artifact: { pass, findings }, loopBackTo: 'script', reason };
+        const reason = truncate(bounded.map((f) => `${f.sceneId ?? 'reel'}: ${f.issue}`).join('; '), MAX_REASON_LEN);
+        return { artifact: { pass, findings: bounded }, loopBackTo: 'script', reason };
       }
-      return { artifact: { pass, findings } };
+      return { artifact: { pass, findings: bounded } };
     },
   };
 }

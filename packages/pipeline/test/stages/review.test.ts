@@ -181,6 +181,57 @@ describe('buildReviewStage', () => {
     expect(result.artifact.findings[0]!.fix.length).toBeLessThan(longText.length);
   }, 20000);
 
+  it('flattens newlines out of issue and fix text from the vision reply', async () => {
+    const stillPath = join(scratch(), 'still.png');
+    writeFileSync(stillPath, Buffer.from('fake-png-bytes'));
+    const videoPath = join(scratch(), 'clean.mp4');
+    await cleanClip(videoPath);
+
+    const client = createMockClient(() => ({
+      role: 'assistant',
+      content: JSON.stringify([{ sceneId: 'sc_title', issue: 'line one\nline two', severity: 'high', fix: 'a\nb' }]),
+    }));
+    const stage = buildReviewStage({ client, renderStills: async () => [{ sceneId: 'sc_title', path: stillPath }] });
+
+    const ctx = makeCtx({
+      render: { videoPath, srtPath: 'x.srt', posterPath: 'x.png', durationSec: 75 },
+      ground: { storyboard: minimalStoryboard() },
+      voice: { audioPath: null, timings: [] },
+    });
+
+    const result = await stage.run(ctx);
+
+    expect(result.artifact.findings[0]!.issue).not.toContain('\n');
+    expect(result.reason).not.toContain('\n');
+  }, 20000);
+
+  it('caps the number of findings and the total reason length when the vision reply floods them', async () => {
+    const stillPath = join(scratch(), 'still.png');
+    writeFileSync(stillPath, Buffer.from('fake-png-bytes'));
+    const videoPath = join(scratch(), 'clean.mp4');
+    await cleanClip(videoPath);
+
+    const flood = Array.from({ length: 80 }, (_, n) => ({
+      sceneId: 'sc_title',
+      issue: `finding number ${n} with some padding text to make the joined reason long`,
+      severity: 'high' as const,
+      fix: 'fix it',
+    }));
+    const client = createMockClient(() => ({ role: 'assistant', content: JSON.stringify(flood) }));
+    const stage = buildReviewStage({ client, renderStills: async () => [{ sceneId: 'sc_title', path: stillPath }] });
+
+    const ctx = makeCtx({
+      render: { videoPath, srtPath: 'x.srt', posterPath: 'x.png', durationSec: 75 },
+      ground: { storyboard: minimalStoryboard() },
+      voice: { audioPath: null, timings: [] },
+    });
+
+    const result = await stage.run(ctx);
+
+    expect(result.artifact.findings.length).toBeLessThan(flood.length);
+    expect(result.reason!.length).toBeLessThan(2500);
+  }, 20000);
+
   it('passes when the vision check returns no findings and the deterministic checks are clean', async () => {
     const stillPath = join(scratch(), 'still.png');
     writeFileSync(stillPath, Buffer.from('fake-png-bytes'));
