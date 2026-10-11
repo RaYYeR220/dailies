@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "1582d57838a1",
+  "strategy": "manual-commit",
+  "branch": "task/6-reel",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/reel/test/srt.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/15/82d57838a1/0/metadata.json",
+      "transcript": "/15/82d57838a1/0/full.jsonl",
+      "compact_transcript": "/15/82d57838a1/0/transcript.jsonl",
+      "content_hash": "/15/82d57838a1/0/content_hash.txt",
+      "prompt": "/15/82d57838a1/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 18,
+    "cache_creation_tokens": 133731,
+    "cache_read_tokens": 793942,
+    "output_tokens": 58576,
+    "api_call_count": 10
+  }
+}
