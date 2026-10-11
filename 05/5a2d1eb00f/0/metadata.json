@@ -1,0 +1,73 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "055a2d1eb00f",
+  "session_id": "957e19a5-fe39-499d-94fd-177cc2abaf32",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-11T23:51:17.851761Z",
+  "branch": "task/8b-editor-cost",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/pipeline/src/outline.ts",
+    "packages/pipeline/src/prompts/editor.ts",
+    "packages/pipeline/test/outline.test.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "ac1ae855626e",
+  "checkpoint_transcript_start": 658,
+  "transcript_lines_at_start": 658,
+  "compact_transcript_start": 83,
+  "token_usage": {
+    "input_tokens": 22,
+    "cache_creation_tokens": 15911,
+    "cache_read_tokens": 2953481,
+    "output_tokens": 7855,
+    "api_call_count": 11
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01VTSQqoXpdpZVVq9EQGLU3U",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "superpowers:executing-plans"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "ac1ae855626e",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 31,
+        "end": 32,
+        "entry_ids": [
+          "70161759-6874-44cb-a1a4-a66063c1d4b6"
+        ],
+        "tool_use_id": "toolu_01VTSQqoXpdpZVVq9EQGLU3U"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01VTSQqoXpdpZVVq9EQGLU3U"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: superpowers:executing-plans",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "initial_attribution": {
+    "calculated_at": "2026-10-11T23:51:17.818995Z",
+    "agent_lines": 29,
+    "agent_removed": 14,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 29,
+    "total_lines_changed": 43,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
