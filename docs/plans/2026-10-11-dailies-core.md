@@ -668,7 +668,7 @@ Behaviour:
 - **`detectSilences`.** Runs `ffmpeg -i <wav> -af silencedetect=noise=<noiseDb>dB:d=<minSec> -f null -` (defaults -35 and 0.45) and parses `silence_start` / `silence_end` from stderr.
 - **`alignLines`.** Drop silences touching the start or end of the audio. With `n` lines, `n - 1` boundaries are needed. The expected position of boundary `i` is `totalSec` times the cumulative share of characters up to line `i`. Each boundary takes the unused silence whose midpoint is nearest to its expected position and within 25% of `totalSec` of it; a boundary with no such silence uses the expected position. Line `i` runs from boundary `i - 1` to boundary `i` (0 and `totalSec` at the ends). The function never throws and always returns `n` contiguous, non-overlapping timings.
 - **`estimateTimings`.** 15 characters per second, minimum 1.6 s per line, contiguous from zero.
-- **`voiceLines`.** Uses a cached WAV under `outDir/cache/<sha256 of model list, voice and text>.wav` when present (zero calls). Otherwise synthesises, writes `outDir/narration.wav`, detects silences and aligns. On `TtsQuotaError`, or when `maxCalls` is zero, it returns `mode: 'captions'`, `audioPath: null` and `estimateTimings`.
+- **`voiceLines`.** Uses a cached WAV under `outDir/cache/<sha256 of provider name, voice and text>.wav` when present (zero calls) — the `TtsProvider` interface exposes only `name`, not a model list, so the cache key is keyed on that. Otherwise synthesises, writes `outDir/narration.wav`, detects silences and aligns. On `TtsQuotaError`, or when `maxCalls` is zero, it returns `mode: 'captions'`, `audioPath: null` and `estimateTimings`.
 
 - [ ] **Step 1: Write failing tests.**
 
