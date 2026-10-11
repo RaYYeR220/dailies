@@ -20,31 +20,43 @@ export interface NarrationLine {
   endSec: number | null;
   mark: Mark;
   evidence: EvidenceRef[];
+  /** The grounding stage rewrote this line after the script was written; `text` is what is spoken. */
+  rewritten: boolean;
 }
+
+const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 /**
  * Every narration line in storyboard order. Once timings exist, a line without one is left out: the
  * grounding stage dropped it, so it is not in the cut. Timings that name none of the storyboard's lines
  * belong to some other cut, and are ignored rather than allowed to empty the page.
+ *
+ * `cues` are the subtitle texts of the rendered reel, one per timing in the same order. The page is given
+ * the storyboard as the script stage wrote it, and grounding may have rewritten a line since; where a cue
+ * differs, the cue is what was spoken, so it replaces the text and the line is marked as rewritten.
  */
-export function narrationLines(sb: Storyboard, timings: LineTiming[] | null, audioOffsetSec: number): NarrationLine[] {
+export function narrationLines(sb: Storyboard, timings: LineTiming[] | null, audioOffsetSec: number, cues: string[] | null = null): NarrationLine[] {
   const ids = new Set(sb.scenes.flatMap((scene) => scene.lines.map((line) => line.id)));
   const matching = timings?.filter((t) => ids.has(t.lineId)) ?? [];
   const timed = matching.length > 0 ? new Map(matching.map((t) => [t.lineId, t])) : null;
+  const spoken = timings && cues && cues.length === timings.length ? new Map(timings.map((t, i) => [t.lineId, cues[i]!])) : null;
   return sb.scenes.flatMap((scene) => {
     const mark: Mark = scene.type === 'flag' ? markFor(scene.verdict) : 'ring';
     return scene.lines.flatMap((line) => {
       const t = timed?.get(line.id);
       if (timed && !t) return [];
+      const cue = spoken?.get(line.id);
+      const rewritten = cue !== undefined && flat(cue) !== '' && flat(cue) !== flat(line.text);
       return [{
         id: line.id,
-        text: line.text,
+        text: rewritten ? flat(cue) : line.text,
         sceneId: scene.id,
         sceneType: scene.type,
         startSec: t ? t.startSec + audioOffsetSec : null,
         endSec: t ? t.endSec + audioOffsetSec : null,
         mark,
         evidence: line.evidence,
+        rewritten,
       }];
     });
   });
@@ -203,6 +215,18 @@ export function claimCounts(claims: Claim[]): Record<Verdict, number> & { total:
   const counts = { verified: 0, contradicted: 0, stale: 0, unverifiable: 0, total: claims.length };
   for (const claim of claims) counts[verdictOf(claim)] += 1;
   return counts;
+}
+
+/** The text of each cue of a SubRip file, in order, with line breaks inside a cue flattened. */
+export function srtCues(srt: string): string[] {
+  return srt
+    .replace(/\r\n?/g, '\n')
+    .split(/\n{2,}/)
+    .flatMap((block) => {
+      const lines = block.split('\n').filter((l) => l.trim() !== '');
+      const at = lines.findIndex((l) => l.includes('-->'));
+      return at === -1 ? [] : [flat(lines.slice(at + 1).join(' '))];
+    });
 }
 
 /** The renderer writes SubRip; a video track only loads WebVTT. */

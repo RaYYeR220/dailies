@@ -36,6 +36,8 @@ export interface ReelData {
   voiceMode: 'voiced' | 'captions' | null;
   gate: Gate | null;
   media: { video: string | null; subtitles: string | null; poster: string | null };
+  /** The subtitle texts of the rendered reel, in order: what is actually spoken. Null without a subtitle file. */
+  cues: string[] | null;
 }
 
 export interface ApprovedReel { runId: string; repoUrl: string; approvedAt: string }

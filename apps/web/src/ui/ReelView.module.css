@@ -163,12 +163,18 @@
   padding: 14px 15px 16px;
 }
 
-.open .ev > div:first-child {
+.open .ev > div:first-of-type {
   padding-right: 132px;
 }
 
 .ev pre {
   font-size: 12px;
+}
+
+.rewritten {
+  padding: 4px 132px 6px 2px;
+  font: 400 13.5px/1.4 var(--txt);
+  color: var(--glass-200);
 }
 
 /* One loupe for the whole list. It glides to whichever line is open. */
@@ -405,12 +411,15 @@
   .ev > div {
     padding: 13px 12px 15px;
   }
-  .open .ev > div:first-child {
+  .open .ev > div:first-of-type {
     padding-top: 42px;
     padding-right: 12px;
   }
   .ev pre {
     font-size: 11.5px;
+  }
+  .rewritten {
+    padding: 34px 2px 4px;
   }
   .now {
     grid-template-columns: 38px minmax(0, 1fr);

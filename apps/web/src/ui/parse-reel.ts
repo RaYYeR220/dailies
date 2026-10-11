@@ -12,7 +12,9 @@ export function parseReel(body: unknown): ReelData | null {
   if (!run) return null;
 
   const reel = isRecord(body.reel) ? body.reel : {};
-  const storyboard = Storyboard.safeParse(body.storyboard);
+  // The script stage writes `{ storyboard, discarded }`; a bare storyboard is read too.
+  const scripted = isRecord(body.storyboard) && isRecord(body.storyboard.storyboard) ? body.storyboard.storyboard : body.storyboard;
+  const storyboard = Storyboard.safeParse(scripted);
   // The verify stage writes `{ claims, counts }`; a bare list is read too.
   const claimList = Array.isArray(body.claims) ? body.claims : isRecord(body.claims) && Array.isArray(body.claims.claims) ? body.claims.claims : [];
   const timings = LineTiming.array().safeParse(body.timings);
@@ -34,5 +36,6 @@ export function parseReel(body: unknown): ReelData | null {
     voiceMode: body.voiceMode === 'voiced' || body.voiceMode === 'captions' ? body.voiceMode : null,
     gate: parseGate(body.gate),
     media: { video: mediaPath(media.video), subtitles: mediaPath(media.subtitles), poster: mediaPath(media.poster) },
+    cues: null,
   };
 }

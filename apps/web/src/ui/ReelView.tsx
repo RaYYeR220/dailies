@@ -21,12 +21,12 @@ import styles from './ReelView.module.css';
 const UNSETTLED_SHOWN = 4;
 
 export function ReelView({ data }: { data: ReelData }) {
-  const { run, storyboard, claims, timings, media } = data;
+  const { run, storyboard, claims, timings, media, cues } = data;
   const player = useRef<ReelPlayerHandle>(null);
   const rows = useRef(new Map<string, HTMLLIElement>());
   const list = useRef<HTMLDivElement>(null);
 
-  const lines = useMemo(() => (storyboard ? narrationLines(storyboard, timings, AUDIO_OFFSET_SEC) : []), [storyboard, timings]);
+  const lines = useMemo(() => (storyboard ? narrationLines(storyboard, timings, AUDIO_OFFSET_SEC, cues) : []), [storyboard, timings, cues]);
   const spans = useMemo(() => (storyboard ? sceneSpans(storyboard, timings, AUDIO_OFFSET_SEC) : null), [storyboard, timings]);
   const sources = useMemo(() => {
     const ctx = { storyboard: storyboard!, claims };
@@ -172,6 +172,9 @@ export function ReelView({ data }: { data: ReelData }) {
                       <span className="sr">{MARK_WORDS[line.mark]}</span>
                     </button>
                     <div id={`src-${line.id}`} className={`${film.film} ${styles.ev}`} hidden={!isOpen}>
+                      {isOpen && line.rewritten ? (
+                        <p className={styles.rewritten}>This line was rewritten at the grounding stage. The sources below are the ones its first wording cited.</p>
+                      ) : null}
                       {isOpen ? (
                         <SourceFrames sources={own} mark={line.mark} hrefFor={(s) => (s.kind === 'diff' ? evidenceHref({ type: 'diff', sha: s.sha, path: s.path }, run.repoUrl) : null)} />
                       ) : null}

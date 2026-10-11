@@ -1,5 +1,6 @@
 import { parseRun, parseStages, isRecord } from './parse';
 import { parseReel } from './parse-reel';
+import { srtCues } from './reel-model';
 import type { ApprovedReel, ReelData, RunInfo, StageInfo } from './types';
 
 /*
@@ -35,6 +36,11 @@ export async function fetchReel(id: string): Promise<ReelData | null> {
   if (status === 404) return null;
   const reel = parseReel(body);
   if (!reel) throw new Error(`GET /api/reels/${id} answered ${status} with a body this page cannot read`);
+  // The subtitle file carries each line as it was finally spoken; see narrationLines for why that matters.
+  if (reel.media.subtitles) {
+    const srt = await fetch(`${apiOrigin()}${reel.media.subtitles}`, { cache: 'no-store' }).catch(() => null);
+    if (srt?.ok) reel.cues = srtCues(await srt.text());
+  }
   return reel;
 }
 

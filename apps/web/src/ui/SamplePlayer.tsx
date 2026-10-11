@@ -10,7 +10,7 @@ import styles from './SampleReel.module.css';
 /** The reel player on its own, with the line being spoken written under it. */
 export function SamplePlayer({ data }: { data: ReelData }) {
   const storyboard = data.storyboard!;
-  const lines = useMemo(() => narrationLines(storyboard, data.timings, AUDIO_OFFSET_SEC), [storyboard, data.timings]);
+  const lines = useMemo(() => narrationLines(storyboard, data.timings, AUDIO_OFFSET_SEC, data.cues), [storyboard, data.timings, data.cues]);
   const spans = useMemo(() => sceneSpans(storyboard, data.timings, AUDIO_OFFSET_SEC), [storyboard, data.timings]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const onLine = useCallback((id: string | null) => {

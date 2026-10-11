@@ -71,18 +71,19 @@ const DONE: StageSeed[] = [
   { name: 'gate', status: 'done', start: 104, end: 105 },
 ];
 
+// Worded the way the stages log, so the strip and the log are seen with the text they will really carry.
 const EVENTS: RunSeed['events'] = [
-  [7, 'ingest', '4 sessions from Entire checkpoints: 212 tool calls, 9 commits, 3 secrets redacted'],
+  [7, 'ingest', '4 sessions, 212 tool calls, 9 commits, 3 redactions'],
   [13, 'edit', '5 beats in 11 editor steps'],
   [20, 'verify', '6 claims (1 dropped for a quote not in the transcript): 2 verified, 1 contradicted, 1 stale, 2 unverifiable'],
-  [28, 'script', '7 scenes, 7 narration lines, 1 flag scene'],
-  [31, 'ground', 'line l3 failed the entailment check: "The tests now pass reliably." Rewriting'],
+  [28, 'script', '5 written scenes, 1 flag scenes, 0 pieces of writer output discarded'],
+  [31, 'ground', 'line l3 is not entailed by its evidence: "The tests now pass reliably." Rewriting'],
   [34, 'ground', 'line l3 rewritten: "The last run shows 14 tests passing."'],
-  [37, 'ground', '7 of 7 lines grounded, 0 dropped'],
-  [49, 'voice', 'captions mode: no voice provider configured, timings estimated for 7 lines'],
-  [93, 'render', 'reel.mp4 written, 30.5 s at 1920x1080'],
+  [37, 'ground', '7 lines kept, 0 dropped, 5 spoken scenes'],
+  [49, 'voice', 'captions cut, 7 lines, 0 TTS calls'],
+  [93, 'render', 'rendered 30.5 s as a captions cut'],
   [104, 'review', '0 high and 1 low finding: silent gap from 12.1s to 14.0s in the narration'],
-  [105, 'gate', 'grounding, secrets, cost and review passed'],
+  [105, 'gate', 'grounding passed, secrets passed, cost passed, review passed'],
 ];
 
 function writeJson(dir: string, name: string, value: unknown): void {
@@ -142,7 +143,7 @@ function writeFinishedArtifacts(dataDir: string, id: string, sb: Storyboard, o: 
   const lineTimings = timings();
   const { total: _total, ...counts } = claimCounts(claimList);
   writeJson(dir, 'verify.json', { claims: claimList, counts });
-  writeJson(dir, 'script.json', sb);
+  writeJson(dir, 'script.json', { storyboard: sb, discarded: [] });
   writeJson(dir, 'ground.json', { storyboard: sb, dropped: [], kept: 7 });
   writeJson(dir, 'voice.json', { mode: 'captions', audioPath: null, timings: lineTimings, calls: 0 });
   writeJson(dir, 'review.json', { pass: true, findings: [] });
@@ -183,11 +184,11 @@ export function seed(dataDir: string, o: { frames?: string | null; media?: boole
   // 3. A run the gate stopped: over budget, and a secret-shaped string on screen.
   insertRun(db, {
     id: SEEDED.blocked, repoUrl: 'https://github.com/acme/billing', status: 'blocked', reason: 'secrets, cost', costUsd: 0.71, stages: DONE,
-    events: [...EVENTS.slice(0, 10), [105, 'gate', 'blocked: secrets, cost']],
+    events: [...EVENTS.slice(0, 10), [105, 'gate', 'grounding passed, secrets failed, cost failed, review passed']],
   });
   writeFinishedArtifacts(dataDir, SEEDED.blocked, { ...storyboard(SEEDED.blocked), repo: 'acme/billing' }, {
     frames: null, media: false,
-    gate: { checks: [check('grounding'), check('secrets', false, ['a key-shaped string in the terminal scene, step 2']), check('cost', false, ['spent $0.71 of a $0.60 budget']), check('review', true, ['review skipped'])] },
+    gate: { checks: [check('grounding'), check('secrets', false, ['scene sc_terminal: 1 secret-shaped string']), check('cost', false, ['spent $0.7100 of a $0.60 budget']), check('review', true, ['review skipped'])] },
   });
 
   // 4. A run that failed in verify after two attempts.

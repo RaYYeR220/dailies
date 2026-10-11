@@ -9,6 +9,7 @@ import {
   narrationLines,
   resolveSource,
   sceneSpans,
+  srtCues,
   srtToVtt,
 } from '../../src/ui/reel-model';
 import { claims, SHA, storyboard, timings } from './fixtures';
@@ -50,6 +51,44 @@ describe('narrationLines', () => {
     const lines = narrationLines(storyboard(), null, OFFSET);
     expect(lines).toHaveLength(7);
     expect(lines.every((l) => l.startSec === null && l.endSec === null)).toBe(true);
+  });
+});
+
+describe('narrationLines with the subtitles of the rendered reel', () => {
+  const cues = () => storyboard().scenes.flatMap((s) => s.lines.map((l) => l.text));
+
+  it('leaves the lines alone when every cue says what the script says', () => {
+    const lines = narrationLines(storyboard(), timings(), OFFSET, cues());
+    expect(lines.every((l) => !l.rewritten)).toBe(true);
+    expect(lines[2]!.text).toBe('The last run shows 14 tests passing.');
+  });
+
+  it('shows what was spoken, and says so, where grounding rewrote a line after the script stage', () => {
+    const script = storyboard();
+    const terminal = script.scenes[2]!;
+    terminal.lines[1]!.text = 'The tests now pass reliably.';
+    const lines = narrationLines(script, timings(), OFFSET, cues());
+    expect(lines[2]).toMatchObject({ id: 'l3', text: 'The last run shows 14 tests passing.', rewritten: true });
+    expect(lines.filter((l) => l.rewritten)).toHaveLength(1);
+  });
+
+  it('does not match cues to lines when their number is not the number of timings', () => {
+    const script = storyboard();
+    script.scenes[2]!.lines[1]!.text = 'The tests now pass reliably.';
+    const lines = narrationLines(script, timings(), OFFSET, cues().slice(1));
+    expect(lines[2]).toMatchObject({ text: 'The tests now pass reliably.', rewritten: false });
+  });
+});
+
+describe('srtCues', () => {
+  it('reads the text of each cue in order', () => {
+    const srt = '1\r\n00:00:02,500 --> 00:00:06,100\r\nThe request was a retry.\r\n\r\n2\r\n00:00:06,100 --> 00:00:09,500\r\nThe first run\r\nfailed twice.\r\n';
+    expect(srtCues(srt)).toEqual(['The request was a retry.', 'The first run failed twice.']);
+  });
+
+  it('is empty for something that is not a subtitle file', () => {
+    expect(srtCues('<html>not found</html>')).toEqual([]);
+    expect(srtCues('')).toEqual([]);
   });
 });
 

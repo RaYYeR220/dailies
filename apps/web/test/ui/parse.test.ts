@@ -72,6 +72,12 @@ describe('parseReel', () => {
     expect(reel.media).toEqual({ video: `/media/${run.id}/reel.mp4?k=${run.id}`, subtitles: null, poster: `/media/${run.id}/poster.png?k=${run.id}` });
   });
 
+  it('reads the script artifact in the shape the pipeline writes it, the storyboard with what was discarded', () => {
+    const reel = parseReel({ ...payload(), storyboard: { storyboard: storyboard(run.id), discarded: ['a flag scene from the writer'] } })!;
+    expect(reel.storyboard!.scenes).toHaveLength(7);
+    expect(reel.storyboard!.repo).toBe('acme/api');
+  });
+
   it('reads the verify artifact in the shape the pipeline writes it, claims with their counts', () => {
     const reel = parseReel({ ...payload(), claims: { claims: claims(), counts: { verified: 2 } } })!;
     expect(reel.claims).toHaveLength(6);
