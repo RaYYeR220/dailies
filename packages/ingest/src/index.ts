@@ -59,7 +59,7 @@ async function buildSession(
       branch: meta.branch,
       startedAt,
       endedAt,
-      turnCount: meta.turnCount,
+      turnCount: meta.turnCount ?? entries.filter((e) => e.kind === 'user').length,
       tokens: meta.tokens,
       commits,
       filesTouched: meta.filesTouched,

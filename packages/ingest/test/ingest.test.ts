@@ -281,6 +281,63 @@ describe('ingest', () => {
     expect(hits).toBeGreaterThan(0);
   });
 
+  it('reports the user-entry count when a headless session carries no turn count', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'headless1',
+          sessions: [
+            {
+              sessionId: 's1',
+              createdAt: '2026-10-10T07:00:00Z',
+              headless: true,
+              lines: [
+                { type: 'user', ts: '2026-10-10T07:00:00Z', content: [{ id: 'u1', text: 'do a thing' }] },
+                { type: 'assistant', ts: '2026-10-10T07:00:05Z', content: [{ type: 'text', text: 'done' }] },
+                { type: 'user', ts: '2026-10-10T07:00:10Z', content: [{ id: 'u2', text: 'do another thing' }] },
+                { type: 'assistant', ts: '2026-10-10T07:00:15Z', content: [{ type: 'text', text: 'done again' }] },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const artifact = await ingest({ repoUrl: repoDir, dataDir: repoDir, since: '2026-10-01T00:00:00Z', until: '2026-10-20T00:00:00Z' });
+
+    expect(artifact.sessions).toHaveLength(1);
+    expect(artifact.sessions[0]!.entries.filter((e) => e.kind === 'user')).toHaveLength(2);
+    expect(artifact.sessions[0]!.turnCount).toBe(2);
+  });
+
+  it('keeps an explicit turn count of zero from the metadata rather than recomputing it from entries', async () => {
+    const repoDir = await makeRepo({
+      layout: 'refs',
+      checkpoints: [
+        {
+          id: 'explicitzero',
+          sessions: [
+            {
+              sessionId: 's1',
+              createdAt: '2026-10-10T07:00:00Z',
+              turnCount: 0,
+              lines: [
+                { type: 'user', ts: '2026-10-10T07:00:00Z', content: [{ id: 'u1', text: 'hello' }] },
+                { type: 'user', ts: '2026-10-10T07:00:05Z', content: [{ id: 'u2', text: 'hello again' }] },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const artifact = await ingest({ repoUrl: repoDir, dataDir: repoDir, since: '2026-10-01T00:00:00Z', until: '2026-10-20T00:00:00Z' });
+
+    // metadata explicitly says 0, even though there are 2 user entries: the recorded value wins
+    expect(artifact.sessions[0]!.turnCount).toBe(0);
+  });
+
   it('caps diffs to the 8 most recent commits of each session, not one global cutoff', async () => {
     const sessionIds = ['s1', 's2', 's3'];
     const checkpoints = sessionIds.flatMap((sessionId) =>
