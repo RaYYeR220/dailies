@@ -46,8 +46,8 @@ One thing neatlogs gets wrong for this setup: it reports a cost of 0 for the gat
 
 ## 3. Entire checkpoints
 
-- 147 of the 224 commits on `main` carry an `Entire-Checkpoint` trailer (counted on 12 October, 05:45). The others are merges, fixes made by hand, and the documents; the hand-made changes are listed period by period in [`hackathon.md`](hackathon.md).
-- The repository on Entire: https://entire.io/gh/RaYYeR220/dailies
+- 147 of the 231 commits on `main` (counted 12 October, 08:55) carry an `Entire-Checkpoint` trailer, and 144 of those checkpoints are on the checkpoint branch; three trailers point at checkpoints that are not there. The other commits are merges, fixes made by hand, and the documents; the hand-made changes are listed period by period in [`hackathon.md`](hackathon.md).
+- The repository on Entire: https://entire.io/gh/RaYYeR220/dailies. Its overview counts 144 commits made in Claude Code sessions and 80 made by hand ([screenshot](evidence/entire/overview.png), 12 October, morning).
 - One checkpoint, with its link and ID: https://entire.io/gh/RaYYeR220/dailies/commit/b0e7eaab9e643185b5e3032cf4980f257df1fd00 is checkpoint `633fe5de2b31`. [Screenshot](evidence/entire/commit-with-checkpoint-close.png).
 - The checkpoint data is on the `entire/checkpoints/v1` branch of this repository.
 
