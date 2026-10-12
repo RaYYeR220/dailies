@@ -1,4 +1,5 @@
-import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CostMeter, createNeatlogsMcp, createRouter, initTracing, shutdownTracing, traced, type ModelClient } from '@dailies/agent';
@@ -139,6 +140,11 @@ export function sanitizeForTerminal(text: string): string {
   return text.replace(UNSAFE_CHARS, (c) => (c === '\\' ? '\\\\' : `\\u{${c.codePointAt(0)!.toString(16)}}`));
 }
 
+/** A path under the home directory with the directory's own name left out, as a trace should record it. */
+export function homeAsTilde(path: string, home = homedir()): string {
+  return home && (path === home || path.startsWith(`${home}/`)) ? `~${path.slice(home.length)}` : path;
+}
+
 export async function runCommand(argv: string[], overrides: RunOverrides = {}): Promise<number> {
   const args = parseRunArgs(argv);
   const env = overrides.env ?? loadEnv(REPO_ROOT);
@@ -153,7 +159,8 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
   mkdirSync(env.dataDir, { recursive: true });
   const db = openDb(join(env.dataDir, DB_FILENAME));
   let runId: string;
-  let repoUrl = args.repoUrl;
+  // A local path is stored in full: "." names nothing once the run is looked at from anywhere else.
+  let repoUrl = !/^[a-z][a-z0-9+.-]*:\/\//i.test(args.repoUrl) && !args.repoUrl.startsWith('git@') && existsSync(args.repoUrl) ? resolve(args.repoUrl) : args.repoUrl;
   if (args.resume) {
     // The runner starts at the first stage that is not done, and reads what the finished ones wrote: a run
     // whose process died in the render does not pay for its model calls or its narration a second time.
@@ -202,7 +209,7 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
         clearInterval(timer);
         flush();
       }
-    })({ repoUrl: stripUserinfo(repoUrl), runId });
+    })({ repoUrl: homeAsTilde(stripUserinfo(repoUrl)), runId });
 
     const run = getRun(db, runId);
     stdout(`status: ${status}`);

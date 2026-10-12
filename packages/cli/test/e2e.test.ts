@@ -8,7 +8,7 @@ import type { Env } from '@dailies/core';
 import { openDb, type GateArtifact, type GroundArtifact } from '@dailies/pipeline';
 import { makeRepo, type FixtureSession } from '../../ingest/test/fixture';
 import { isMainModule } from '../src/index';
-import { parseRunArgs, REPO_ROOT, runCommand, sanitizeForTerminal, stripUserinfo } from '../src/run';
+import { homeAsTilde, parseRunArgs, REPO_ROOT, runCommand, sanitizeForTerminal, stripUserinfo } from '../src/run';
 import { verifyCommand } from '../src/verify';
 
 const dirs: string[] = [];
@@ -251,6 +251,14 @@ describe('REPO_ROOT', () => {
   it('resolves to the Dailies monorepo root, not wherever the CLI happens to be invoked from — needed for the entire-dailies plugin flow, which runs from inside the target repository', () => {
     expect(existsSync(join(REPO_ROOT, 'pnpm-workspace.yaml'))).toBe(true);
     expect(existsSync(join(REPO_ROOT, 'packages', 'cli', 'package.json'))).toBe(true);
+  });
+});
+
+describe('homeAsTilde', () => {
+  it('leaves the name of the home directory out of a path under it, and touches nothing else', () => {
+    expect(homeAsTilde('/Users/ada/work/api', '/Users/ada')).toBe('~/work/api');
+    expect(homeAsTilde('/Users/adam/work', '/Users/ada')).toBe('/Users/adam/work');
+    expect(homeAsTilde('https://github.com/acme/api', '/Users/ada')).toBe('https://github.com/acme/api');
   });
 });
 
