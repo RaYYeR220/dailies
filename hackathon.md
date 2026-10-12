@@ -150,7 +150,7 @@ An automated review of the second change found four ways it now verified too eas
 
 *neatlogs.* Two detections added through the MCP server: a run that ends blocked, and a verify stage that found a contradicted claim. The second fires on the demonstration run.
 
-Committed by hand in this period: the three rule changes above and their review corrections, the plan tables and the plan-against-actual report, the budget constant, the resume option, the symlink fix in the command-line shims, the scale fix, and the documents.
+Committed by hand in this period, with no checkpoint: the three rule changes above and their review corrections, the plan tables and the plan-against-actual report, the budget constant, the resume option, the symlink fix in the command-line shims, the scale fix, the budget-aware re-cut, the session-length fix, naming a local repository by its folder, the front page showing the last approved reel, the documents, the evidence files and the demo video. This period has more hand-made commits than any other: the work was reading output and correcting what it showed, a few lines at a time.
 
 ## Shared while building
 
