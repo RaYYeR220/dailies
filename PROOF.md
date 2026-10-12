@@ -79,7 +79,7 @@ Found while building: a short `sk-` key written as a bare value in a prompt is n
 
 **A run spent too much; it was stopped.** Section 1, the before run: the meter stopped the run at the budget and the run ended `blocked`.
 
-A fourth path exists and is tested, but did not occur in a recorded run: when the review stage finds a problem in the rendered reel (too long, black frames, an unreadable frame), it sends the cut back to the script stage with the finding, at most twice.
+**The review found a fault and sent the cut back; then the gate refused the run for what that had cost.** `run_76fbb02bc391`, on the server, twelve sessions of this repository. The review stage read stills of the first cut (50.5 seconds), found one high-severity fault and sent the cut back to the script stage. The second cut (71.2 seconds) passed the review with nothing found. By then the run had spent $0.70 against the plan's ceiling of $0.6525, and the gate refused it: `grounding passed, secrets passed, cost failed, review passed`. Each half is the product doing what it was built to do, and together they wasted a run, because a re-cut that takes a run past its ceiling can only be refused. The runner now prices a cut from what the last one cost and makes the review's re-cut only when the budget can pay for it; otherwise it keeps the cut that exists and the gate carries the finding to the person who approves (commit `e7f47e6`).
 
 ## 6. A public repository with commits dated during the hackathon
 

@@ -27,7 +27,7 @@ From a checkout, `pnpm dailies verify <repository URL> --since 7d` prints the ve
 | neatlogs traces | Section 2, with trace IDs and screenshots |
 | Entire checkpoints | Section 3, with a checkpoint link and its ID |
 | A business plan: pricing, costs, revenue, runway | Section 4 and [`business/`](business/README.md) |
-| A run where an action failed, and what the agent did next | Section 5: three of them |
+| A run where an action failed, and what the agent did next | Section 5: four of them |
 | Commits dated during the hackathon | Section 6 |
 | What was shared, tagged #neatHack | Section 7 |
 

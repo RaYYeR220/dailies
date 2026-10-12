@@ -18,7 +18,7 @@
 |---|---|
 | Claims are found in the transcript | A model finds them. Code keeps only those whose quote is literally in the transcript, so a made-up claim is dropped, but a real one can be missed |
 | "I implemented X" is checked against the diff | By a model, held to one quoted line that code then searches for in the patch. Weaker than the rules |
-| The review stage sends a bad cut back | Tested, and it ran in recorded runs, but it has not yet found anything to send back in one |
+| The review stage sends a bad cut back | It did in one recorded run ([`PROOF.md`](PROOF.md) section 5). It does so only when the budget can pay for another cut; otherwise the first cut is kept and the finding goes to the approver |
 | The service takes any public repository | Twelve sessions at most per run, three runs a day per address, forty a day in total. Rendering is slow on the server |
 | Other agents' sessions | Parsed as well as they can be. Only Claude Code's format was tested on real data |
 

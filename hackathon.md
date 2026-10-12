@@ -142,6 +142,8 @@ An automated review of the second change found four ways it now verified too eas
 
 *Two more things that were not as assumed.* Entire does not pass environment variables to its plugins, so the browser path set in the shell never reached `entire dailies run` and the render stalled; settings now come from the tool's own `.env` only. And `dailies run --resume` was added on the spot to finish that run from the render stage instead of paying for its model calls again. On the server, a render scale of 0.6667 passed validation and failed after the last frame with `height must be an integer, but is 720.036`; scales now move to the nearest quarter.
 
+*The first server run with the review stage* ended refused, and for a reason worth the price. The review found a fault in the first cut and sent it back; the second cut was clean; the run had then cost $0.70 against a ceiling of $0.6525, and the gate refused it. A re-cut that takes a run past its ceiling can only be refused, so the runner now makes the review's re-cut only when the budget can pay for it.
+
 *neatlogs.* Two detections added through the MCP server: a run that ends blocked, and a verify stage that found a contradicted claim. The second fires on the demonstration run.
 
 Committed by hand in this period: the three rule changes above and their review corrections, the plan tables and the plan-against-actual report, the budget constant, the resume option, the symlink fix in the command-line shims, the scale fix, and the documents.
@@ -162,7 +164,7 @@ Committed by hand in this period: the three rule changes above and their review 
 - Verification rests on what a session recorded. A command run outside the recorded session is invisible to it.
 - About a third of real test runs cannot be read from their output, and claims resting on them come out unverifiable.
 - Rendering on the server is several times slower than on a laptop.
-- The review stage has run but has not yet had a bad cut to send back in a recorded run.
+- A reel of a twelve-session repository costs about $0.52 against a ceiling of $0.65. That leaves no room for a second cut, so when the review finds a fault there, the first cut is kept and the finding goes to the approver.
 - The rate limit trusts the address the proxy reports.
 - Only Claude Code's session format has been tested on real data.
 
