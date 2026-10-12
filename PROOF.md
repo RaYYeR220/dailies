@@ -18,7 +18,7 @@ The same input both times: twelve sessions of this repository.
 | Context of the last model call | 86,960 tokens | 32,665 tokens |
 | Outcome | `blocked`: the run's own budget stopped it | `needs_approval` |
 
-What the trace showed: the editor read whole transcripts through its tools, and every call carried everything read so far, so the context grew from 1,792 tokens to 86,960 in twelve calls ([top of the trace](evidence/neatlogs/before-trace-top.png), [end of it](evidence/neatlogs/before-trace-end.png)). neatlogs' own "Slow LLM Response" detection marks the 31.8-second call near the end.
+What the trace showed: the editor read whole transcripts through its tools, and every call carried everything read so far, so the context grew from 1,792 tokens to 86,960 in twelve calls ([top of the trace](evidence/neatlogs/before-trace-top.png), [end of it](evidence/neatlogs/before-trace-end-close.png)). neatlogs' own "Slow LLM Response" detection marks the 31.8-second call near the end.
 
 The change (commits `a0882e0` to `4089db6`, the main one is `155ea6e`): the editor now starts from a short outline of each session made by code, its tools return bounded excerpts, it runs on a cheaper model, and the stage has a share of the run's budget with a fallback made by code when the share is spent. [The trace after](evidence/neatlogs/after-edit-trace-end.png).
 
@@ -28,9 +28,9 @@ The first full reel after the change, on the same twelve sessions: 247 seconds f
 
 | Trace | What it is |
 |---|---|
-| `fa903ba743ffd5b275c97799f3ed6b8b` | A full run on the demonstration repository, $0.20, 257 s. One trace: `run`, then a span per stage, with the model calls, tool calls and the two gates inside. [Stages](evidence/neatlogs/after-trace-stages.png), [top](evidence/neatlogs/after-trace-top.png), [the edit stage's output](evidence/neatlogs/after-trace-edit-output.png) |
+| `fa903ba743ffd5b275c97799f3ed6b8b` | A full run on the demonstration repository, $0.20, 257 s. One trace: `run`, then a span per stage, with the model calls, tool calls and the two gates inside. [Stages](evidence/neatlogs/after-trace-stages-close.png), [top](evidence/neatlogs/after-trace-top.png), [the edit stage's output](evidence/neatlogs/after-trace-edit-output.png) |
 | `51f16cf87d19e7d4ae42af05352493cc`, `34f6cabdbe2ca23fe35562d3030524bc` | The before and after of section 1 |
-| `93c0e37b355ac201ed7b6497cb3a6626` | The run whose render failed, section 5. [Screenshot](evidence/neatlogs/failed-render-trace.png) |
+| `93c0e37b355ac201ed7b6497cb3a6626` | The run whose render failed, section 5. [Screenshot](evidence/neatlogs/failed-render-trace-close.png) |
 
 How neatlogs is used, in the order the video goes through it:
 
@@ -38,7 +38,7 @@ How neatlogs is used, in the order the video goes through it:
 - **Implementation.** The neatlogs TypeScript SDK wraps the OpenAI-compatible client that talks to the hackathon gateway. Coding sessions that built this repository are traced by the `@neatlogs/claude-code` hooks.
 - **Runtime.** Before the editor starts, the agent asks the neatlogs MCP server for earlier runs of the same repository (`search_traces`) and puts what it finds into the editor's and the writer's prompts as history (`packages/pipeline/src/memory.ts`). The line `[edit] memory: 1 earlier runs, 0 with failures` in a run's log is that call.
 - **Reasoning.** The before trace is the reason the edit stage was rebuilt. Without it the only fact was "the run was blocked".
-- **Result.** $1.79 to $0.10 for the stage. Two detections were added to the project through the same MCP server: "Reel blocked" (a run that ends blocked) and "Claim contradicted by the record" (the verify stage found a contradicted claim). The second one fires on the demonstration run and is visible in the [stages screenshot](evidence/neatlogs/after-trace-stages.png).
+- **Result.** $1.79 to $0.10 for the stage. Two detections were added to the project through the same MCP server: "Reel blocked" (a run that ends blocked) and "Claim contradicted by the record" (the verify stage found a contradicted claim). The second one fires on the demonstration run and is visible next to the verify stage in [this wider screenshot](evidence/neatlogs/after-trace-stages.png).
 
 One thing neatlogs gets wrong for this setup: it reports a cost of 0 for the gateway's model aliases. Dailies meters cost from the gateway's own response header instead.
 
@@ -46,7 +46,7 @@ One thing neatlogs gets wrong for this setup: it reports a cost of 0 for the gat
 
 - 147 of the 224 commits on `main` carry an `Entire-Checkpoint` trailer (counted on 12 October, 05:45). The others are merges, fixes made by hand, and the documents; the hand-made changes are listed period by period in [`hackathon.md`](hackathon.md).
 - The repository on Entire: https://entire.io/gh/RaYYeR220/dailies
-- One checkpoint, with its link and ID: https://entire.io/gh/RaYYeR220/dailies/commit/b0e7eaab9e643185b5e3032cf4980f257df1fd00 is checkpoint `633fe5de2b31`. [Screenshot](evidence/entire/commit-with-checkpoint.png).
+- One checkpoint, with its link and ID: https://entire.io/gh/RaYYeR220/dailies/commit/b0e7eaab9e643185b5e3032cf4980f257df1fd00 is checkpoint `633fe5de2b31`. [Screenshot](evidence/entire/commit-with-checkpoint-close.png).
 - The checkpoint data is on the `entire/checkpoints/v1` branch of this repository.
 
 How Entire is used:
@@ -73,7 +73,7 @@ Found while building: a short `sk-` key written as a bare value in a prompt is n
 
 ## 5. A run where an action failed, and what the agent did next
 
-**The render failed; the run was picked up where it stopped.** `run_3a06918cb956`, trace `93c0e37b355ac201ed7b6497cb3a6626`. The render stage could not get frames from its browser and the process was stopped. The trace ends with `render` in error ([screenshot](evidence/neatlogs/failed-render-trace.png)). `dailies run --resume run_3a06918cb956` started at the render stage: ingest, edit, verify, script, ground and voice were read from what they had already written, so no model call and no narration was paid for twice. The run finished: 75-second reel, review passed, gate passed, $0.25 in total, $0.20 of it spent before the failure.
+**The render failed; the run was picked up where it stopped.** `run_3a06918cb956`, trace `93c0e37b355ac201ed7b6497cb3a6626`. The render stage could not get frames from its browser and the process was stopped. The trace ends with `render` in error ([screenshot](evidence/neatlogs/failed-render-trace-close.png)). `dailies run --resume run_3a06918cb956` started at the render stage: ingest, edit, verify, script, ground and voice were read from what they had already written, so no model call and no narration was paid for twice. The run finished: 75-second reel, review passed, gate passed, $0.25 in total, $0.20 of it spent before the failure.
 
 **A model's output failed a check; the pipeline dropped it and went on.** In `run_d11ca83125b4` the claim extractor returned a claim whose quote is not in the transcript, and the writer returned three scenes that pointed at things the record does not hold. The log says so: `14 claims (1 dropped for a quote not in the transcript)` and `3 pieces of writer output discarded`. Neither reached the reel.
 

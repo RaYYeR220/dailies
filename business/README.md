@@ -41,6 +41,8 @@ The cost ceiling is not only a number on a page. Every run carries a budget, and
 
 [`plan-vs-actual.md`](plan-vs-actual.md) compares the plan's $0.59 with what recorded runs actually cost.
 
+Screenshots of the page in cfo.ai: [the summary with the cost ceiling](screens/cfo-plan-ceiling.png), [the three scenarios](screens/cfo-plan-scenarios.png), [cash over twelve months](screens/cfo-plan-cash.png).
+
 ## What the plan leaves out
 
 Taxes, payment fees, marketing, support, refunds and financing are not modelled. Customer numbers are expected values and can be fractions. The Optimised scenario's $0.35 is a target, not a measurement. The usage averages (20 and 80 reels a month) are assumptions; at today's cost a Solo customer who makes more than 22 reels a month falls below the 55% margin.
