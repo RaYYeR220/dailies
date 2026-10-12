@@ -17,7 +17,9 @@ function candidates(s: Session): Claim[] {
     if (e[i]!.kind !== 'assistant') continue;
     const next = e[i + 1];
     if (next && next.kind !== 'user') continue;                 // only the message that ends a turn
-    const m = PAT.exec(e[i]!.text);
+    // The pattern backtracks on a long run of text with no sentence end, and transcripts are untrusted input:
+    // only the last 4000 characters of a closing message are scanned, where a summary sits anyway.
+    const m = PAT.exec(e[i]!.text.slice(-4000));
     if (!m) continue;
     const quote = m[0].trim().slice(0, 200);
     if (quote.length < 8 || NEG.test(quote)) continue;          // skip conditionals and negations

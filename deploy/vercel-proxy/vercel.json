@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "https://34-14-134-171.sslip.io/$1" }
+  ]
+}
