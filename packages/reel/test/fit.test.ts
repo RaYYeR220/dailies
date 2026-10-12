@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { FACE, emOf } from '../src/remotion/measure';
 import { boxRoom } from '../src/remotion/text';
-import { ROLES, fitRef, fitRepo, fitRoles, heightOf, widthOf } from '../src/remotion/ui';
+import { ROLES, fitFigure, fitRef, fitRepo, fitRoles, heightOf, widthOf } from '../src/remotion/ui';
 import { theme } from '../src/theme';
 
 // Outside a browser a face is measured by estimate, which is enough to pin the rules of fitting.
@@ -34,6 +34,50 @@ describe('fitRoles', () => {
         const family: string = role.face.family;
         const min = family === theme.font.code ? floor.code : family === theme.font.display ? floor.display : floor.text;
         expect(role.type.min).toBeGreaterThanOrEqual(min);
+      }
+    }
+  });
+});
+
+describe('fitFigure', () => {
+  const display = ROLES.value[0]!;
+  const oneLine = (value: string, width: number) => fitRoles(value, [display], boxRoom(width, 300), { maxLines: 1 });
+
+  it('keeps a value on one line of display, at the largest size its frame takes', () => {
+    expect(fitFigure('1493', ROLES.value, boxRoom(600, 300))).toMatchObject({ lines: ['1493'], size: size.display.value.max, role: display, cut: false });
+  });
+  it('reduces the size down to the display floor before it changes the value', () => {
+    const fitted = fitFigure('1493', ROLES.value, boxRoom(215, 300));
+    expect(fitted).toMatchObject({ lines: ['1493'], role: display, cut: false });
+    expect(fitted.size).toBeLessThan(size.display.value.max);
+    expect(fitted.size).toBeGreaterThanOrEqual(floor.display);
+    expect(widthOf(fitted, display.face)).toBeLessThanOrEqual(215);
+  });
+  it('abbreviates a value that is too wide for one line at the display floor', () => {
+    expect(oneLine('12,345', 200).cut).toBe(true);
+    const fitted = fitFigure('12,345', ROLES.value, boxRoom(200, 300));
+    expect(fitted).toMatchObject({ lines: ['12k'], role: display, cut: false });
+    expect(fitted.size).toBeGreaterThanOrEqual(floor.display);
+    expect(widthOf(fitted, display.face)).toBeLessThanOrEqual(200);
+  });
+  it('sets a value that is too wide even abbreviated in the text face, whole where that fits', () => {
+    expect(oneLine('1.2M tokens', 520).cut).toBe(true);
+    expect(fitFigure('1,234,567 tokens', ROLES.value, boxRoom(520, 300))).toMatchObject({ lines: ['1,234,567 tokens'], role: ROLES.value[1], cut: false });
+    expect(fitFigure('1,234,567 tokens', ROLES.value, boxRoom(300, 300))).toMatchObject({ lines: ['1.2M tokens'], role: ROLES.value[1], cut: false });
+  });
+  it('cuts with an ellipsis only when the text face at its floor cannot hold the value either', () => {
+    const fitted = fitFigure('1,234,567 tokens', ROLES.value, boxRoom(120, 300));
+    expect(fitted).toMatchObject({ role: ROLES.value[1], size: floor.text, cut: true });
+    expect(fitted.lines).toHaveLength(1);
+    expect(fitted.lines[0]!.endsWith('…')).toBe(true);
+  });
+  it('never breaks a value onto two lines, whatever the width of its frame', () => {
+    // The first real render set `1493` as `149` over `3` in the narrow frames of a row of six.
+    for (const value of ['1493', '12,345', '1,234,567 tokens', '128', 'n/a', 'not a number at all']) {
+      for (let width = 60; width <= 700; width += 20) {
+        const fitted = fitFigure(value, ROLES.figure, boxRoom(width, 300));
+        expect(fitted.lines.length, `${value} in ${width} px`).toBe(1);
+        expect(widthOf(fitted, fitted.role.face), `${value} in ${width} px`).toBeLessThanOrEqual(width);
       }
     }
   });

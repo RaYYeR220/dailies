@@ -1,27 +1,36 @@
 import { theme } from '../../theme';
-import { glassRoom, linesRoom } from '../lens';
+import { glassRoom, linesRoom, type LensRest } from '../lens';
 import { FACE } from '../measure';
-import { LIMITS, clampEnd, sourceRef } from '../text';
-import { GlassBlock, Lines, ROLES, Type, fitRoles, useScene, type SceneParts } from '../ui';
+import { promptShown, sourceRef } from '../text';
+import { GlassBlock, Lines, ROLES, Type, fitRoles, useScene, type SceneOf, type SceneParts } from '../ui';
 
-const { color, size, leading, space, layout, dim } = theme;
+const { color, size, leading, space, layout, dim, shot } = theme;
+
+const LABEL = size.text.label * leading.text;
+const REF = size.code.ref * leading.code;
+
+/**
+ * The request as the glass shows it: what `promptShown` leaves of it, fitted in a glass that keeps the prompt's
+ * own margin clear inside the rim. `above` and `below` are what the block holds over and under the lines.
+ */
+export function layoutPrompt(scene: SceneOf<'prompt'>, lens: LensRest, bottom: number) {
+  const room = glassRoom(lens, bottom, shot.prompt.rim);
+  const above = LABEL + space.xl;
+  const below = space.xl + REF;
+  return { room, above, below, fitted: fitRoles(promptShown(scene.quote), ROLES.prompt, linesRoom(room, above, below, layout.measure)) };
+}
 
 export const Prompt: SceneParts<'prompt'> = {
   Film: () => null,
 
   Glass: ({ scene }) => {
-    const { shot, bottom } = useScene();
-    const room = glassRoom(shot.lens, bottom);
-    // Line breaks are flattened: the request is fitted as running text, and a pasted list would outgrow its rows.
-    const quote = clampEnd(scene.quote.replace(/\s+/g, ' ').trim(), LIMITS.promptQuote);
-    const label = size.text.label * leading.text;
-    const ref = size.code.ref * leading.code;
-    const fitted = fitRoles(quote, ROLES.prompt, linesRoom(room, label + space.xl, space.xl + ref, layout.measure));
+    const m = useScene();
+    const { room, fitted } = layoutPrompt(scene, m.shot.lens, m.bottom);
     return (
       <GlassBlock at={room}>
-        <Type face={FACE.text} size={size.text.label} tone={color.soft} style={{ height: label, marginBottom: space.xl }}>You asked</Type>
+        <Type face={FACE.text} size={size.text.label} tone={color.soft} style={{ height: LABEL, marginBottom: space.xl }}>You asked</Type>
         <Lines fitted={fitted} face={fitted.role.face} leading={fitted.role.type.leading} align="center" />
-        <Type face={FACE.code} size={size.code.ref} leading={leading.code} style={{ height: ref, marginTop: space.xl, opacity: dim.faint }}>{sourceRef(scene.entryId)}</Type>
+        <Type face={FACE.code} size={size.code.ref} leading={leading.code} style={{ height: REF, marginTop: space.xl, opacity: dim.faint }}>{sourceRef(scene.entryId)}</Type>
       </GlassBlock>
     );
   },

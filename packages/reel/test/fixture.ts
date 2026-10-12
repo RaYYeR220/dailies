@@ -100,6 +100,90 @@ export function shortStoryboard(): Storyboard {
   return { ...sb, scenes: [sb.scenes[0]!, sb.scenes[1]!, sb.scenes.at(-1)!] };
 }
 
+const REAL_PROMPT =
+  'Implement Task 16 from the product plan: replace the placeholder look of the reel with the Loupe direction. Read the reference frames first and write docs/design.md, ' +
+  'then build the film strip, the lens layer, the pencil marks and all seven scenes, and render stills to compare.';
+
+const REAL_HUNK = `@@ -12,7 +12,11 @@ export function shotOf(scene: Scene, captions = false): Shot {
+   const lift = captions && scene.lines.length > 0 ? layout.captionInset / 2 : 0;
+   const centre = film.perforations / 2;
+   switch (scene.type) {
+-    case 'title': return rest(shot.title, centre);
++    case 'title': {
++      // The lens waits on the repo name while the film is pulled in under it.
++      const lens = { x: shot.title.x, y: shot.title.y, scale: shot.title.scale, turn: shot.title.turn };
++      return { lens, unit: shot.title.unit, half: false, at: centre, frames: NONE };
++    }
+     case 'prompt': return rest(shot.prompt, centre, lift);
+   }
+ }`;
+
+/**
+ * What the first real render held: twelve sessions of one night, session ids as long as real ones, a request near
+ * the schema's limit, a four-digit stat, and more claims than the end card has marks for.
+ */
+export function realStoryboard(): Storyboard {
+  const s = (n: number) => `0f3a9c2${n}-7b54-4e19-a1c3-5d2e8f6b9a70`;
+  const repo = 'RaYYeR220/dailies';
+  return {
+    runId: 'run_real',
+    repo,
+    targetSec: 75,
+    facts: { 'sessions.count': 12, 'commits.count': 38, 'files.count': 164, 'turns.total': 1493, 'tools.calls': 5120, 'duration.minutes': 200 },
+    scenes: [
+      { id: 'title', type: 'title', lines: [], repo, windowLabel: '11 Oct, 23:05 – 12 Oct, 02:25', sessionCount: 12, commitCount: 38 },
+      {
+        id: 'sc_1', type: 'prompt', sessionId: s(1), entryId: `${s(1)}:0`, quote: REAL_PROMPT,
+        lines: [{ id: 'l1', text: 'The night opened with a request to redraw the reel in the Loupe direction.', evidence: entry(`${s(1)}:0`) }],
+      },
+      {
+        id: 'sc_2', type: 'terminal',
+        steps: [
+          { command: 'pnpm --filter @dailies/reel test', output: ' Test Files  1 failed | 8 passed (9)\n      Tests  3 failed | 178 passed (181)', ok: false, entryId: `${s(1)}:212`, headline: '3 failed' },
+          { command: 'pnpm --filter @dailies/reel test', output: ' Test Files  9 passed (9)\n      Tests  181 passed (181)\n   Duration  41.20s', ok: true, entryId: `${s(1)}:240`, headline: '181 passed' },
+          { command: 'pnpm typecheck', output: '> dailies@0.1.0 typecheck\n> tsc --noEmit -p tsconfig.json', ok: true, entryId: `${s(1)}:244` },
+        ],
+        lines: [
+          { id: 'l2', text: 'Three render tests failed on the first pass.', evidence: entry(`${s(1)}:212`) },
+          { id: 'l3', text: 'The second run passed all one hundred and eighty-one.', evidence: entry(`${s(1)}:240`) },
+          { id: 'l4', text: 'The type check came back clean.', evidence: entry(`${s(1)}:244`) },
+        ],
+      },
+      {
+        id: 'sc_3', type: 'diff', sha: 'e3576f3a1c0d4b7e9f2a', path: 'packages/reel/src/remotion/lens.ts', hunk: REAL_HUNK, added: 5, removed: 1,
+        lines: [{ id: 'l5', text: 'Each scene now declares where the lens rests.', evidence: [{ type: 'diff', sha: 'e3576f3a1c0d4b7e9f2a', path: 'packages/reel/src/remotion/lens.ts' }] }],
+      },
+      {
+        id: 'flag_c_4', type: 'flag', claimId: 'c_4', verdict: 'stale',
+        quote: 'Reel suite 181 passed, root typecheck clean.',
+        reality: 'Code was edited after the last passing run.',
+        lines: [
+          { id: 'flag_c_4_quote', text: 'The agent wrote: "Reel suite 181 passed, root typecheck clean."', evidence: entry(`${s(1)}:251`) },
+          { id: 'flag_c_4_reality', text: 'Code was edited after the last passing run.', evidence: entry(`${s(1)}:249`) },
+        ],
+      },
+      {
+        id: 'sc_4', type: 'stats',
+        items: [
+          { label: 'Sessions', value: '12', statKey: 'sessions.count' },
+          { label: 'Commits', value: '38', statKey: 'commits.count' },
+          { label: 'Files touched', value: '164', statKey: 'files.count' },
+          { label: 'Turns', value: '1493', statKey: 'turns.total' },
+          { label: 'Tool calls', value: '5120', statKey: 'tools.calls' },
+          { label: 'Minutes', value: '200', statKey: 'duration.minutes' },
+        ],
+        lines: [{ id: 'l6', text: 'Twelve sessions made thirty-eight commits in two hundred minutes.', evidence: [{ type: 'stat', key: 'sessions.count' }] }],
+      },
+      { id: 'end', type: 'end', lines: [], repo, verified: 9, flagged: 2, unverified: 6 },
+    ],
+  };
+}
+
+export function realTimings(): LineTiming[] {
+  const lines = ['l1', 'l2', 'l3', 'l4', 'l5', 'flag_c_4_quote', 'flag_c_4_reality', 'l6'];
+  return lines.map((lineId, n) => ({ lineId, startSec: n * 3.5, endSec: n * 3.5 + 3.5 }));
+}
+
 /** Text of exactly `length` characters that closes with END, so a still shows at a glance whether anything was cut. */
 const fill = (phrase: string, length: number) => `${phrase.repeat(Math.ceil(length / phrase.length)).slice(0, length - 4).trimEnd()} END`.padEnd(length, '.');
 

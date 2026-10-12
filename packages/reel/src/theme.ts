@@ -150,7 +150,9 @@ export const theme = {
   /** Where the lens rests in each scene: centre in px, scale, the turn of the barrel in degrees, the frame pitch under it. */
   shot: {
     title: { x: 600, y: 690, scale: 1.4, turn: 0, unit: 300 },
-    prompt: { x: 960, y: 540, scale: 2.25, turn: -90, unit: 1100 },
+    // `rim`: the margin a request keeps inside the edge of the glass. The glass fills the frame here, so the usual
+    // `loupe.rim` would let a long request run from edge to edge of the picture; this is the margin of the page instead.
+    prompt: { x: 960, y: 540, scale: 2.25, turn: -90, unit: 1100, rim: 96 },
     // `at` is how far into its frame the lens rests, in perforations: a little past the middle, which leaves the step before it in the clear.
     terminal: { x: 1548, y: 520, scale: 1.25, turn: 0, unit: 600, at: 4.4, alone: { x: 960, scale: 1.5 } },   // `alone`: a single step, with no step before it to keep clear
     diff: { x: 980, y: 540, scale: 2.75, turn: -90, unit: 1500 },
