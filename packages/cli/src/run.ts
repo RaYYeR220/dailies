@@ -75,22 +75,34 @@ function exitCodeFor(status: string): number {
   return 1;
 }
 
-// The authority part of a URL, the way git reads it: everything up to the last "@" before the
-// first "/". Stripped before a repository URL reaches tracing input — a run is only ever of a
-// public repository, but a credential pasted into the URL by mistake must not be the one place
-// that escapes ingest's own redaction and lands in a trace unredacted.
-const USERINFO = /^([a-z][a-z0-9+.-]{0,31}:\/\/)[^\s/]*@/i;
-function stripUserinfo(url: string): string {
-  return url.replace(USERINFO, '$1');
+/**
+ * `url` with any userinfo removed, the way a real URL parser reads it rather than a hand-rolled
+ * pattern. Stripped before a repository URL reaches tracing input — a run is only ever of a
+ * public repository, but a credential pasted into the URL by mistake must not be the one place
+ * that escapes ingest's own redaction and lands in a trace unredacted. A string that is not a
+ * URL at all (a local path, an SCP-style `git@host:path`, which carries no embedded secret) is
+ * returned unchanged.
+ */
+export function stripUserinfo(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.username = '';
+    parsed.password = '';
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 // Event messages, reasons and claim text ultimately derive from a third-party repository's
 // commits and agent transcripts — untrusted input by design. Printed to a terminal as-is, a
-// control character (an escape sequence, a stray carriage return) could spoof or hide output.
-// eslint-disable-next-line no-control-regex
-const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/g;
+// control character (an escape sequence, a stray carriage return) could spoof or hide output;
+// a Unicode format or separator character (a bidi override, a zero-width joiner) could do the
+// same without ever touching the C0/C1 range. `\` is escaped too, so the escaped text can always
+// be told apart from a literal backslash that was already in the input.
+const UNSAFE_CHARS = /\\|[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
 export function sanitizeForTerminal(text: string): string {
-  return text.replace(CONTROL_CHARS, (c) => `\\x${c.charCodeAt(0).toString(16).padStart(2, '0')}`);
+  return text.replace(UNSAFE_CHARS, (c) => (c === '\\' ? '\\\\' : `\\u{${c.codePointAt(0)!.toString(16)}}`));
 }
 
 export async function runCommand(argv: string[], overrides: RunOverrides = {}): Promise<number> {

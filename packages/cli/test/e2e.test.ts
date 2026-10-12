@@ -6,7 +6,7 @@ import { createMockClient, type ChatMessage, type Role } from '@dailies/agent';
 import type { Env } from '@dailies/core';
 import type { GateArtifact, GroundArtifact } from '@dailies/pipeline';
 import { makeRepo, type FixtureSession } from '../../ingest/test/fixture';
-import { runCommand, sanitizeForTerminal } from '../src/run';
+import { runCommand, sanitizeForTerminal, stripUserinfo } from '../src/run';
 import { verifyCommand } from '../src/verify';
 
 const dirs: string[] = [];
@@ -197,10 +197,31 @@ describe('sanitizeForTerminal', () => {
   it('escapes control characters so untrusted event text cannot inject terminal escape sequences', () => {
     const malicious = 'ok\u001b[2J\u001b[1;1Hpwned\r\n';
 
-    expect(sanitizeForTerminal(malicious)).toBe('ok\\x1b[2J\\x1b[1;1Hpwned\\x0d\\x0a');
+    expect(sanitizeForTerminal(malicious)).toBe('ok\\u{1b}[2J\\u{1b}[1;1Hpwned\\u{d}\\u{a}');
+  });
+
+  it('escapes a Unicode bidi override, not just the C0/C1 range', () => {
+    const spoofed = `safe\u202Eevil`; // U+202E right-to-left override
+
+    expect(sanitizeForTerminal(spoofed)).toBe('safe\\u{202e}evil');
+  });
+
+  it('escapes a literal backslash so the output stays unambiguous', () => {
+    expect(sanitizeForTerminal('C:\\repo\u001b')).toBe('C:\\\\repo\\u{1b}');
   });
 
   it('leaves ordinary text untouched', () => {
     expect(sanitizeForTerminal('3 sessions, 2 file diffs')).toBe('3 sessions, 2 file diffs');
+  });
+});
+
+describe('stripUserinfo', () => {
+  it('removes a credential pasted into a repository URL before it reaches tracing input', () => {
+    expect(stripUserinfo('https://x-access-token:ghp_secret@github.com/acme/repo.git')).toBe('https://github.com/acme/repo.git');
+  });
+
+  it('leaves a local path or an SCP-style URL unchanged, since neither carries an embedded secret', () => {
+    expect(stripUserinfo('/tmp/some-repo')).toBe('/tmp/some-repo');
+    expect(stripUserinfo('git@github.com:acme/repo.git')).toBe('git@github.com:acme/repo.git');
   });
 });
