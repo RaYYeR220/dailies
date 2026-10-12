@@ -17,12 +17,12 @@ Rayyer (solo) · GitHub [RaYYeR220](https://github.com/RaYYeR220)
 | Input | Entire checkpoints, read through plain git refs (`refs/entire/checkpoints/*` and the `entire/checkpoints/v1` branch) |
 | Building | Entire CLI 0.11.4 with the entire-graph plugin; every build session is captured as checkpoints |
 | Tracing | neatlogs TypeScript SDK in the product; `@neatlogs/claude-code` hooks on the build sessions; the neatlogs MCP endpoint for run-time read-back |
-| Business plan | cfo.ai (planned, not started) |
+| Business plan | cfo.ai: a 12-month model in three scenarios, built by its agent. The plan's cost ceiling for a reel is the product's default budget |
 | Models | The hackathon gateway: Claude Sonnet 4.6, Claude Haiku, Nova Pro. Venice as fallback |
 | Voice | Gemini text-to-speech |
 | Video | Remotion 4 |
 | Runtime | Node 24, TypeScript, pnpm workspaces, SQLite |
-| Hosting | Google Compute Engine VM behind a Vercel proxy (planned, not created) |
+| Hosting | A Google Compute Engine VM (4 cores, no graphics card) running one container image, behind a Vercel proxy |
 
 ## How the build is organised
 
@@ -122,6 +122,30 @@ neatlogs traces: `51f16cf87d19e7d4ae42af05352493cc` (before), run `run_95ebd6104
 
 Committed by hand in this period: the web app's import of the pipeline without stages; serving the grounded storyboard instead of the draft; finding the checkpoint branch in a clone; the explicit browser path; two rule tightenings after the automated review; the second precision pass's commit (its session stopped while a test run was still in the background).
 
+**03:50 – 05:10 — the first reel with a flag, and what it showed about the rules.**
+
+*A demonstration repository.* A small webhook sender, written in three real Claude Code sessions: write it with tests, add retries, change two constants. The third session was meant to produce a false claim: change the constants, do not touch the tests, report that all tests pass. Claude changed the constants, ran the suite, and reported three failures. So the false sentence is a checkpoint written by hand, marked as a fixture in its metadata, placed after a real failing test output.
+
+*The first reel with a flag* showed the contradicted claim correctly, and three faults around it, each found by reading the frames against the record:
+
+| What the reel showed | What was wrong | Change |
+|---|---|---|
+| "4 errors" under a line that said three tests failed | The video took the last counted line of the output; vitest prints `3 failed` and then `Errors  1 error` | The video shows the result the pipeline read |
+| "all 12 passed" came out unverifiable | Any command that mentioned a test runner counted as a test run: `git commit -m "add vitest coverage"` hid the real run before it | A command that only reads, moves or records is not a run |
+| A STALE flag on "`tsc --noEmit` clean before each commit" | `npm test \| tail && npx tsc --noEmit` was one test run, so the type check on that line did not exist for the rules. This was a false accusation in our own reel | Each kind of run on a line is recorded on its own |
+
+An automated review of the second change found four ways it now verified too easily, and all four were closed. The public sessions were scanned again after each step; the account is version 5 in `eval/results/2026-10-12-field-sample.md`. Three flags, each read by hand.
+
+*The business plan.* Built in cfo.ai by its agent from the measured cost of a reel and three prices. Its finding is that cash is the constraint: the base case covers its costs in month 12 and runs out of money in month 10. Its cost ceiling for a reel, $0.6525, replaced the round number the code had as its default budget; a test now holds the two together. `business/`.
+
+*Integration.* The review stage runs in both entry points; every stage is a span in the trace and the run records its real outcome; the agent reads earlier runs of the same repository back from neatlogs before editing; home directories are redacted from recorded output; a re-cut reel goes back to draft. One session, eleven commits; its own review pass found a way for a redaction pattern to run into a private-key marker and defeat it.
+
+*Two more things that were not as assumed.* Entire does not pass environment variables to its plugins, so the browser path set in the shell never reached `entire dailies run` and the render stalled; settings now come from the tool's own `.env` only. And `dailies run --resume` was added on the spot to finish that run from the render stage instead of paying for its model calls again. On the server, a render scale of 0.6667 passed validation and failed after the last frame with `height must be an integer, but is 720.036`; scales now move to the nearest quarter.
+
+*neatlogs.* Two detections added through the MCP server: a run that ends blocked, and a verify stage that found a contradicted claim. The second fires on the demonstration run.
+
+Committed by hand in this period: the three rule changes above and their review corrections, the plan tables and the plan-against-actual report, the budget constant, the resume option, the symlink fix in the command-line shims, the scale fix, and the documents.
+
 ## Shared while building
 
 - First post, 11 October: https://x.com/BazydloMis57623/status/2109392014827802719
@@ -129,21 +153,32 @@ Committed by hand in this period: the web app's import of the pipeline without s
 
 ## Demo
 
-The service answers at https://34-14-134-171.sslip.io but cannot complete a run yet (see above). From a checkout: `pnpm dailies run <repository URL> --since 24h`.
+- The service: https://dailies-reel.vercel.app
+- A finished reel: `evidence/reels/acme-api-demo/reel.mp4`
+- From a checkout: `pnpm dailies run <repository URL> --since 7d`, or `entire dailies run .` inside a repository with checkpoints
 
 ## Known limitations and next steps
 
-- Reels are produced end to end from the command line. On the server the worker is not yet wired to the stages.
-- The review stage exists but does not run yet.
-- Rendering on the server is about four times slower than on a laptop.
-- The business plan in cfo.ai has not been started.
 - Verification rests on what a session recorded. A command run outside the recorded session is invisible to it.
+- About a third of real test runs cannot be read from their output, and claims resting on them come out unverifiable.
+- Rendering on the server is several times slower than on a laptop.
+- The review stage has run but has not yet had a bad cut to send back in a recorded run.
+- The rate limit trusts the address the proxy reports.
+- Only Claude Code's session format has been tested on real data.
 
 ## Submission
 
-Confirmed requirements (neatlogs.com/hackathon, read 11 October):
-- A public repository with commits dated during the hackathon: this repository.
-- A demo video of three minutes or less that covers neatlogs, Entire and cfo.ai: not made yet.
-- Evidence: a run before and after a change with the numbers compared; neatlogs traces; Entire checkpoints or graph output; a cfo.ai business plan; a run where an action failed and what the agent did next; links to posts tagged #neatHack. None collected yet beyond the checkpoints and traces of the build sessions.
-- Entire asks for an accessible checkpoint link and its ID.
-- Submission is a quote post of the official neatlogs post on X, 12 October, 19:00–23:55 IST. The final cutoff is to be announced on Discord; as of 23:00 CEST on 11 October it had not been.
+What the hackathon asks for, and where it is:
+
+| Asked for | Where |
+|---|---|
+| A public repository with commits dated during the hackathon | This repository; first commit 11 October, 21:26 CEST |
+| A demo video that covers neatlogs, Entire and cfo.ai | Linked from the submission post |
+| A run before a change and a run after it | `PROOF.md`, section 1 |
+| neatlogs traces | `PROOF.md`, section 2 |
+| Entire checkpoints, with an accessible link and its ID | `PROOF.md`, section 3 |
+| A business plan | `business/` |
+| A run where an action failed, and what the agent did next | `PROOF.md`, section 5 |
+| Links to what was shared, tagged #neatHack | `PROOF.md`, section 7 |
+
+Submission is a quote post of the official neatlogs post on X, 12 October, 19:00–23:55 IST.
