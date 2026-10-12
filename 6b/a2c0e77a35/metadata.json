@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "6ba2c0e77a35",
+  "strategy": "manual-commit",
+  "branch": "task/17-integration",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/core/src/budget.ts",
+    "packages/core/test/budget.test.ts",
+    "packages/pipeline/test/stages/gate.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/6b/a2c0e77a35/0/metadata.json",
+      "transcript": "/6b/a2c0e77a35/0/full.jsonl",
+      "compact_transcript": "/6b/a2c0e77a35/0/transcript.jsonl",
+      "content_hash": "/6b/a2c0e77a35/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 26,
+    "cache_creation_tokens": 9861,
+    "cache_read_tokens": 5431656,
+    "output_tokens": 3994,
+    "api_call_count": 13
+  }
+}
