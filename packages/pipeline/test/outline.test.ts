@@ -32,7 +32,7 @@ describe('outlineSession', () => {
     expect(outline.lastMessage).toBe('The retry now backs off and all tests pass.');
     expect(outline.edits).toBe(2);
     expect(outline.runs).toEqual(['test fail @4', 'test pass @8']);
-    expect(outline.commits).toEqual([SHA_A]);
+    expect(outline.commits).toEqual([SHA_A.slice(0, 12)]);
     expect(outline.files).toEqual(['src/queue.ts']);
   });
 
@@ -87,6 +87,41 @@ describe('outlineSession', () => {
 });
 
 describe('outlinesWithin', () => {
+  it('shows a short SHA for a commit, not the full 40 characters', () => {
+    const s = session('s1', [{ kind: 'user', text: 'go' }], { commits: [SHA_A] });
+    expect(outlineSession(s).commits[0]).toEqual(SHA_A.slice(0, 12));
+  });
+
+  it('fits 12 realistic sessions, each with several commits, files and runs, and still keeps real prompt text', () => {
+    // Not an adversarial fixture: 3 commits, 8 files and 8 test runs across a 30-minute session is
+    // an ordinary amount of real work, not a pathological input.
+    const sessions = Array.from({ length: 12 }, (_, n) =>
+      session(
+        `s${n}`,
+        [
+          { kind: 'user', text: `Add feature number ${n} to the pipeline and make sure the tests still pass after the refactor.` },
+          ...Array.from({ length: 8 }, (_, r) => [
+            { kind: 'tool_call' as const, toolName: 'Bash', toolUseId: `t${n}-${r}`, command: 'pnpm vitest run', text: '{}' },
+            { kind: 'tool_result' as const, toolUseId: `t${n}-${r}`, text: r % 3 === 0 ? FAILED_RUN : PASSED_RUN },
+          ]).flat(),
+          { kind: 'assistant', text: `Feature ${n} is implemented and all tests pass now.` },
+        ],
+        {
+          commits: Array.from({ length: 3 }, (_, i) => `${(n * 10 + i).toString(16).padStart(40, '0')}`),
+          filesTouched: Array.from({ length: 8 }, (_, i) => `src/components/feature-${n}/module-${i}/handler.ts`),
+        },
+      ),
+    );
+
+    const outlines = outlinesWithin(sessions, 9000);
+
+    expect(JSON.stringify(outlines).length).toBeLessThanOrEqual(9000);
+    for (const o of outlines) {
+      expect(o.firstPrompt.length).toBeGreaterThan(0);
+      expect(o.lastMessage.length).toBeGreaterThan(0);
+    }
+  });
+
   it('keeps every session and fits the limit for 12 long sessions', () => {
     const sessions = Array.from({ length: 12 }, (_, n) =>
       session(`s${n}`, [

@@ -3,6 +3,7 @@ import type { Beat, Session } from '@dailies/core';
 
 const PROMPT_CHARS = 240;
 const MESSAGE_CHARS = 240;
+const TEXT_FLOOR_CHARS = 80;
 const MAX_COMMITS = 6;
 const MAX_FILES = 8;
 const MAX_RUNS = 12;
@@ -11,8 +12,19 @@ const BEAT_SUMMARY_CHARS = 400;
 const ID_CHARS = 80;
 const NAME_CHARS = 80;
 const DATE_CHARS = 40;
-const COMMIT_CHARS = 40;
+const SHORT_SHA_CHARS = 12;
 const FILE_PATH_CHARS = 300;
+
+// Progressively smaller (files, runs) caps tried before cutting into firstPrompt/lastMessage: a
+// session's outline can still point the editor at its diffs and commands through the tools (get_diff,
+// read_entries) with fewer files/runs listed, but with no prompt text at all the editor has nothing
+// to judge the session by without reading it — so list length gives way first.
+const LIST_STEPS: { files: number; runs: number }[] = [
+  { files: MAX_FILES, runs: MAX_RUNS },
+  { files: 5, runs: 8 },
+  { files: 3, runs: 5 },
+  { files: 2, runs: 3 },
+];
 
 /** `text` in at most `max` characters; a cut is marked with an ellipsis that counts towards the limit. */
 export function cut(text: string, max: number): string {
@@ -40,6 +52,12 @@ export interface SessionOutline {
   files: string[]; // at most 8
   runs: string[]; // e.g. "test fail @120", "test pass @188", at most 12, in order
   edits: number; // file-editing tool calls
+}
+
+/** `sha`'s short form: a plain prefix, with no ellipsis marker, so it still resolves through `resolveCommit`. */
+function shortSha(sha: string): string {
+  // eslint-disable-next-line no-control-regex
+  return sha.replace(/[\u0000-\u001f\u007f\u0085\u2028\u2029\s]+/g, ' ').trim().slice(0, SHORT_SHA_CHARS);
 }
 
 function minutesBetween(startedAt: string, endedAt: string | null): number {
@@ -70,7 +88,7 @@ export function outlineSession(session: Session): SessionOutline {
     entries: session.entries.length,
     firstPrompt: oneLine(firstPrompt, PROMPT_CHARS),
     lastMessage: oneLine(lastAssistant?.text ?? '', MESSAGE_CHARS),
-    commits: session.commits.slice(0, MAX_COMMITS).map((c) => oneLine(c, COMMIT_CHARS)),
+    commits: session.commits.slice(0, MAX_COMMITS).map(shortSha),
     files: session.filesTouched.slice(0, MAX_FILES).map((f) => oneLine(f, FILE_PATH_CHARS)),
     runs: runLines(session, MAX_RUNS),
     edits,
@@ -81,26 +99,46 @@ function trimmedTo(outline: SessionOutline, cap: number): SessionOutline {
   return { ...outline, firstPrompt: cut(outline.firstPrompt, cap), lastMessage: cut(outline.lastMessage, cap) };
 }
 
-/**
- * Every session's outline, `firstPrompt` and `lastMessage` trimmed evenly, as far as needed, so the
- * JSON fits `maxChars`. No session is ever dropped: every other field is already bounded in
- * `outlineSession`, so for a realistic session count the fixed cost of those fields plus fully
- * trimmed text still fits; an unrealistic number of sessions can still exceed `maxChars` even at
- * cap zero, which is accepted here rather than dropping a session to force the fit.
- */
-export function outlinesWithin(sessions: Session[], maxChars: number): SessionOutline[] {
-  const full = sessions.map(outlineSession);
-  const fits = (cap: number) => JSON.stringify(full.map((o) => trimmedTo(o, cap))).length <= maxChars;
-  if (fits(PROMPT_CHARS)) return full;
+function withListCaps(outline: SessionOutline, filesCap: number, runsCap: number): SessionOutline {
+  return { ...outline, files: outline.files.slice(0, filesCap), runs: outline.runs.slice(0, runsCap) };
+}
 
-  let lo = 0;
+/** `outlines` (already at some list-length step) with `firstPrompt`/`lastMessage` trimmed down to the
+ * largest common cap, at least `floor`, that fits `maxChars` — or null if even `floor` does not fit. */
+function trimTextToFit(outlines: SessionOutline[], maxChars: number, floor: number): SessionOutline[] | null {
+  const fits = (cap: number) => JSON.stringify(outlines.map((o) => trimmedTo(o, cap))).length <= maxChars;
+  if (!fits(floor)) return null;
+  if (fits(PROMPT_CHARS)) return outlines.map((o) => trimmedTo(o, PROMPT_CHARS));
+
+  let lo = floor;
   let hi = PROMPT_CHARS;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     if (fits(mid)) lo = mid;
     else hi = mid - 1;
   }
-  return full.map((o) => trimmedTo(o, lo));
+  return outlines.map((o) => trimmedTo(o, lo));
+}
+
+/**
+ * Every session's outline, fit to `maxChars`. No session is ever dropped. `firstPrompt` and
+ * `lastMessage` are what the editor judges a session by without reading it, so `files` and `runs`
+ * give way first, one `LIST_STEPS` entry at a time — the editor can still reach the rest of either
+ * through `get_diff`/`read_entries` — before any text is trimmed below `TEXT_FLOOR_CHARS`. An
+ * unrealistic combination (very many sessions, each with long lists even at the smallest step) can
+ * still exceed `maxChars` at the text floor, which is accepted here rather than dropping a session.
+ */
+export function outlinesWithin(sessions: Session[], maxChars: number): SessionOutline[] {
+  const full = sessions.map(outlineSession);
+
+  for (const step of LIST_STEPS) {
+    const capped = full.map((o) => withListCaps(o, step.files, step.runs));
+    const fit = trimTextToFit(capped, maxChars, TEXT_FLOOR_CHARS);
+    if (fit) return fit;
+  }
+
+  const smallest = LIST_STEPS[LIST_STEPS.length - 1]!;
+  return full.map((o) => trimmedTo(withListCaps(o, smallest.files, smallest.runs), TEXT_FLOOR_CHARS));
 }
 
 /**
