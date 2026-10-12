@@ -97,6 +97,31 @@ The grounding benchmark: 20 of 20 fabricated narration lines rejected, 20 of 20 
 
 Committed by hand after sessions ended early (two sessions started a long command in the background and stopped, which ends a headless session): the Docker files of the deployment task, and the benchmark run of version 2.
 
+**01:10 – 03:50 — the first real runs, and what they broke.**
+
+*First run on real data* (12 sessions of this repository). The edit stage alone spent $1.79 in 12 agent steps and the run was stopped by its own budget gate at $1.50. The stage was rebuilt around short per-session outlines made by code, tighter tool outputs and a cheaper model.
+
+| Edit stage, same repository | Before | After |
+|---|---|---|
+| Cost | $1.79 | $0.10 |
+| Agent steps | 12 | 4 |
+| Time | 84 s | about 30 s |
+| Run outcome | blocked: budget | reached the gate |
+
+neatlogs traces: `51f16cf87d19e7d4ae42af05352493cc` (before), run `run_95ebd6104a1e` (after).
+
+*First full reel.* One command, 247 seconds from URL to MP4: 12 sessions, 59 claims (15 verified, 44 unverifiable, none contradicted), 10 narration lines in one text-to-speech call, 78 seconds of video, $0.54. The gate passed grounding, secrets and cost. The review stage did not run: it was built but never exported, so nothing could call it. Being fixed.
+
+*What reading the artifacts showed, each now fixed with a test from the real case:* `pnpm typecheck` was not recognised as a type check; a clean type check printed nothing the parser knew; a global cap on diffs left older sessions with none; five terminal scenes in a row; narration of 133 seconds against a 75-second target.
+
+*Rendering stopped working on the build machine at about 01:45* and it took an hour to find out why. The same browser binary renders from `/tmp` and from the home directory and hangs from anywhere under `Desktop`: macOS stops delivering frames to a process in a privacy-protected folder once the screen locks. An earlier diagnosis recorded here and in the plan (the working directory) was wrong. The renderer now accepts an explicit browser path.
+
+*Rule precision, by hand.* A scan of 394 public sessions with a crude text pattern and the deterministic rule produced 23 flags. Reading the recorded runs behind them showed most were wrong, for reasons that became four rule changes; an automated review of the third version found two more places where it verified too easily. Two flags remain and both hold. The full account, including what it does not show, is in `eval/results/2026-10-12-field-sample.md`.
+
+*Server.* The service is up on a 4-core VM behind TLS. The first run submitted through its API sat for half an hour with every stage pending: the worker's entry point still had the placeholder written before the stages existed. Being fixed in the integration task. A 30-second reel renders in 35 seconds on a laptop and 145 seconds on the server, which has no graphics card; a task is looking for what is expensive under software rendering.
+
+Committed by hand in this period: the web app's import of the pipeline without stages; serving the grounded storyboard instead of the draft; finding the checkpoint branch in a clone; the explicit browser path; two rule tightenings after the automated review; the second precision pass's commit (its session stopped while a test run was still in the background).
+
 ## Shared while building
 
 - First post, 11 October: https://x.com/BazydloMis57623/status/2109392014827802719
@@ -104,12 +129,13 @@ Committed by hand after sessions ended early (two sessions started a long comman
 
 ## Demo
 
-Not available yet.
+The service answers at https://34-14-134-171.sslip.io but cannot complete a run yet (see above). From a checkout: `pnpm dailies run <repository URL> --since 24h`.
 
 ## Known limitations and next steps
 
-- No reel has been produced end to end yet. The pipeline stages that call the models, the review stage and the command-line tool are not built.
-- No web interface and no deployment yet.
+- Reels are produced end to end from the command line. On the server the worker is not yet wired to the stages.
+- The review stage exists but does not run yet.
+- Rendering on the server is about four times slower than on a laptop.
 - The business plan in cfo.ai has not been started.
 - Verification rests on what a session recorded. A command run outside the recorded session is invisible to it.
 
