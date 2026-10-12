@@ -23,9 +23,11 @@ function rowsOf(dataDir: string): Row[] {
   return runs.map((r) => {
     const dir = join(dataDir, 'runs', r.id);
     const reached = (lastDone.get(r.id) as { name: string } | undefined)?.name ?? null;
-    const ingest = readJson<{ sessions: unknown[] }>(join(dir, 'ingest.json'));
+    const ingest = readJson<{ sessions: unknown[]; repo?: { dir?: string } }>(join(dir, 'ingest.json'));
+    // A run started on a local path (`dailies run .`) is named after the folder that was read.
+    const local = /^https?:/.test(r.repo_url) ? null : (ingest?.repo?.dir ?? r.repo_url).replace(/\/+$/, '').split('/').at(-1) || null;
     const render = readJson<{ durationSec: number }>(join(dir, 'render.json'));
-    return { id: r.id, repo: label(r.repo_url), status: r.status, reason: r.reason, cost: r.cost_usd, created: r.created_at, sessions: ingest?.sessions.length ?? null, seconds: render?.durationSec ?? null, reached };
+    return { id: r.id, repo: local ?? label(r.repo_url), status: r.status, reason: r.reason, cost: r.cost_usd, created: r.created_at, sessions: ingest?.sessions.length ?? null, seconds: render?.durationSec ?? null, reached };
   });
 }
 
@@ -49,7 +51,7 @@ function main() {
   out.push(`Generated ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by \`eval/src/plan-vs-actual.ts\` from the run database. Every run that reached a rendered reel is listed; nothing is left out.`, '');
   out.push('| | Plan | Actual |', '|---|---|---|');
   out.push(`| Cost of one reel | ${usd(plan.plannedCostPerReelUsd)} | ${usd(mean)} mean, ${usd(median)} median, over ${reels.length} reels |`);
-  out.push(`| Ceiling for a ${pct(plan.targetGrossMargin).replace('.0', '')} margin on Solo | ${usd(ceiling)} | ${over.length} of ${reels.length} reels cost more |`);
+  out.push(`| Ceiling for a ${pct(plan.targetGrossMargin).replace('.0', '')} margin on Solo | $${ceiling} | ${over.length} of ${reels.length} reels cost more |`);
   out.push(`| Gross margin on Solo (${reelsPerMonth} reels for $${pricePerMonth}) | ${pct(marginAt(plan.plannedCostPerReelUsd))} | ${pct(marginAt(mean))} at the mean cost |`, '');
   out.push('## Runs', '', '| Run | Repository | Sessions | Reel | Cost | Against the ceiling | Outcome |', '|---|---|---|---|---|---|---|');
   for (const r of rows) {
