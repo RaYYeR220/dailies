@@ -62,7 +62,7 @@ function day(iso: string): string {
 
 function realityOf(claim: FlaggedClaim): string {
   if (claim.verdict === 'stale') return 'Code was edited after the last passing run.';
-  if (claim.kind === 'tests_pass') return 'The last test run before that message had failed.';
+  if (claim.kind === 'tests_pass') return 'The last test run before that message reported failures.';
   const reason = flat(claim.reason ?? '') || 'the record contradicts this claim';
   return cut(`${reason[0]!.toUpperCase()}${reason.slice(1)}${endsSentence(reason) ? '' : '.'}`, ON_SCREEN.flagReality);
 }

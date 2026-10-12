@@ -8,6 +8,23 @@ type Verdicted = Pick<Claim, 'verdict' | 'reason' | 'evidence'>;
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 
+// Staleness means code changed under the claim, not that some file did: a rewritten evidence note
+// or data file does not make a test result stale.
+const SOURCE_EXTENSIONS = new Set([
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java', '.kt', '.rb', '.php',
+  '.c', '.cc', '.cpp', '.h', '.hpp', '.cs', '.swift', '.scala', '.sql', '.sh', '.vue', '.svelte',
+]);
+const NON_SOURCE_DIRS = new Set(['docs', 'evidence', 'screenshots']);
+
+function isSourceEdit(filePath: string): boolean {
+  const segments = filePath.split('/');
+  const base = segments[segments.length - 1] ?? '';
+  const dot = base.lastIndexOf('.');
+  if (dot <= 0) return false;
+  if (!SOURCE_EXTENSIONS.has(base.slice(dot).toLowerCase())) return false;
+  return !segments.slice(0, -1).some((dir) => NON_SOURCE_DIRS.has(dir));
+}
+
 function findEntry(session: Session, entryId: string): Entry | undefined {
   return session.entries.find((e) => e.id === entryId);
 }
@@ -37,7 +54,13 @@ function lastRunVerdict(claim: Claim, session: Session, classes: CommandClass[],
 
   const last = runs[runs.length - 1]!;
   if (last.outcome === 'fail') return { verdict: 'contradicted', reason: 'the last recorded run failed', evidence: runEvidence(last) };
-  if (last.outcome === 'unknown') return unverifiable('the last recorded run output was not recognised');
+  if (last.outcome === 'unknown') {
+    // Only a test run has this distinction: an errored shell call with no recognised test summary never ran
+    // the tests, so saying "the last run failed" would be false. Other classes already fail on isError alone.
+    const resultEntry = last.cls === 'test' && last.resultEntryId ? findEntry(session, last.resultEntryId) : undefined;
+    if (resultEntry?.isError) return unverifiable('the last test command exited with an error before reporting results');
+    return unverifiable('the last recorded run output was not recognised');
+  }
 
   const edit = session.entries.find(
     (e) =>
@@ -47,7 +70,7 @@ function lastRunVerdict(claim: Claim, session: Session, classes: CommandClass[],
       e.toolName !== undefined &&
       EDIT_TOOLS.has(e.toolName) &&
       e.filePath !== undefined &&
-      !e.filePath.endsWith('.md')
+      isSourceEdit(e.filePath)
   );
   if (edit) {
     return {

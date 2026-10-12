@@ -11,8 +11,16 @@ describe('parseOutcome', () => {
     expect(parseOutcome('typecheck', 'src/a.ts(3,1): error TS2322: nope', false)).toBe('fail');
   });
 
-  it('treats isError as fail regardless of the output text', () => {
-    expect(parseOutcome('test', '14 passed', true)).toBe('fail');
+  it('treats isError as fail for a non-test class regardless of the output text', () => {
+    expect(parseOutcome('build', 'built in 1.2s', true)).toBe('fail');
+  });
+
+  it('does not fail a test run merely because its command errored: a recognised failing summary is required', () => {
+    expect(parseOutcome('test', 'No module named pytest', true)).toBe('unknown');
+  });
+
+  it('still fails an errored test run when the output has a recognised failing summary', () => {
+    expect(parseOutcome('test', '2 failed, 8 passed', true)).toBe('fail');
   });
 
   it('does not treat a zero count as a failure marker', () => {

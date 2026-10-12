@@ -172,7 +172,7 @@ describe('ground stage', () => {
     expect(scenes.find((s) => s.type === 'flag')!.lines.map((l) => l.id)).toEqual(['flag_c_1_quote', 'flag_c_1_reality']);
     for (const call of h.calls) {
       expect(userText(call)).not.toContain('The agent wrote');
-      expect(userText(call)).not.toContain('The last test run before that message had failed.');
+      expect(userText(call)).not.toContain('The last test run before that message reported failures.');
     }
   });
 
@@ -185,7 +185,7 @@ describe('ground stage', () => {
     const { scenes, artifact } = await ground({ ingest, claims: [{ ...LIE, quote }] });
 
     const flag = scenes.find((s) => s.type === 'flag')!;
-    expect(flag.lines.map((l) => l.text)).toEqual([`The agent wrote: "${quote}"`, 'The last test run before that message had failed.']);
+    expect(flag.lines.map((l) => l.text)).toEqual([`The agent wrote: "${quote}"`, 'The last test run before that message reported failures.']);
     expect(artifact.dropped).toEqual([]);
   });
 
