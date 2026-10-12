@@ -1,0 +1,9 @@
+{
+  "source": "cfo.ai page \"Dailies business plan\", scenarios Base / Optimised / Lean, built 12 October 2026",
+  "currency": "USD",
+  "pricing": { "solo": { "pricePerMonth": 29, "reelsPerMonth": 20 }, "team": { "pricePerMonth": 129, "reelsPerMonth": 80 }, "onDemand": { "pricePerReel": 2.5 } },
+  "targetGrossMargin": 0.55,
+  "plannedCostPerReelUsd": 0.59,
+  "optimisedCostPerReelUsd": 0.35,
+  "maxCostPerReelUsd": { "solo": 0.6525, "team": 0.725625, "onDemand": 1.125 }
+}

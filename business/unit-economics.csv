@@ -1,0 +1,7 @@
+cost_basis,plan,price,reels_per_customer,cost_of_goods_per_customer,gross_profit_per_customer,gross_margin_pct,price_per_reel,cost_per_reel,max_reel_cost_for_55pct_margin
+current,solo,29.00,20,11.80,17.20,59.31,1.4500,0.5900,0.652500
+current,team,129.00,80,47.20,81.80,63.41,1.6125,0.5900,0.725625
+current,on_demand,2.50,1,0.59,1.91,76.40,2.5000,0.5900,1.125000
+optimised,solo,29.00,20,7.00,22.00,75.86,1.4500,0.3500,0.652500
+optimised,team,129.00,80,28.00,101.00,78.29,1.6125,0.3500,0.725625
+optimised,on_demand,2.50,1,0.35,2.15,86.00,2.5000,0.3500,1.125000
