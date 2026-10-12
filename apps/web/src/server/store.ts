@@ -29,6 +29,11 @@ export function approveReel(db: Database, runId: string): void {
   ).run(runId, approvedAt);
 }
 
+/** Sets an existing reel back to draft, clearing its approval. A no-op when the run has no reel row at all. */
+export function draftReel(db: Database, runId: string): void {
+  db.prepare("UPDATE reels SET status = 'draft', approved_at = NULL WHERE run_id = ?").run(runId);
+}
+
 export function addFeedback(db: Database, runId: string, text: string): void {
   db.prepare('INSERT INTO feedback (run_id, ts, text) VALUES (?, ?, ?)').run(runId, new Date().toISOString(), text);
 }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { loadEnv } from '@dailies/core';
 import { getRun, recut } from '@dailies/pipeline/runtime';
 import { getDb } from '../../../../../server/db';
-import { addFeedback } from '../../../../../server/store';
+import { addFeedback, draftReel } from '../../../../../server/store';
 import { hasValidOwnerToken } from '../../../../../server/owner-token';
 
 export async function POST(
@@ -40,6 +40,8 @@ export async function POST(
     try {
       recut(db, id, body.text);
       didRecut = true;
+      // The old cut's approval does not carry over: it is a reel for a script this re-cut is about to replace.
+      draftReel(db, id);
     } catch {
       // the run never completed verify; feedback is still stored.
     }
