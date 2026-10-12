@@ -22,6 +22,62 @@ describe('redact', () => {
   });
   it('leaves git SHAs and ordinary prose alone', () => {
     const src = 'commit 3c66306a912e51b2e07432322d48ad4f63ebce3d fixed the retry loop';
-    expect(redact(src)).toEqual({ text: src, hits: 0 });
+    expect(redact(src)).toEqual({ text: src, hits: 0, homePaths: 0 });
+  });
+
+  it('replaces a macOS or Linux home directory with ~, counted apart from secret hits', () => {
+    const mac = redact('reading /Users/yehor/Desktop/projects/neathack/README.md');
+    expect(mac.text).toBe('reading ~/Desktop/projects/neathack/README.md');
+    expect(mac.homePaths).toBe(1);
+    expect(mac.hits).toBe(0);
+
+    const linux = redact('writing to /home/runner/work/repo/dist/out.js');
+    expect(linux.text).toBe('writing to ~/work/repo/dist/out.js');
+    expect(linux.homePaths).toBe(1);
+    expect(linux.hits).toBe(0);
+  });
+
+  it('replaces a Windows home directory with ~', () => {
+    const win = redact('cd C:\\Users\\yehor\\projects\\neathack');
+    expect(win.text).toBe('cd ~\\projects\\neathack');
+    expect(win.homePaths).toBe(1);
+    expect(win.hits).toBe(0);
+  });
+
+  it('does not swallow trailing punctuation into the username', () => {
+    const r = redact('see /Users/yehor, then check /home/yehor.');
+    expect(r.text).toBe('see ~, then check ~.');
+    expect(r.homePaths).toBe(2);
+  });
+
+  it('does not run the name past a quote, colon or comma into unrelated text', () => {
+    const r = redact('{"cwd":"/home/x","note":"fine"}');
+    expect(r.text).toBe('{"cwd":"~","note":"fine"}');
+    expect(r.homePaths).toBe(1);
+  });
+
+  it('never eats into an adjacent unterminated private-key marker, so the fallback in @dailies/ingest can still find it', () => {
+    const r = redact('{"cwd":"/home/x","content":"-----BEGIN RSA PRIVATE KEY-----\\nMIIEpA...');
+    expect(r.text).toContain('-----BEGIN RSA PRIVATE KEY-----');
+    expect(r.homePaths).toBe(1);
+  });
+
+  it('stops at the marker even with no delimiter between the name and it', () => {
+    const r = redact('path is /home/x-----BEGIN RSA PRIVATE KEY-----\nMIIEpA...');
+    expect(r.text).toContain('-----BEGIN RSA PRIVATE KEY-----');
+    expect(r.homePaths).toBe(1);
+  });
+
+  it('redacts dotted, unicode and email-shaped account names in full', () => {
+    expect(redact('cd /Users/john.doe/code').text).toBe('cd ~/code');
+    expect(redact('cd /home/Єгор/code').text).toBe('cd ~/code');
+    expect(redact('cd /home/user@corp.com/code').text).toBe('cd ~/code');
+  });
+
+  it('counts several home paths in one string and never touches a secret hit', () => {
+    const r = redact('cp /Users/yehor/a.txt /home/yehor/b.txt # TOKEN=aVeryRealSecretValue123');
+    expect(r.text).toBe('cp ~/a.txt ~/b.txt # TOKEN=[REDACTED:assignment]');
+    expect(r.homePaths).toBe(2);
+    expect(r.hits).toBe(1);
   });
 });

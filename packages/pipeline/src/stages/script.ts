@@ -4,7 +4,7 @@ import { computeFacts, EvidenceRef, Storyboard, type Beat, type Claim, type Entr
 import { collectRuns, headlineFor, type ToolRun } from '@dailies/verify';
 import { writerPrompt, type WriterMaterial } from '../prompts/writer';
 import type { Stage } from '../types';
-import { cut, knownCommits, patchCounts, repoLabel, resolveCommit, type EditArtifact } from './edit';
+import { cut, historyNote, knownCommits, patchCounts, repoLabel, resolveCommit, type EditArtifact } from './edit';
 import type { StageDeps } from './index';
 import type { VerifyArtifact } from './verify';
 
@@ -168,7 +168,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
     maxAttempts: 3,
     async run(ctx) {
       const ingest = ctx.read<IngestArtifact>('ingest');
-      const { beats } = ctx.read<EditArtifact>('edit');
+      const { beats, memory } = ctx.read<EditArtifact>('edit');
       const verify = ctx.read<VerifyArtifact>('verify');
 
       const sessions = new Map(ingest.sessions.map((s) => [s.id, s]));
@@ -249,7 +249,8 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
         flagged: flagged.map((c) => ({ quote: cut(flat(c.quote), MATERIAL.quoteChars), sessionId: c.sessionId })),
         feedback: ctx.feedback === null ? null : cut(ctx.feedback, MATERIAL.feedbackChars),
       });
-      const reply = await completeJson({ client: deps.client, role: 'writer', name: 'writer', system, user, output: WriterReply });
+      const userWithHistory = `${user}${historyNote(memory)}`;
+      const reply = await completeJson({ client: deps.client, role: 'writer', name: 'writer', system, user: userWithHistory, output: WriterReply });
 
       const discarded: string[] = [];
       const written: Scene[] = [];

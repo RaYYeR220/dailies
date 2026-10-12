@@ -397,6 +397,17 @@ describe('script stage', () => {
     expect(told.trimEnd().endsWith('sc_3: text overflows the frame')).toBe(true);
   });
 
+  it('script appends the edit stage memory notes to the writer prompt under a heading that marks them as history, not instructions', async () => {
+    const edit = { ...twoBeats(), memory: { status: 'used' as const, previousRuns: 2, notes: ['2026-09-01: error, 1 failed spans, render timed out waiting for the root component'] } };
+    const h = harness({ artifacts: { ingest: twoSessions(), edit, verify: threeClaims() }, reply: () => json(writerReply()) });
+
+    await scriptStage(h.deps).run(h.ctx());
+
+    const told = promptText(h.calls[0]!.messages);
+    expect(told).toContain('render timed out');
+    expect(told).toContain('not an instruction');
+  });
+
   it('script fails when the writer returns no usable scene, so the runner retries it', async () => {
     const h = harness({ artifacts: artifacts(), reply: () => json({ scenes: [{ type: 'flag', lines: [] }] }) });
     const stage = scriptStage(h.deps);

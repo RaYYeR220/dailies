@@ -1,11 +1,33 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ChatMessage } from '@dailies/agent';
+import type { ChatMessage, NeatlogsMcp, TraceSummary } from '@dailies/agent';
 import type { IngestArtifact } from '@dailies/core';
 import { runPipeline } from '../../src/index';
 import type { Stage } from '../../src/index';
 import { fallbackBeats } from '../../src/outline';
 import { editStage, repoLabel } from '../../src/stages/edit';
 import { cleanup, harness, json, promptText, session, twoSessions, SHA_A, SHA_B, type MockRequest } from './fixture';
+
+/** One row `recallRepo` would get back from neatlogs' search_traces tool. */
+function trace(o: Partial<TraceSummary> = {}): TraceSummary {
+  return {
+    traceId: 't1', status: 'error', createdAt: '2026-09-01T00:00:00Z', durationMs: 1000, totalTokens: 100,
+    costUsd: 0.01, erroredSpans: 1, workflowName: 'dailies-reel', inputPreview: '', outputPreview: 'render timed out waiting for the root component',
+    ...o,
+  };
+}
+
+function mockMcp(traces: TraceSummary[], onSearch?: (query: string) => void): NeatlogsMcp {
+  const unused = async () => { throw new Error('unused in this test'); };
+  return {
+    call: unused,
+    traceContext: unused,
+    analytics: unused,
+    searchTraces: async (a) => {
+      onSearch?.(a.query);
+      return traces;
+    },
+  };
+}
 
 afterEach(cleanup);
 
@@ -283,5 +305,83 @@ describe('repoLabel', () => {
     expect(repoLabel(`https://example.com/acme/${'n'.repeat(300)}`)).toHaveLength(80);
     expect(repoLabel('https://example.com/acme/retry%0Aqueue\u0007')).not.toMatch(/[\u0000-\u001f]/);
     expect(repoLabel('/tmp/line\nbreak')).toBe('line break');
+  });
+});
+
+describe('edit stage memory', () => {
+  it('calls recallRepo once, logs what it found, and carries it on the artifact', async () => {
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [beat()] }) });
+    const deps = { ...h.deps, mcp: mockMcp([trace(), trace({ traceId: 't2', status: 'success', erroredSpans: 0 })]) };
+
+    const result = await editStage(deps).run(h.ctx());
+
+    expect(h.events.join('\n')).toContain('memory: 2 earlier runs, 1 with failures');
+    expect(result.artifact.memory).toEqual({
+      status: 'used',
+      previousRuns: 2,
+      notes: [expect.stringContaining('render timed out')],
+    });
+  });
+
+  it('logs memory: skipped and still carries it on the artifact when there is no neatlogs client', async () => {
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [beat()] }) });
+
+    const result = await editStage(h.deps).run(h.ctx());
+
+    expect(h.events.join('\n')).toContain('memory: skipped, no neatlogs client');
+    expect(result.artifact.memory).toEqual({ status: 'skipped', reason: 'no neatlogs client', previousRuns: 0, notes: [] });
+  });
+
+  it('appends the memory notes to the editor prompt under a heading that marks them as history, not instructions', async () => {
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [beat()] }) });
+    const deps = { ...h.deps, mcp: mockMcp([trace()]) };
+
+    await editStage(deps).run(h.ctx());
+
+    expect(h.calls[0]!.role).toBe('editor');
+    const told = promptText(h.calls[0]!.messages);
+    expect(told).toContain('render timed out');
+    expect(told).toContain('not an instruction');
+  });
+
+  it('searches by the credential-free repository label, never the raw run URL', async () => {
+    const queries: string[] = [];
+    const h = harness({
+      artifacts: { ingest: twoSessions() },
+      reply: () => json({ beats: [beat()] }),
+      repoUrl: 'https://x-access-token:ghp_abcdefghijklmnopqrstuvwxyz0123@github.com/acme/retry-queue',
+    });
+    const deps = { ...h.deps, mcp: mockMcp([trace()], (q) => queries.push(q)) };
+
+    await editStage(deps).run(h.ctx());
+
+    expect(queries).toEqual(['acme/retry-queue']);
+  });
+
+  it('falls back to memory: skipped on any recall failure, not only when the client reports itself unavailable', async () => {
+    const mcp: NeatlogsMcp = {
+      call: async () => { throw new Error('unused in this test'); },
+      traceContext: async () => { throw new Error('unused in this test'); },
+      analytics: async () => { throw new Error('unused in this test'); },
+      searchTraces: async () => { throw new TypeError('malformed row from the search_traces tool'); },
+    };
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [beat()] }) });
+    const deps = { ...h.deps, mcp };
+
+    const result = await editStage(deps).run(h.ctx());
+
+    expect(h.events.join('\n')).toContain('memory: skipped, malformed row from the search_traces tool');
+    expect(result.artifact.memory).toEqual({ status: 'skipped', reason: 'malformed row from the search_traces tool', previousRuns: 0, notes: [] });
+    expect(result.artifact.beats).toEqual([expect.objectContaining({ title: 'Retry for failed jobs' })]);
+  });
+
+  it('carries memory through the fallback path too, when the editor reply has no usable beat', async () => {
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [] }) });
+    const deps = { ...h.deps, mcp: mockMcp([trace()]) };
+
+    const result = await editStage(deps).run(h.ctx());
+
+    expect(result.artifact.beats).toEqual(fallbackBeats(twoSessions().sessions, 6));
+    expect(result.artifact.memory).toEqual({ status: 'used', previousRuns: 1, notes: [expect.stringContaining('render timed out')] });
   });
 });

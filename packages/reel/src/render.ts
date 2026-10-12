@@ -14,6 +14,36 @@ const ENTRY_POINT = fileURLToPath(new URL('./remotion/index.ts', import.meta.url
 // command-line tool start elsewhere, so the root is pinned to this package.
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const TIMEOUT_MS = 120_000;
+const MIN_SCALE = 0.25;
+const MAX_SCALE = 1;
+const DEFAULT_SCALE = 1;
+
+export interface RenderSettings { concurrency?: number; scale: number }
+
+/**
+ * `DAILIES_RENDER_CONCURRENCY` and `DAILIES_RENDER_SCALE`, how fast a reel renders on a given machine: concurrency
+ * has no safe default across a laptop with a GPU and a small headless server, so an invalid or absent value is left
+ * to the renderer; scale trades resolution for speed and is bounded to what still reads on screen.
+ */
+export function renderSettingsFromEnv(env: Record<string, string | undefined> = process.env): RenderSettings {
+  let concurrency: number | undefined;
+  const rawConcurrency = env.DAILIES_RENDER_CONCURRENCY;
+  if (rawConcurrency !== undefined) {
+    const n = Number(rawConcurrency);
+    if (Number.isInteger(n) && n > 0) concurrency = n;
+    else console.warn(`DAILIES_RENDER_CONCURRENCY must be a positive integer, got ${JSON.stringify(rawConcurrency)}; ignoring it`);
+  }
+
+  let scale = DEFAULT_SCALE;
+  const rawScale = env.DAILIES_RENDER_SCALE;
+  if (rawScale !== undefined) {
+    const n = Number(rawScale);
+    if (Number.isFinite(n) && n >= MIN_SCALE && n <= MAX_SCALE) scale = n;
+    else console.warn(`DAILIES_RENDER_SCALE must be a number between ${MIN_SCALE} and ${MAX_SCALE}, got ${JSON.stringify(rawScale)}; ignoring it`);
+  }
+
+  return { concurrency, scale };
+}
 
 type Browser = Awaited<ReturnType<typeof openBrowser>>;
 type Composition = Awaited<ReturnType<typeof selectComposition>>;
@@ -68,8 +98,9 @@ export async function renderReel(i: { storyboard: Storyboard; timings: LineTimin
   const posterPath = join(outDir, 'poster.png');
   const inputProps: ReelProps = { storyboard: i.storyboard, timings: i.timings, audio: i.audioPath !== null };
 
+  const settings = renderSettingsFromEnv();
   await withComposition(inputProps, publicDir, async ({ serveUrl, composition, browser }) => {
-    await renderMedia({ serveUrl, composition, inputProps, codec: 'h264', outputLocation: videoPath, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
+    await renderMedia({ serveUrl, composition, inputProps, codec: 'h264', outputLocation: videoPath, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS, concurrency: settings.concurrency, scale: settings.scale });
     await renderStill({ serveUrl, composition, inputProps, frame: middle(timeline.scenes[0]!), output: posterPath, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
   });
   await writeFile(srtPath, toSrt(i.storyboard, i.timings, timeline.audioStartFrame / timeline.fps));

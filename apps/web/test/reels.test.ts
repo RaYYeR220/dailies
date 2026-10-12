@@ -6,7 +6,7 @@ import { createRun, getRun, runPipeline } from '@dailies/pipeline';
 import type { Stage } from '@dailies/pipeline';
 import { DEFAULT_BUDGET } from '@dailies/core';
 import { getDb } from '../src/server/db';
-import { approveReel } from '../src/server/store';
+import { approveReel, getReel } from '../src/server/store';
 import { GET as getReelDetail } from '../src/app/api/reels/[id]/route';
 import { GET as listReels } from '../src/app/api/reels/route';
 import { POST as approveRoute } from '../src/app/api/reels/[id]/approve/route';
@@ -216,6 +216,22 @@ describe('POST /api/reels/[id]/feedback', () => {
     const body = (await res.json()) as { recut: boolean };
     expect(body.recut).toBe(true);
     expect(getRun(db, id).status).toBe('running');
+  });
+
+  it('a re-cut of an approved reel sets it back to draft, while the new cut renders', async () => {
+    process.env.DAILIES_OWNER_TOKEN = 'secret-token';
+    const db = getDb();
+    const id = createRun(db, runInput);
+    await runPipeline(db, id, stagesThrough(['ingest', 'edit', 'verify']), { dataDir, sleep: noSleep });
+    db.prepare("UPDATE runs SET status = 'needs_approval' WHERE id = ?").run(id);
+    approveReel(db, id);
+    expect(getReel(db, id)!.status).toBe('approved');
+
+    const res = await sendFeedback(id, 'make it punchier', { 'x-owner-token': 'secret-token' });
+
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { recut: boolean }).toEqual({ recut: true });
+    expect(getReel(db, id)).toEqual({ runId: id, status: 'draft', approvedAt: null });
   });
 
   it('with the owner token does not recut a run that is still running', async () => {

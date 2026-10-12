@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CostMeter, createRouter, initTracing, shutdownTracing, traced, type ModelClient } from '@dailies/agent';
+import { CostMeter, createNeatlogsMcp, createRouter, initTracing, shutdownTracing, traced, type ModelClient } from '@dailies/agent';
 import { DEFAULT_BUDGET, loadEnv, type Env, type RenderArtifact } from '@dailies/core';
 import { buildStages, createRun, getRun, listEvents, openDb, runPipeline, type StageDeps } from '@dailies/pipeline';
 import { createGeminiTts, type TtsProvider } from '@dailies/voice';
@@ -152,16 +152,12 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
   const meter = new CostMeter(DEFAULT_BUDGET.maxCostPerReelUsd);
   client = client ?? createRouter(env, meter);
   const tts: TtsProvider | null = args.noVoice || env.geminiKeys.length === 0 ? null : createGeminiTts(env.geminiKeys);
+  const mcp = env.neatlogsApiKey ? createNeatlogsMcp({ apiKey: env.neatlogsApiKey, url: `${env.neatlogsEndpoint}/mcp` }) : null;
 
   await initTracing(env, 'dailies-reel');
   try {
     const status = await traced('WORKFLOW', 'dailies-reel', async (input: { repoUrl: string; runId: string }) => {
-      const deps: StageDeps = { db, client: client!, meter, tts, voice: 'Charon', maxSessions: args.maxSessions };
-      // `reviewStage` is not exported from `@dailies/pipeline` (only its artifact type is), so there is no
-      // way into it through the package's one allowed door. `--no-review` is accepted for the documented
-      // command surface, but there is currently nothing for it to switch off: buildStages' eight stages,
-      // unmodified, are what every run executes either way.
-      void args.noReview;
+      const deps: StageDeps = { db, client: client!, meter, tts, voice: 'Charon', maxSessions: args.maxSessions, mcp, noReview: args.noReview };
       const stages = buildStages(deps);
 
       let afterId = 0;

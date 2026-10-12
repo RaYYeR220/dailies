@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { openDb, createRun } from '@dailies/pipeline';
 import { DEFAULT_BUDGET } from '@dailies/core';
 import type { Database } from '@dailies/pipeline';
-import { ensureWebTables, getReel, approveReel, addFeedback, listApproved, allowRun } from '../src/server/store';
+import { ensureWebTables, getReel, approveReel, draftReel, addFeedback, listApproved, allowRun } from '../src/server/store';
 
 let db: Database;
 let dataDir: string;
@@ -49,6 +49,26 @@ describe('getReel / approveReel', () => {
     expect(reel!.runId).toBe(id);
     expect(reel!.status).toBe('approved');
     expect(typeof reel!.approvedAt).toBe('string');
+  });
+});
+
+describe('draftReel', () => {
+  it('sets an approved reel back to draft, clearing approvedAt', () => {
+    const id = createRun(db, runInput);
+    approveReel(db, id);
+    expect(getReel(db, id)!.status).toBe('approved');
+
+    draftReel(db, id);
+
+    expect(getReel(db, id)).toEqual({ runId: id, status: 'draft', approvedAt: null });
+  });
+
+  it('is a no-op when the run has no reel row yet', () => {
+    const id = createRun(db, runInput);
+
+    draftReel(db, id);
+
+    expect(getReel(db, id)).toBeNull();
   });
 });
 

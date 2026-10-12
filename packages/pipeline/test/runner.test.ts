@@ -1,10 +1,23 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_BUDGET, BudgetExceededError } from '@dailies/core';
 import { openDb, createRun, getRun, listEvents, addCost, unfinishedRuns, runPipeline, recut } from '../src/index';
 import type { Database, Stage, StageName } from '../src/index';
+
+// Captures what the runner hands to @dailies/agent's traced(), without a real neatlogs export: the kind and
+// name of every span it opens, in the order it opens them, plus what the outer "run" span's wrapped function
+// resolved to. `vi.hoisted` keeps this reachable from inside the mock factory below despite vi.mock's hoisting.
+const tracing = vi.hoisted(() => ({ spans: [] as { kind: string; name: string }[], runOutput: undefined as unknown }));
+vi.mock('@dailies/agent', () => ({
+  traced: (kind: string, name: string, fn: (...a: unknown[]) => Promise<unknown>) => async (...a: unknown[]) => {
+    tracing.spans.push({ kind, name });
+    const out = await fn(...a);
+    if (name === 'run') tracing.runOutput = out;
+    return out;
+  },
+}));
 
 let db: Database;
 let dataDir: string;
@@ -20,6 +33,8 @@ const noSleep = async () => {};
 beforeEach(() => {
   db = openDb(':memory:');
   dataDir = mkdtempSync(join(tmpdir(), 'dailies-runner-'));
+  tracing.spans.length = 0;
+  tracing.runOutput = undefined;
 });
 
 afterEach(() => {
@@ -342,5 +357,58 @@ describe('recut', () => {
       review: 2,
       gate: 2,
     });
+  });
+});
+
+describe('tracing', () => {
+  it('wraps the whole run and every stage attempt in a CHAIN span named after the stage', async () => {
+    const stages: Stage[] = [
+      { name: 'ingest', maxAttempts: 1, run: async () => ({ artifact: {} }) },
+      { name: 'edit', maxAttempts: 1, run: async () => ({ artifact: {} }) },
+    ];
+    const id = createRun(db, input);
+
+    const status = await runPipeline(db, id, stages, { dataDir, sleep: noSleep });
+
+    expect(status).toBe('needs_approval');
+    expect(tracing.spans).toEqual([
+      { kind: 'CHAIN', name: 'run' },
+      { kind: 'CHAIN', name: 'ingest' },
+      { kind: 'CHAIN', name: 'edit' },
+    ]);
+  });
+
+  it('records the final status, reason and cost on the run span, not just the bare status it returns', async () => {
+    const stages: Stage[] = [{ name: 'ingest', maxAttempts: 1, run: async () => ({ artifact: {} }) }];
+    const id = createRun(db, input);
+    addCost(db, id, 0.05);
+
+    const status = await runPipeline(db, id, stages, { dataDir, sleep: noSleep });
+
+    expect(status).toBe('needs_approval');
+    expect(tracing.runOutput).toEqual({ status: 'needs_approval', reason: null, costUsd: 0.05 });
+  });
+
+  it('records a failed run on the run span even though runPipeline itself returns a plain status string', async () => {
+    const stages: Stage[] = [{ name: 'ingest', maxAttempts: 1, run: async () => { throw new Error('boom'); } }];
+    const id = createRun(db, input);
+
+    const status = await runPipeline(db, id, stages, { dataDir, sleep: noSleep });
+
+    expect(status).toBe('failed');
+    expect(tracing.runOutput).toEqual({ status: 'failed', reason: 'boom', costUsd: 0 });
+    // The stage's own CHAIN span saw the thrown error too: traced() rethrows it unchanged, which is how a
+    // real neatlogs span marks itself failed, and the runner's retry/failure bookkeeping still ran on top.
+    expect(tracing.spans).toEqual([{ kind: 'CHAIN', name: 'run' }, { kind: 'CHAIN', name: 'ingest' }]);
+  });
+
+  it('skips tracing entirely for a run that is already terminal', async () => {
+    const id = createRun(db, input);
+    db.prepare("UPDATE runs SET status = 'blocked' WHERE id = ?").run(id);
+
+    const status = await runPipeline(db, id, [], { dataDir, sleep: noSleep });
+
+    expect(status).toBe('blocked');
+    expect(tracing.spans).toEqual([]);
   });
 });
