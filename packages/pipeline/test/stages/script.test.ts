@@ -312,10 +312,51 @@ describe('script stage', () => {
   it('script frames the storyboard with a title and an end card built from the record', async () => {
     const { storyboard, scenes, h } = await run();
 
-    expect(scenes[0]).toEqual({ id: 'title', type: 'title', lines: [], repo: 'acme/retry-queue', windowLabel: '2026-10-10 – 2026-10-11', sessionCount: 2, commitCount: 2 });
+    // the window is told from the first session's start to the last session's end, not as the two dates the run was asked for
+    expect(scenes[0]).toEqual({ id: 'title', type: 'title', lines: [], repo: 'acme/retry-queue', windowLabel: '10 Oct, 07:00 – 09:20', sessionCount: 2, commitCount: 2 });
     expect(scenes.at(-1)).toEqual({ id: 'end', type: 'end', lines: [], repo: 'acme/retry-queue', verified: 2, flagged: 1, unverified: 0 });
     expect(storyboard).toMatchObject({ runId: h.runId, repo: 'acme/retry-queue', targetSec: 75, facts: computeFacts(twoSessions().sessions) });
     expect(Storyboard.safeParse(storyboard).success).toBe(true);
+  });
+
+  describe('window label', () => {
+    /** The title's label for `twoSessions` with these start and end times. */
+    const labelFor = async (times: [startedAt: string, endedAt: string | null][]) => {
+      const base = twoSessions();
+      const ingest = { ...base, sessions: base.sessions.map((s, i) => ({ ...s, startedAt: times[i]![0], endedAt: times[i]![1] })) };
+      const h = harness({ artifacts: { ...artifacts(), ingest }, reply: () => json(writerReply()) });
+      const { artifact } = await scriptStage(h.deps).run(h.ctx());
+      return { label: ofType(artifact.storyboard.scenes, 'title')[0]!.windowLabel, told: promptText(h.calls[0]!.messages) };
+    };
+
+    it('script names both dates when the sessions span two, in UTC', async () => {
+      const { label, told } = await labelFor([
+        ['2026-10-12T01:05:10+02:00', '2026-10-11T23:50:00Z'],   // 23:05 on the 11th in UTC, whatever offset the stamp carries
+        ['2026-10-12T00:10:00Z', '2026-10-12T02:25:40Z'],
+      ]);
+
+      expect(label).toBe('11 Oct, 23:05 – 12 Oct, 02:25');
+      expect(told).toContain('Window: 11 Oct, 23:05 – 12 Oct, 02:25');   // the writer is told the same window the title shows
+    });
+
+    it('script names the date once when the sessions fall within one', async () => {
+      // the later session comes first: the label runs from the earliest start to the latest end, not by position
+      const { label } = await labelFor([
+        ['2026-10-11T16:20:00Z', '2026-10-11T18:30:00Z'],
+        ['2026-10-11T14:00:00Z', '2026-10-11T15:00:00Z'],
+      ]);
+
+      expect(label).toBe('11 Oct, 14:00 – 18:30');
+    });
+
+    it('script takes a session with no recorded end to end where it started', async () => {
+      expect((await labelFor([['2026-10-11T14:00:00Z', '2026-10-11T15:00:00Z'], ['2026-10-11T16:20:00Z', null]])).label).toBe('11 Oct, 14:00 – 16:20');
+      expect((await labelFor([['2026-10-11T14:00:00Z', null], ['2026-10-11T14:00:30Z', null]])).label).toBe('11 Oct, 14:00');
+    });
+
+    it('script falls back to the dates of the run when no session carries a time it can read', async () => {
+      expect((await labelFor([['yesterday', null], ['', null]])).label).toBe('2026-10-10 – 2026-10-11');
+    });
   });
 
   it('script gives every scene and every line its own id', async () => {
