@@ -50,6 +50,18 @@ describe('redact', () => {
     expect(r.homePaths).toBe(2);
   });
 
+  it('does not run the name past a quote, colon or comma into unrelated text', () => {
+    const r = redact('{"cwd":"/home/x","note":"fine"}');
+    expect(r.text).toBe('{"cwd":"~","note":"fine"}');
+    expect(r.homePaths).toBe(1);
+  });
+
+  it('never eats into an adjacent unterminated private-key marker, so the fallback in @dailies/ingest can still find it', () => {
+    const r = redact('{"cwd":"/home/x","content":"-----BEGIN RSA PRIVATE KEY-----\\nMIIEpA...');
+    expect(r.text).toContain('-----BEGIN RSA PRIVATE KEY-----');
+    expect(r.homePaths).toBe(1);
+  });
+
   it('redacts dotted, unicode and email-shaped account names in full', () => {
     expect(redact('cd /Users/john.doe/code').text).toBe('cd ~/code');
     expect(redact('cd /home/Єгор/code').text).toBe('cd ~/code');

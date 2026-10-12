@@ -12,10 +12,13 @@ const RULES: [string, RegExp][] = [
 
 // A user's home directory: the owner's name is itself an identifying string, worth hiding from a terminal
 // scene the same way a secret is, but it is not a secret hit (the gate's secret check must stay unaffected).
-// The name itself is unconstrained (dotted, unicode and email-shaped account names all occur in the wild), so a
-// trailing character that could only be sentence punctuation around the path — never part of it — is trimmed
-// back out of the match rather than carried into the replacement.
-const HOME_DIR = /\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Za-z]:\\Users\\[^\\\s]+/g;
+// The name stops at a path separator, whitespace, or a character that can only be a structural delimiter
+// around it (a quote, a colon, a bracket) — never part of an account name. Without that bound, a name
+// embedded in a JSON- or shell-quoted blob could run on past its own field into unrelated text; in the
+// worst case straight through a "-----BEGIN ... PRIVATE KEY-----" marker, erasing the literal text that
+// @dailies/ingest's unterminated-private-key fallback looks for and leaving the key itself unredacted.
+const NAME = /[^/\\\s"'`<>|,;:=(){}[\]]{1,255}/.source;
+const HOME_DIR = new RegExp(`/Users/${NAME}|/home/${NAME}|[A-Za-z]:\\\\Users\\\\${NAME}`, 'g');
 const TRAILING_PUNCT = /[.,;:!?'")\]}]+$/;
 
 export function redact(input: string): { text: string; hits: number; homePaths: number } {
