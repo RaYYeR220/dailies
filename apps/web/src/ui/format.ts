@@ -15,7 +15,10 @@ export function stamp(fromIso: string, toIso: string): string {
 
 export function repoName(repoUrl: string): string {
   const match = /^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(repoUrl);
-  return match ? `${match[1]}/${match[2]}` : repoUrl;
+  if (match) return `${match[1]}/${match[2]}`;
+  // A run the command-line tool made on a local folder is named by the folder, never by its path on someone's disk.
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(repoUrl)) return repoUrl;
+  return repoUrl.replace(/\/+$/, '').split('/').at(-1) || repoUrl;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

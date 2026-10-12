@@ -35,6 +35,8 @@ describe('repoName', () => {
 
   it('is the address itself for anything else', () => {
     expect(repoName('file:///tmp/repo')).toBe('file:///tmp/repo');
+    expect(repoName('/Users/ada/work/acme-api/')).toBe('acme-api');
+    expect(repoName('.')).toBe('.');
   });
 });
 
