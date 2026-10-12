@@ -1090,7 +1090,7 @@ A pattern-based scan of public sessions (no model involved) produced the first r
 
 Each item was observed, not anticipated.
 
-**Files:** `packages/reel/src/render.ts` and test (render settings only); `packages/core/src/redact.ts` and test; `packages/pipeline/src/stages/index.ts`, `packages/pipeline/src/runner.ts` and tests; `packages/pipeline/src/stages/{edit,script}.ts` (memory only); `apps/web/src/app/api/reels/[id]/feedback/route.ts`, `apps/web/src/server/store.ts` and tests; `packages/core/src/budget.ts`
+**Files:** `packages/reel/src/render.ts` and test (render settings only); `packages/core/src/redact.ts` and test; `packages/pipeline/src/stages/index.ts`, `packages/pipeline/src/runner.ts` and tests; `packages/pipeline/src/stages/{edit,script}.ts` (memory only); `apps/web/src/app/api/reels/[id]/feedback/route.ts`, `apps/web/src/server/store.ts`, `apps/web/src/worker-main.ts` and tests; `packages/cli/src/run.ts` and its test; `packages/core/src/budget.ts`
 
 1. **Rendering speed is a deployment setting.** A 30-second reel renders in 35 seconds on a laptop and in 145 seconds on the 4-core server, which has no graphics card. `renderReel` reads two optional environment variables: `DAILIES_RENDER_CONCURRENCY` (an integer passed to the renderer as its concurrency; default left to the renderer) and `DAILIES_RENDER_SCALE` (a number between 0.25 and 1 passed as the output scale, so 0.667 yields 1280x720 from the same composition; default 1). Invalid values are ignored with a logged warning. Test both through an injected environment object, without rendering.
    (An earlier note here blamed the working directory for render timeouts. That was wrong. The cause was macOS: a browser binary stored under a privacy-protected folder stops producing frames when the screen locks. `DAILIES_BROWSER_EXECUTABLE` already lets a render use a binary elsewhere.)
@@ -1099,6 +1099,7 @@ Each item was observed, not anticipated.
 4. **Earlier runs are recalled but not used.** `recallRepo` exists and nothing calls it. Call it once at the start of the edit stage, log `memory: <n> earlier runs, <m> with failures` (or `memory: skipped, <reason>`), and append the notes to the editor's and the writer's prompts under a heading that marks them as history, not instructions.
 5. **A re-cut of an approved reel stays approved.** While the new cut is rendering, the old approval still stands. `recut` through the feedback route sets the reel back to draft.
 6. **The default budget is below a real run.** A real 12-session run costs about $0.60 after the editor fix. `DEFAULT_BUDGET.maxCostPerReelUsd` becomes 1.0 until the business plan sets it.
+7. **The review stage is built and never runs.** `reviewStage` is not exported as a function from `@dailies/pipeline`, so neither the command-line tool nor the worker can place it before the gate, and `--no-review` does nothing. Export it, insert it between `render` and `gate` in both entry points, and make `--no-review` leave it out. Test: the stage list of a default run contains `review` immediately before `gate`, and the list with `--no-review` does not.
 
 - [ ] **Step 1: Write a failing test for each item.**
 - [ ] **Step 2: Run.** Expected: FAIL.
