@@ -19,13 +19,16 @@ cp .env.example .env
 #   DAILIES_SITE_ADDRESS=your-domain.example      # default is :80 (plain HTTP on any host)
 #   DAILIES_RUNS_PER_IP=3                         # default
 #   DAILIES_RUNS_PER_DAY=40                       # default
+#   DAILIES_RENDER_CONCURRENCY=4                  # frames drawn at once; the number of cores is a good start
+#   DAILIES_RENDER_SCALE=0.75                     # 0.25, 0.5, 0.75 or 1; lower is faster on a server with no graphics card
+#   DAILIES_FEATURED_RUN=run_...                  # the reel on the front page; default is the reel approved last
 
 docker compose up -d --build
 ```
 
-The first build installs the workspace, builds `@dailies/web`, and bakes in
-the headless browser Remotion needs to render video, so it is slow the first
-time and fast on every rebuild after (Docker layer caching). Three containers
+The first build installs the workspace, builds `@dailies/web`, so it is slow the first
+time and fast on every rebuild after (Docker layer caching). The headless browser
+the renderer needs is fetched on the first render after a build. Three containers
 start: `web` (the Next.js app and API), `worker` (the pipeline runner), and
 `caddy` (reverse proxy and, when `DAILIES_SITE_ADDRESS` is a real hostname,
 automatic TLS).
