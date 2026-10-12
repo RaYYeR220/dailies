@@ -92,6 +92,7 @@ This repository. First commit 11 October 2026, 21:26. The hackathon ran 10 to 12
 ## 7. What was shared while building
 
 - 11 October: https://x.com/BazydloMis57623/status/2109392014827802719
+- 12 October, with a clip of the flag from the demonstration reel: https://x.com/BazydloMis57623/status/2109542307137568866
 - [entireio/cli#2728](https://github.com/entireio/cli/issues/2728)
 
 ## The demonstration repository

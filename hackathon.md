@@ -157,6 +157,7 @@ Committed by hand in this period, with no checkpoint: the three rule changes abo
 ## Shared while building
 
 - First post, 11 October: https://x.com/BazydloMis57623/status/2109392014827802719
+- 12 October, the flag from the demonstration reel: https://x.com/BazydloMis57623/status/2109542307137568866
 - Upstream report from this build: [entireio/cli#2728](https://github.com/entireio/cli/issues/2728), a short `sk-` key written as a bare value in a prompt is not redacted in checkpoint transcripts. Reproduced with made-up values on CLI 0.11.4.
 
 ## Demo
