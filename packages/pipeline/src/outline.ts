@@ -14,6 +14,10 @@ const NAME_CHARS = 80;
 const DATE_CHARS = 40;
 const SHORT_SHA_CHARS = 12;
 const FILE_PATH_CHARS = 300;
+const RUNS_HEAD = 4;
+// Ingest sets an entry's filePath from any tool call carrying a file_path input, including a
+// read-only Read, so edits is its own set rather than "any tool_call with a filePath".
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 
 // Progressively smaller (files, runs) caps tried before cutting into firstPrompt/lastMessage: a
 // session's outline can still point the editor at its diffs and commands through the tools (get_diff,
@@ -66,18 +70,25 @@ function minutesBetween(startedAt: string, endedAt: string | null): number {
   return ms > 0 ? Math.round(ms / 60000) : 0;
 }
 
-/** One line per recorded command: its kind, outcome and entry index, in session order. */
+/**
+ * One line per recorded command: its kind, outcome and entry index, in session order, at most
+ * `max`. The first few plus the last, not simply the first `max`: the final run is often the one
+ * the arc's validation step is built on — including the "failed right before reporting success"
+ * case — and a long session must not lose it to an early run.
+ */
 function runLines(session: Session, max: number): string[] {
-  return collectRuns(session)
-    .slice(0, max)
-    .map((r) => `${r.cls} ${r.outcome} @${r.index}`);
+  const all = collectRuns(session).map((r) => `${r.cls} ${r.outcome} @${r.index}`);
+  if (all.length <= max) return all;
+  const head = Math.min(RUNS_HEAD, max);
+  const tail = max - head;
+  return tail > 0 ? [...all.slice(0, head), ...all.slice(all.length - tail)] : all.slice(0, head);
 }
 
 /** A compact summary of one session: enough for the editor to choose beats without reading the transcript. */
 export function outlineSession(session: Session): SessionOutline {
   const firstPrompt = session.entries.find((e) => e.kind === 'user')?.text ?? '';
   const lastAssistant = [...session.entries].reverse().find((e) => e.kind === 'assistant' && e.text.trim() !== '');
-  const edits = session.entries.filter((e) => e.kind === 'tool_call' && e.filePath !== undefined).length;
+  const edits = session.entries.filter((e) => e.kind === 'tool_call' && e.filePath !== undefined && e.toolName !== undefined && EDIT_TOOLS.has(e.toolName)).length;
   return {
     id: oneLine(session.id, ID_CHARS),
     agent: oneLine(session.agent, NAME_CHARS),

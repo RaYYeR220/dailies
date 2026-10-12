@@ -89,6 +89,16 @@ describe('edit stage', () => {
     expect(h.calls).toHaveLength(8);   // maxSteps
   });
 
+  it('edit returns fallback beats when the editor never replies with valid JSON, instead of letting the runner retry it', async () => {
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => ({ role: 'assistant', content: 'not json, and not a tool call either' }) });
+
+    const result = await editStage(h.deps).run(h.ctx());
+
+    expect(result.artifact.beats).toEqual(fallbackBeats(twoSessions().sessions, 6));
+    expect(h.events.join('\n')).toContain('editor fallback');
+    expect(h.calls).toHaveLength(2);   // the first reply, then one repair attempt
+  });
+
   it('edit returns fallback beats when it spends past its share of the run budget, and logs why', async () => {
     const h = harness({
       artifacts: { ingest: twoSessions() },

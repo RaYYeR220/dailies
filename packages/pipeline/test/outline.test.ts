@@ -36,6 +36,20 @@ describe('outlineSession', () => {
     expect(outline.files).toEqual(['src/queue.ts']);
   });
 
+  it('counts only actual file edits, not a Read call that also carries a filePath', () => {
+    const s = session('s1', [
+      { kind: 'user', text: 'go' },
+      { kind: 'tool_call', toolName: 'Read', toolUseId: 't1', filePath: 'src/queue.ts', text: '{}' },
+      { kind: 'tool_result', toolUseId: 't1', text: 'file contents' },
+      { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'src/queue.ts', text: '{}' },
+      { kind: 'tool_result', toolUseId: 't2', text: 'ok' },
+      { kind: 'tool_call', toolName: 'Write', toolUseId: 't3', filePath: 'src/new.ts', text: '{}' },
+      { kind: 'tool_result', toolUseId: 't3', text: 'ok' },
+    ]);
+
+    expect(outlineSession(s).edits).toBe(2);
+  });
+
   it('cuts the first prompt and the last message to 240 characters', () => {
     const s = session('long', [{ kind: 'user', text: 'p'.repeat(500) }, { kind: 'assistant', text: 'a'.repeat(500) }]);
 
@@ -60,6 +74,19 @@ describe('outlineSession', () => {
     expect(outline.commits).toHaveLength(6);
     expect(outline.files).toHaveLength(8);
     expect(outline.runs).toHaveLength(12);
+  });
+
+  it('keeps the final runs, not just the first 12, so the last validation is never dropped', () => {
+    const runs = Array.from({ length: 20 }, (_, n) => [
+      { kind: 'tool_call' as const, toolName: 'Bash', toolUseId: `t${n}`, command: 'pnpm vitest run', text: '{}' },
+      { kind: 'tool_result' as const, toolUseId: `t${n}`, text: n === 19 ? PASSED_RUN : FAILED_RUN, isError: n !== 19 },
+    ]).flat();
+    const s = session('many', [{ kind: 'user', text: 'go' }, ...runs]);
+
+    const outline = outlineSession(s);
+
+    expect(outline.runs).toHaveLength(12);
+    expect(outline.runs[outline.runs.length - 1]).toContain('test pass');
   });
 
   it('gives a session with no user entry an empty first prompt, not a throw', () => {

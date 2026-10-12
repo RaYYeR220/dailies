@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { AgentStepLimitError, defineTool, runAgent, type ModelClient, type Tool } from '@dailies/agent';
+import { AgentStepLimitError, ModelOutputError, defineTool, runAgent, type ModelClient, type Tool } from '@dailies/agent';
 import { Beat, type Entry, type IngestArtifact, type Session } from '@dailies/core';
 import { editorPrompt } from '../prompts/editor';
 import { fallbackBeats, outlinesWithin } from '../outline';
@@ -226,7 +226,7 @@ export function editStage(deps: StageDeps): Stage<EditArtifact> {
         output = result.output;
         ctx.log(`editor replied in ${result.steps} steps`);
       } catch (err) {
-        if (err instanceof AgentStepLimitError || err instanceof StageBudgetError) {
+        if (err instanceof AgentStepLimitError || err instanceof StageBudgetError || err instanceof ModelOutputError) {
           ctx.log(`editor fallback, whole-session beats: ${err.message}`);
           return { artifact: { beats: fallback() } };
         }
