@@ -313,7 +313,7 @@ describe('script stage', () => {
     const { storyboard, scenes, h } = await run();
 
     expect(scenes[0]).toEqual({ id: 'title', type: 'title', lines: [], repo: 'acme/retry-queue', windowLabel: '2026-10-10 – 2026-10-11', sessionCount: 2, commitCount: 2 });
-    expect(scenes.at(-1)).toEqual({ id: 'end', type: 'end', lines: [], repo: 'acme/retry-queue', verified: 2, flagged: 1 });
+    expect(scenes.at(-1)).toEqual({ id: 'end', type: 'end', lines: [], repo: 'acme/retry-queue', verified: 2, flagged: 1, unverified: 0 });
     expect(storyboard).toMatchObject({ runId: h.runId, repo: 'acme/retry-queue', targetSec: 75, facts: computeFacts(twoSessions().sessions) });
     expect(Storyboard.safeParse(storyboard).success).toBe(true);
   });
