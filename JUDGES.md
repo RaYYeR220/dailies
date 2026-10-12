@@ -2,7 +2,7 @@
 
 ## The short path
 
-1. **The video** (under three minutes): link in the submission post.
+1. **The video** (2 min 37 s): [`evidence/video/dailies-demo.mp4`](evidence/video/dailies-demo.mp4), and linked from the submission post.
 2. **A finished reel**, without running anything: [`evidence/reels/acme-api-demo/reel.mp4`](evidence/reels/acme-api-demo/reel.mp4). 59 seconds, one command, $0.20.
 3. **The service:** https://dailies-reel.vercel.app. The reel on the front page was made by the service. Click a narration line to see the session entry or the diff it rests on.
 4. **Your own repository:** paste any public GitHub repository that has Entire checkpoints. A run takes a few minutes, most of it rendering on a small server with no graphics card. Three runs a day per address.
@@ -15,7 +15,7 @@ From a checkout, `pnpm dailies verify <repository URL> --since 7d` prints the ve
 |---|---|
 | The agent | [`README.md`](README.md), "What it does"; the stages in `packages/pipeline/src/stages/`; the service |
 | Use of neatlogs, Entire and cfo.ai | [`PROOF.md`](PROOF.md) sections 2, 3 and 4. Each goes through architecture, implementation, runtime, reasoning and result |
-| The demo video | the submission post |
+| The demo video | [`evidence/video/dailies-demo.mp4`](evidence/video/dailies-demo.mp4). For each of the three tools a rail at the top left lights up as it goes through architecture, implementation, runtime, reasoning and result |
 | Building in public | [`PROOF.md`](PROOF.md) section 7 and [`hackathon.md`](hackathon.md), which records the mistakes as well |
 | Usefulness and originality | The first paragraph of the README, and [`eval/results/2026-10-12-field-sample.md`](eval/results/2026-10-12-field-sample.md): the rules on 394 real public sessions |
 

@@ -7,6 +7,7 @@ Dailies reads the agent sessions recorded in a repository's [Entire](https://ent
 ![A frame of a reel: the agent said "All 13 tests pass.", the last test run before that message reported failures](evidence/reels/acme-api-demo/flag.png)
 
 - **Try it:** https://dailies-reel.vercel.app (paste a public GitHub repository that has Entire checkpoints)
+- **The demo video** (2 min 37 s): [`evidence/video/dailies-demo.mp4`](evidence/video/dailies-demo.mp4)
 - **A finished reel:** [`evidence/reels/acme-api-demo/reel.mp4`](evidence/reels/acme-api-demo/reel.mp4), 59 seconds, made by one command for $0.20
 - **For judges:** [`JUDGES.md`](JUDGES.md) is the short path; [`PROOF.md`](PROOF.md) has every piece of evidence the hackathon asks for
 - **Build log:** [`hackathon.md`](hackathon.md)

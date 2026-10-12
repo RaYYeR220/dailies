@@ -156,6 +156,7 @@ Committed by hand in this period: the three rule changes above and their review 
 ## Demo
 
 - The service: https://dailies-reel.vercel.app
+- The demo video: `evidence/video/dailies-demo.mp4`
 - A finished reel: `evidence/reels/acme-api-demo/reel.mp4`
 - From a checkout: `pnpm dailies run <repository URL> --since 7d`, or `entire dailies run .` inside a repository with checkpoints
 
@@ -175,7 +176,7 @@ What the hackathon asks for, and where it is:
 | Asked for | Where |
 |---|---|
 | A public repository with commits dated during the hackathon | This repository; first commit 11 October, 21:26 CEST |
-| A demo video that covers neatlogs, Entire and cfo.ai | Linked from the submission post |
+| A demo video that covers neatlogs, Entire and cfo.ai | `evidence/video/dailies-demo.mp4`, 2 min 37 s; also linked from the submission post |
 | A run before a change and a run after it | `PROOF.md`, section 1 |
 | neatlogs traces | `PROOF.md`, section 2 |
 | Entire checkpoints, with an accessible link and its ID | `PROOF.md`, section 3 |
