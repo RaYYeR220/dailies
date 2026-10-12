@@ -44,7 +44,12 @@ function main() {
   const { pricePerMonth, reelsPerMonth } = plan.pricing.solo;
   const marginAt = (cost: number) => 1 - (cost * reelsPerMonth) / pricePerMonth;
 
-  const rows = dataDirs.flatMap((d) => (d.endsWith('.json') ? (JSON.parse(readFileSync(d, 'utf8')) as Row[]) : rowsOf(d))).sort((a, b) => a.created.localeCompare(b.created));
+  // A run that was copied from one machine to another is in both sets of rows; it is one run.
+  const seen = new Set<string>();
+  const rows = dataDirs
+    .flatMap((d) => (d.endsWith('.json') ? (JSON.parse(readFileSync(d, 'utf8')) as Row[]) : rowsOf(d)))
+    .filter((r) => !seen.has(r.id) && seen.add(r.id))
+    .sort((a, b) => a.created.localeCompare(b.created));
   const reels = rows.filter((r) => r.seconds !== null);
   const costs = reels.map((r) => r.cost).sort((a, b) => a - b);
   const mean = costs.reduce((n, c) => n + c, 0) / (costs.length || 1);
@@ -53,7 +58,7 @@ function main() {
 
   const out: string[] = [];
   out.push('# Plan against actual', '');
-  out.push(`Generated ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by \`eval/src/plan-vs-actual.ts\` from the run database. Every run that reached a rendered reel is listed; nothing is left out.`, '');
+  out.push(`Generated ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by \`eval/src/plan-vs-actual.ts\` from the run rows in \`business/runs-laptop.json\` and \`business/runs-server.json\`. Every run on either machine is listed, including the ones made while the pipeline was still being built; nothing is left out.`, '');
   out.push('| | Plan | Actual |', '|---|---|---|');
   out.push(`| Cost of one reel | ${usd(plan.plannedCostPerReelUsd)} | ${usd(mean)} mean, ${usd(median)} median, over ${reels.length} reels |`);
   out.push(`| Ceiling for a ${pct(plan.targetGrossMargin).replace('.0', '')} margin on Solo | $${ceiling} | ${over.length} of ${reels.length} reels cost more |`);
@@ -63,7 +68,8 @@ function main() {
     const reel = r.seconds === null ? 'none' : `${Math.round(r.seconds)} s`;
     const against = r.seconds === null ? '' : r.cost > ceiling ? `over by ${usd(r.cost - ceiling)}` : `${pct(r.cost / ceiling)} of it`;
     const outcome =
-      r.seconds === null && r.status !== 'blocked' && r.status !== 'failed' ? `no reel; last stage done: ${r.reached ?? 'none'}`
+      r.status === 'blocked' && r.reason === 'cost' ? 'refused at the gate: over the ceiling'
+      : r.seconds === null && r.status !== 'blocked' && r.status !== 'failed' ? `no reel; last stage done: ${r.reached ?? 'none'}`
       : r.status === 'needs_approval' ? 'passed the gate, awaiting approval'
       : r.status === 'approved' ? 'approved'
       : `${r.status}${r.reason ? `: ${r.reason}` : ''}`;
