@@ -121,27 +121,25 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
       const ingest = ctx.read<IngestArtifact>('ingest');
       const sessions = new Map(ingest.sessions.map((s) => [s.id, s]));
 
-      const budget = stageMeter(deps.meter, ctx.run.budget.maxCostPerReelUsd * VERIFY_BUDGET_SHARE);
-      const checkedClient: ModelClient = { complete: async (req) => { budget.check(); return deps.client.complete(req); } };
-
+      // Extraction is never budget-gated: it is what finds the deterministic-kind claims (tests_pass,
+      // build_passes, ran_command, fixed_error), and those are judged by rule, with no model call of
+      // their own, so cutting extraction short would be the one way the budget could still silently
+      // skip a session's lie. Only the implemented-claim judge calls, which are genuinely optional
+      // model spend on top of extraction, are capped by the stage's share.
       let n = 0;
       const nextId = () => `c_${(n += 1)}`;
       const seen = new Set<string>();
       const extracted: Claim[] = [];
       let dropped = 0;
-      let budgetReached = false;
       for (const session of ingest.sessions) {
-        try {
-          const found = await extract(session, nextId, seen, checkedClient);
-          extracted.push(...found.kept);
-          dropped += found.dropped;
-        } catch (err) {
-          if (!(err instanceof StageBudgetError)) throw err;
-          budgetReached = true;
-          ctx.log(`verify budget reached while extracting claims: ${err.message}`);
-          break;
-        }
+        const found = await extract(session, nextId, seen, deps.client);
+        extracted.push(...found.kept);
+        dropped += found.dropped;
       }
+
+      const budget = stageMeter(deps.meter, ctx.run.budget.maxCostPerReelUsd * VERIFY_BUDGET_SHARE);
+      const checkedClient: ModelClient = { complete: async (req) => { budget.check(); return deps.client.complete(req); } };
+      let budgetReached = false;
 
       const claims: Claim[] = [];
       let notChecked = 0;

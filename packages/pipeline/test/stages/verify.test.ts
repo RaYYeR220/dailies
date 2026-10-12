@@ -302,7 +302,7 @@ describe('verify stage', () => {
     const ingest: IngestArtifact = { ...twoSessions(), sessions: [implementedSession('s1'), implementedSession('s2'), implementedSession('s3')], diffs: { [`${SHA_B}:src/status.ts`]: STATUS_PATCH } };
     const h = harness({
       artifacts: { ingest },
-      budget: { maxCostPerReelUsd: 1.5, maxTtsCalls: 3, maxRenderSec: 300 },   // verify's share is 30% = $0.45
+      budget: { maxCostPerReelUsd: 0.5, maxTtsCalls: 3, maxRenderSec: 300 },   // verify's share is 30% = $0.15
       costPerCall: 0.1,
       reply: (req) => {
         if (req.role === 'judge') return json({ supported: true, path: 'src/status.ts', quote: PATCH_LINE });
@@ -313,14 +313,38 @@ describe('verify stage', () => {
 
     const { artifact } = await verifyStage(h.deps).run(h.ctx());
 
-    // 3 extractor calls at 0.1 each bring spend to 0.30 (under the 0.45 share). The judge call for
-    // s1's claim passes its check at 0.30 and brings spend to 0.40; s2's claim's check still passes
-    // at 0.40 and brings spend to 0.50. s3's claim's check then sees 0.50 > 0.45 and is skipped.
+    // Extraction is never budget-gated (a separate test pins that), so the share here only tracks
+    // judge-call spend: the judge call for s1's claim passes its check at 0.00 and brings spend to
+    // 0.10; s2's claim's check still passes at 0.10 and brings spend to 0.20. s3's claim's check
+    // then sees 0.20 > 0.15 and is skipped.
     expect(artifact.claims.map((c) => c.verdict)).toEqual(['verified', 'verified', 'unverifiable']);
     expect(artifact.claims[0]!.sessionId).toBe('s1');
     expect(artifact.claims[1]!.sessionId).toBe('s2');
     expect(artifact.claims[2]).toMatchObject({ sessionId: 's3', reason: 'not checked: verification budget reached' });
     expect(h.calls.filter((c) => c.role === 'judge')).toHaveLength(2);
     expect(h.events.join('\n')).toContain('verification budget reached');
+  });
+
+  it("verify's budget share never cuts extraction short: every session is still checked by the model-free rules", async () => {
+    const h = harness({
+      artifacts: { ingest: twoSessions() },
+      budget: { maxCostPerReelUsd: 0.1, maxTtsCalls: 3, maxRenderSec: 300 },   // share is $0.03
+      costPerCall: 0.1,   // one extractor call alone blows past the share
+      reply: scripted({
+        s1: [LIE],
+        s2: [{ entryId: 's2:6', quote: 'All 3 tests pass.', kind: 'tests_pass' }],
+      }),
+    });
+
+    const { artifact } = await verifyStage(h.deps).run(h.ctx());
+
+    // both sessions were extracted and their deterministic-kind claims judged by rule, with no
+    // model call and so no way for the budget to touch them, exactly as the task's design intends.
+    expect(artifact.claims.map((c) => [c.sessionId, c.kind, c.verdict])).toEqual([
+      ['s1', 'tests_pass', 'contradicted'],
+      ['s2', 'tests_pass', 'verified'],
+    ]);
+    expect(h.calls.filter((c) => c.role === 'extractor')).toHaveLength(2);
+    expect(h.events.join('\n')).not.toContain('verification budget reached');
   });
 });
