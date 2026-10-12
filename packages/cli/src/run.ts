@@ -75,23 +75,32 @@ function exitCodeFor(status: string): number {
   return 1;
 }
 
+// The conservative fallback: everything up to the last "@" before the first "/", for a URL
+// that carries a credential but is too malformed for `new URL()` to accept at all (an invalid
+// port, for instance) — a parser that rejects the URL must not be the reason a credential in it
+// survives. Run unconditionally, including after a successful parse, as a second pass that does
+// not depend on `URL`'s own idea of what counts as userinfo.
+const USERINFO = /^([a-z][a-z0-9+.-]{0,31}:\/\/)[^\s/]*@/i;
+
 /**
- * `url` with any userinfo removed, the way a real URL parser reads it rather than a hand-rolled
- * pattern. Stripped before a repository URL reaches tracing input — a run is only ever of a
- * public repository, but a credential pasted into the URL by mistake must not be the one place
- * that escapes ingest's own redaction and lands in a trace unredacted. A string that is not a
- * URL at all (a local path, an SCP-style `git@host:path`, which carries no embedded secret) is
- * returned unchanged.
+ * `url` with any userinfo removed. Stripped before a repository URL reaches tracing input — a
+ * run is only ever of a public repository, but a credential pasted into the URL by mistake must
+ * not be the one place that escapes ingest's own redaction and lands in a trace unredacted. A
+ * string that is not a URL at all (a local path, an SCP-style `git@host:path`, which carries no
+ * embedded secret) is returned unchanged.
  */
 export function stripUserinfo(url: string): string {
+  let cleaned = url;
   try {
     const parsed = new URL(url);
     parsed.username = '';
     parsed.password = '';
-    return parsed.toString();
+    cleaned = parsed.toString();
   } catch {
-    return url;
+    // Not a URL `new URL()` will accept — fall through to the regex pass below rather than
+    // returning the original string unexamined.
   }
+  return cleaned.replace(USERINFO, '$1');
 }
 
 // Event messages, reasons and claim text ultimately derive from a third-party repository's

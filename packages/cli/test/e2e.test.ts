@@ -224,4 +224,10 @@ describe('stripUserinfo', () => {
     expect(stripUserinfo('/tmp/some-repo')).toBe('/tmp/some-repo');
     expect(stripUserinfo('git@github.com:acme/repo.git')).toBe('git@github.com:acme/repo.git');
   });
+
+  it('still strips the credential when the rest of the URL is malformed enough that URL() rejects it', () => {
+    // Neither of these parses as a URL (an invalid port) but both carry a real credential.
+    expect(stripUserinfo('https://tok@github.com:acme/repo.git')).toBe('https://github.com:acme/repo.git');
+    expect(stripUserinfo('https://u:p@host:99999/x')).toBe('https://host:99999/x');
+  });
 });
