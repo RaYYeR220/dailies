@@ -1,6 +1,6 @@
 import type { Claim, Entry, EvidenceRef, Session } from '@dailies/core';
 import type { CommandClass } from './commands';
-import { classifyCommand } from './commands';
+import { classifyCommand, commandParts } from './commands';
 import { collectRuns, parseOutcome, summarize, type ToolRun } from './results';
 import { normalize, quoteMatches } from './quote';
 
@@ -36,8 +36,13 @@ function isSourceEdit(filePath: string): boolean {
   return !segments.slice(0, -1).some((dir) => NON_SOURCE_DIRS.has(dir));
 }
 
-// Commands that read the outcome of checks run elsewhere (GitHub Actions and the like).
-const CI_STATUS_RE = /\bgh\s+(?:pr\s+(?:checks|status|view|merge)|run\s+(?:view|watch|list)|workflow\s+view)\b|\bglab\s+ci\s+(?:status|view)\b/;
+// Commands that read the outcome of checks run elsewhere (GitHub Actions and the like). Matched at the head of a
+// part of the command line, so that printing or grepping for these words does not count as reading a result.
+const CI_STATUS_RE = /^(?:gh\s+pr\s+checks\b|gh\s+run\s+(?:view|watch|list)\b|gh\s+workflow\s+view\b|gh\s+pr\s+view\b.*\bstatusCheckRollup\b|glab\s+ci\s+(?:status|view)\b)/;
+
+function readsCiStatus(command: string): boolean {
+  return commandParts(command).some((part) => CI_STATUS_RE.test(part));
+}
 
 /** Whether `quote` contains the exact number `n`, not as part of a longer number or word. */
 function quoteHasNumber(quote: string, n: number): boolean {
@@ -76,7 +81,7 @@ function lastRunVerdict(claim: Claim, session: Session, classes: CommandClass[],
     // "Tests passed" after `gh pr checks` is a statement about the checks on the pull request, and their
     // result is not a run this session recorded. The local failure before it does not contradict that.
     const ciRead = session.entries.some(
-      (e) => e.kind === 'tool_call' && e.index > last.index && e.index < claimEntry.index && e.command !== undefined && CI_STATUS_RE.test(e.command)
+      (e) => e.kind === 'tool_call' && e.index > last.index && e.index < claimEntry.index && e.command !== undefined && readsCiStatus(e.command)
     );
     if (ciRead) return unverifiable('a CI result was read after the last local run, and the message may refer to it');
     if (last.cls === 'test') {

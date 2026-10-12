@@ -21,7 +21,7 @@ Script: `eval/src/field-scan.ts`. Dataset: `eval/datasets/neathack-public.json`.
 | Stale | 13 | 3 | 1 | 1 | 2 |
 | Flags (contradicted + stale) | 23 | 8 | 2 | 2 | 3 |
 | Repositories with a flag | 14 | 7 | 2 | 2 | 3 |
-| Test runs read as pass / fail / unknown | 991 / 356 / 561 | 1003 / 292 / 631 | 1027 / 231 / 673 | 1015 / 231 / 685 | 1007 / 230 / 572 |
+| Test runs read as pass / fail / unknown | 991 / 356 / 561 | 1003 / 292 / 631 | 1027 / 231 / 673 | 1015 / 231 / 685 | 1007 / 230 / 574 |
 
 Counts move slightly between versions because the scans ran an hour apart and repositories kept receiving sessions.
 
@@ -40,9 +40,11 @@ Counts move slightly between versions because the scans ran an hour apart and re
 
 **Version 3 to 4.** An automated review of the version 3 change objected that it could now verify too easily. Two of its three points held. A passing last summary no longer verifies when an earlier summary in the same output failed (it may be another suite): that output is evidence for neither verdict. A folder named `temp` inside a source tree still counts as code; only operating-system temp paths are ignored.
 
-**Version 4 to 5.** Running the product on a small demonstration repository showed a recognition fault, not an accusation: any command that mentioned a test runner was counted as a test run. `git commit -m "add vitest coverage"`, `grep` inside `node_modules/vitest` and `npm view vitest versions` all became test runs with an unreadable result, and each one hid the real run before it, so a true "all 12 passed" came out unverifiable. A command that only reads, moves or records things is no longer a run, the body of a here-document is not read as commands, and `2>&1` is no longer taken for a background job. 113 fewer commands are counted as unreadable test runs and 14 more statements are verified.
+**Version 4 to 5.** Running the product on a small demonstration repository showed a recognition fault, not an accusation: any command that mentioned a test runner was counted as a test run. `git commit -m "add vitest coverage"`, `grep` inside `node_modules/vitest` and `npm view vitest versions` all became test runs with an unreadable result, and each one hid the real run before it, so a true "all 12 passed" came out unverifiable. A command that only reads, moves or records things is no longer a run, the body of a here-document is not read as commands, and `2>&1` is no longer taken for a background job. 111 fewer commands are counted as unreadable test runs and 14 more statements are verified.
 
 The same change uncovered two more flags, because runs that had been hidden were now visible. Both were read by hand. One holds and is listed below. The other was wrong: "Tests passed", said right after `gh pr checks` on a merged pull request, was about the checks on GitHub, and the local run before it had one failing test that the session itself had shown to fail without the change. A result read from CI is not a run this session recorded, so a claim made after one is now unverifiable, with that reason, instead of contradicted.
+
+An automated review of this change objected, as it had for version 3, that it opened ways to verify too easily, and it was right on four counts. A harmless-looking command can still start a run (`echo "$(npm test)"`, `find -exec`, `git bisect run`), so those are judged by what they mention, as before. A here-document fed to a shell is commands, and is read. Silence from a type check or a linter is a pass only when the exit status is the command's own; `tsc >/dev/null; echo` proves nothing. And only a command that actually reads check results counts as reading CI, matched at the head of the command and not anywhere in it. The numbers in the last column are after these corrections; none of them changed a verdict in this sample.
 
 ## The three flags that remain
 

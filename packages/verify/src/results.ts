@@ -110,7 +110,8 @@ function parseTypecheckOutcome(text: string, exitTrusted: boolean): RunOutcome {
   if (/error TS\d+/.test(text)) return 'fail';
   if (/Found [1-9]\d*\s+errors?/.test(text)) return 'fail';
   if (/Found 0 errors/.test(text)) return 'pass';
-  if (text.trim() === '') return 'pass';
+  // Silence proves nothing by itself: `tsc >/dev/null; echo` is silent too. It is a pass only together
+  // with an exit status that is the command's own (see `hasUntrustedExit`), which the caller has checked.
   if (exitTrusted) return 'pass';
   return 'unknown';
 }
@@ -118,7 +119,6 @@ function parseTypecheckOutcome(text: string, exitTrusted: boolean): RunOutcome {
 function parseLintOrBuildOutcome(text: string, exitTrusted: boolean): RunOutcome {
   if (/[1-9]\d*\s+errors?/.test(text)) return 'fail';
   if (/[1-9]\d*\s+problems?/.test(text)) return 'fail';
-  if (text.trim() === '') return 'pass';
   if (/compiled successfully/.test(text)) return 'pass';
   if (/built in/.test(text)) return 'pass';
   if (/Done in/.test(text)) return 'pass';

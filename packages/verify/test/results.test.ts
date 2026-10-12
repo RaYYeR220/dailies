@@ -33,7 +33,8 @@ describe('parseOutcome', () => {
 
   it('recognises typecheck pass and fail markers', () => {
     expect(parseOutcome('typecheck', 'Found 0 errors', false)).toBe('pass');
-    expect(parseOutcome('typecheck', '', false)).toBe('pass');
+    expect(parseOutcome('typecheck', '', false, { exitTrusted: true })).toBe('pass');
+    expect(parseOutcome('typecheck', '', false)).toBe('unknown');
     expect(parseOutcome('typecheck', 'Found 3 errors', false)).toBe('fail');
   });
 
@@ -207,5 +208,27 @@ describe('collectRuns on what Claude Code records', () => {
 
   it('records no run for a commit whose message names a runner', () => {
     expect(collectRuns(session('git commit -m "cover it with vitest"', '[main 274af55] cover it with vitest'))).toEqual([]);
+  });
+});
+
+describe('silence is a pass only with the exit status of the command itself', () => {
+  const run = (command: string, text: string, isError = false) =>
+    collectRuns({
+      id: 's1',
+      entries: [
+        { id: 'e1', sessionId: 's1', index: 0, kind: 'tool_call', text: '', command, toolUseId: 't1' },
+        { id: 'e2', sessionId: 's1', index: 1, kind: 'tool_result', text, toolUseId: 't1', isError },
+      ],
+    } as unknown as Parameters<typeof collectRuns>[0])[0];
+
+  it('does not read a silent type check as a pass when something after it decides the exit status', () => {
+    expect(run('npx tsc --noEmit >/dev/null 2>&1; echo', '(Bash completed with no output)')).toMatchObject({ outcome: 'unknown' });
+    expect(run('npx tsc --noEmit 2>&1 | tail -5', '')).toMatchObject({ outcome: 'unknown' });
+    expect(run('pnpm lint | grep -v warning', '')).toMatchObject({ cls: 'lint', outcome: 'unknown' });
+  });
+
+  it('reads a silent, unpiped check as a pass, and an errored one as a failure', () => {
+    expect(run('npx tsc --noEmit', '')).toMatchObject({ outcome: 'pass' });
+    expect(run('npx tsc --noEmit > /dev/null 2>&1', '', true)).toMatchObject({ outcome: 'fail' });
   });
 });

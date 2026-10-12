@@ -48,4 +48,19 @@ describe('classifyCommand', () => {
     expect(classifyCommand(write)).toBe('other');
     expect(classifyCommand(`${write}\nnpx vitest run /tmp/probe.test.ts`)).toBe('test');
   });
+
+  it('still sees a run started through a command that looks harmless', () => {
+    expect(classifyCommand('echo "$(npm test 2>&1 | tail -3)"')).toBe('test');
+    expect(classifyCommand('find . -name "*.test.ts" -exec vitest run {} +')).toBe('test');
+    expect(classifyCommand('git bisect run pnpm test')).toBe('test');
+    expect(classifyCommand('git rebase -i HEAD~3 --exec "pytest -q"')).toBe('test');
+    expect(classifyCommand('find tests -name "*.py" | xargs pytest -q')).toBe('test');
+    expect(classifyCommand('npm install-test')).toBe('test');
+  });
+
+  it('reads a here-document fed to a shell, since its body is commands', () => {
+    expect(classifyCommand("bash <<'EOF'\nset -e\nnpm test\nEOF")).toBe('test');
+    expect(classifyCommand("ssh build-host <<EOF\ncd app && pytest -q\nEOF")).toBe('test');
+    expect(classifyCommand("python3 - <<'EOF'\nprint('pytest is mentioned here')\nEOF")).toBe('other');
+  });
 });

@@ -527,4 +527,16 @@ describe('tests_pass: results the session did not record', () => {
     expect(verifyClaim(at(src), src).verdict).toBe('stale');
     expect(verifyClaim(at(docs), docs).verdict).toBe('verified');
   });
+
+  it('is not talked out of a contradiction by a command that only mentions the checks', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'python -m pytest -q' },
+      { kind: 'tool_result', toolUseId: 't1', text: '1 failed, 296 passed in 23.86s', isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't2', command: 'echo "run gh pr checks later" && gh pr view 43 --json state' },
+      { kind: 'tool_result', toolUseId: 't2', text: 'run gh pr checks later\n{"state":"OPEN"}' },
+      { kind: 'assistant', text: 'All tests pass.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[4]!.id, quote: 'All tests pass.', kind: 'tests_pass' });
+    expect(verifyClaim(c, sess).verdict).toBe('contradicted');
+  });
 });
