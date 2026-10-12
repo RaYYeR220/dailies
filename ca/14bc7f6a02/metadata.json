@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "ca14bc7f6a02",
+  "strategy": "manual-commit",
+  "branch": "task/16b-loupe-fixes",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/reel/test/bench.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ca/14bc7f6a02/0/metadata.json",
+      "transcript": "/ca/14bc7f6a02/0/full.jsonl",
+      "compact_transcript": "/ca/14bc7f6a02/0/transcript.jsonl",
+      "content_hash": "/ca/14bc7f6a02/0/content_hash.txt",
+      "prompt": "/ca/14bc7f6a02/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 104,
+    "cache_creation_tokens": 216193,
+    "cache_read_tokens": 20935877,
+    "output_tokens": 164581,
+    "api_call_count": 55
+  }
+}

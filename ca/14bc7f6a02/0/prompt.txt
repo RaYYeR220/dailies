@@ -1,0 +1,27 @@
+<task-notification>
+<task-id>bm95shoag</task-id>
+<tool-use-id>toolu_01KficYY3LKq8vqLKYji3JLV</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-16b-loupe-fixes/62eadada-e440-441e-bc63-6a1b2c9a54bb/tasks/bm95shoag.output</output-file>
+<status>failed</status>
+<summary>Background command "Ask the headless browser what rendering path swiftshader gives" failed with exit code 144</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bolt2za94</task-id>
+<tool-use-id>toolu_01XLWMSYTC2dw7n9CSqcF6vS</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-16b-loupe-fixes/62eadada-e440-441e-bc63-6a1b2c9a54bb/tasks/bolt2za94.output</output-file>
+<status>completed</status>
+<summary>Background command "Profile finer ablations of the loupe overlay and the pencil filter" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bza5t4ukx</task-id>
+<tool-use-id>toolu_014WucrQkqQQKmw4tJaXB3Sc</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-16b-loupe-fixes/62eadada-e440-441e-bc63-6a1b2c9a54bb/tasks/bza5t4ukx.output</output-file>
+<status>failed</status>
+<summary>Background command "Experiment: where is the turbulence anchored, live and as an image" failed with exit code 144</summary>
+</task-notification>
