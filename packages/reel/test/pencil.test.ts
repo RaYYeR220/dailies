@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Scene } from '@dailies/core';
-import { dashesDrawn, endMarks, markPaths, ringAround } from '../src/remotion/pencil';
+import { PENCIL_REGION, dashesDrawn, endMarks, markExtent, markPaths, markShown, ringAround, type MarkKind } from '../src/remotion/pencil';
 
 describe('end scene', () => {
   const end = { id: 'sc_end', type: 'end', repo: 'acme/retry-queue', verified: 4, flagged: 1 };
@@ -120,5 +120,58 @@ describe('ringAround', () => {
     expect(ring.height).toBe(60 + 68);
     expect(ring.width).toBeGreaterThan(456);
     expect(ring.width).toBeLessThan(540);
+  });
+});
+
+describe('markShown', () => {
+  it('draws nothing before the pencil touches the film', () => {
+    expect(markShown(0, true)).toBe('nothing');
+    expect(markShown(0, false)).toBe('nothing');
+    expect(markShown(-0.3, true)).toBe('nothing');
+  });
+  it('draws the stroke live while it grows, and while the lens is moving', () => {
+    expect(markShown(0.01, true)).toBe('drawn');
+    expect(markShown(0.99, true)).toBe('drawn');
+    expect(markShown(1, false)).toBe('drawn');
+  });
+  it('keeps a finished mark as a picture of itself while the lens rests', () => {
+    expect(markShown(1, true)).toBe('kept');
+    expect(markShown(1.4, true)).toBe('kept');
+  });
+});
+
+describe('markExtent', () => {
+  const kinds: MarkKind[] = ['ring', 'dashed', 'cross', 'question'];
+  const sizes: [number, number][] = [[31, 39], [47, 40], [90, 120], [300.4, 96.2], [715.3, 354.9], [220, 900]];
+
+  /** How far the pencil filter's region reaches from the centre of a mark: the box of its strokes and of its own box, grown by the region. */
+  const reach = (kind: MarkKind, width: number, height: number, seed: number) => {
+    const numbers = markPaths(kind, width, height, seed).flatMap((d) => (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number));
+    const xs = [-width / 2, width / 2, ...numbers.filter((_, i) => i % 2 === 0)];
+    const ys = [-height / 2, height / 2, ...numbers.filter((_, i) => i % 2 === 1)];
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    return { x: Math.max(Math.abs(x0 - PENCIL_REGION.x * (x1 - x0)), Math.abs(x1 + PENCIL_REGION.x * (x1 - x0))), y: Math.max(Math.abs(y0 - PENCIL_REGION.y * (y1 - y0)), Math.abs(y1 + PENCIL_REGION.y * (y1 - y0))) };
+  };
+
+  it('covers all the pencil filter works on, for every kind of mark, hand and size', () => {
+    for (const kind of kinds) for (const [width, height] of sizes) for (let seed = 0; seed < 40; seed++) {
+      const extent = markExtent(kind, width, height, seed);
+      const needed = reach(kind, width, height, seed);
+      expect(extent.x, `${kind} ${width}x${height} seed ${seed}`).toBeGreaterThanOrEqual(needed.x);
+      expect(extent.y, `${kind} ${width}x${height} seed ${seed}`).toBeGreaterThanOrEqual(needed.y);
+    }
+  });
+  it('is a whole number of pixels either way from the centre, so the picture and the live mark share one pixel grid', () => {
+    for (const kind of kinds) for (const [width, height] of sizes) {
+      const extent = markExtent(kind, width, height, 7);
+      expect(Number.isInteger(extent.x) && Number.isInteger(extent.y)).toBe(true);
+    }
+  });
+  it('keeps the picture close to the mark', () => {
+    for (const kind of kinds) for (const [width, height] of sizes) {
+      const extent = markExtent(kind, width, height, 7);
+      expect(extent.x, `${kind} ${width}x${height}`).toBeLessThanOrEqual(width + 0.4 * height + 16);
+      expect(extent.y, `${kind} ${width}x${height}`).toBeLessThanOrEqual(height + 0.2 * width + 16);
+    }
   });
 });

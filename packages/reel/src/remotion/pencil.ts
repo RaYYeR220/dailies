@@ -87,6 +87,37 @@ export function markPaths(kind: MarkKind, width: number, height: number, seed: n
   }
 }
 
+/** How far the pencil filter works past the box of a mark's strokes, as a share of that box: to each side, and up and down. */
+export const PENCIL_REGION = { x: 0.12, y: 0.2 } as const;
+
+/**
+ * How a mark is put on the screen. Before the pencil touches the film there is nothing to draw. While the stroke
+ * grows, and while the lens moves and everything under it changes size, the stroke goes through the pencil
+ * filter anew on every frame. A finished mark under a resting lens does not change again: it is kept as a
+ * picture of itself, which costs a frame next to nothing.
+ */
+export function markShown(progress: number, resting: boolean): 'nothing' | 'drawn' | 'kept' {
+  if (progress <= 0) return 'nothing';
+  return progress >= 1 && resting ? 'kept' : 'drawn';
+}
+
+/**
+ * Half the size of the picture a finished mark is kept as, in px each way from its centre: all the pencil
+ * filter works on, which is the box of the strokes and of the mark's own box, grown by `PENCIL_REGION`.
+ * Whole numbers, so the centre of the mark falls on a pixel of the picture, as it does for the filter.
+ */
+export function markExtent(kind: MarkKind, width: number, height: number, seed: number): { x: number; y: number } {
+  // The control points of a Bézier bound it, so the numbers of the paths bound the strokes.
+  const numbers = markPaths(kind, width, height, seed).flatMap((d) => (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number));
+  const xs = [-width / 2, width / 2, ...numbers.filter((_, i) => i % 2 === 0)];
+  const ys = [-height / 2, height / 2, ...numbers.filter((_, i) => i % 2 === 1)];
+  const reach = (values: number[], share: number) => {
+    const [low, high] = [Math.min(...values), Math.max(...values)];
+    return Math.ceil(Math.max(-low, high) + share * (high - low)) + 1;
+  };
+  return { x: reach(xs, PENCIL_REGION.x), y: reach(ys, PENCIL_REGION.y) };
+}
+
 /**
  * The dash array that shows the first `progress` of a dashed stroke whose length is normalised to 1:
  * whole dashes, the one being drawn, then nothing.

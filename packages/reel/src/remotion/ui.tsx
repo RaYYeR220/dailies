@@ -34,6 +34,8 @@ export interface Clock {
   bottom: number;
   /** A still: every cue counts as already passed, so the frame shows the scene as it ends up. */
   settled: boolean;
+  /** The lens is at rest on this scene: nothing of the scene is being scaled, only moved. */
+  resting: boolean;
 }
 
 export const SceneContext = createContext<Clock | null>(null);
