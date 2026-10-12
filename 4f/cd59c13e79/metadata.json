@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "4fcd59c13e79",
+  "strategy": "manual-commit",
+  "branch": "task/8b-editor-cost",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/pipeline/src/outline.ts",
+    "packages/pipeline/test/outline.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/4f/cd59c13e79/0/metadata.json",
+      "transcript": "/4f/cd59c13e79/0/full.jsonl",
+      "compact_transcript": "/4f/cd59c13e79/0/transcript.jsonl",
+      "content_hash": "/4f/cd59c13e79/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 58,
+    "cache_creation_tokens": 58349,
+    "cache_read_tokens": 10063639,
+    "output_tokens": 39116,
+    "api_call_count": 29,
+    "subagent_tokens": {
+      "input_tokens": 58,
+      "cache_creation_tokens": 126030,
+      "cache_read_tokens": 2579095,
+      "output_tokens": 30827,
+      "api_call_count": 29
+    }
+  }
+}
