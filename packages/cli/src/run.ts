@@ -75,6 +75,24 @@ function exitCodeFor(status: string): number {
   return 1;
 }
 
+// The authority part of a URL, the way git reads it: everything up to the last "@" before the
+// first "/". Stripped before a repository URL reaches tracing input — a run is only ever of a
+// public repository, but a credential pasted into the URL by mistake must not be the one place
+// that escapes ingest's own redaction and lands in a trace unredacted.
+const USERINFO = /^([a-z][a-z0-9+.-]{0,31}:\/\/)[^\s/]*@/i;
+function stripUserinfo(url: string): string {
+  return url.replace(USERINFO, '$1');
+}
+
+// Event messages, reasons and claim text ultimately derive from a third-party repository's
+// commits and agent transcripts — untrusted input by design. Printed to a terminal as-is, a
+// control character (an escape sequence, a stray carriage return) could spoof or hide output.
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/g;
+export function sanitizeForTerminal(text: string): string {
+  return text.replace(CONTROL_CHARS, (c) => `\\x${c.charCodeAt(0).toString(16).padStart(2, '0')}`);
+}
+
 export async function runCommand(argv: string[], overrides: RunOverrides = {}): Promise<number> {
   const args = parseRunArgs(argv);
   const env = overrides.env ?? loadEnv();
@@ -111,7 +129,7 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
       let afterId = 0;
       const flush = () => {
         for (const event of listEvents(db, input.runId, afterId)) {
-          stdout(`[${event.stage ?? 'run'}] ${event.message}`);
+          stdout(`[${sanitizeForTerminal(event.stage ?? 'run')}] ${sanitizeForTerminal(event.message)}`);
           afterId = event.id;
         }
       };
@@ -122,11 +140,11 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
         clearInterval(timer);
         flush();
       }
-    })({ repoUrl: args.repoUrl, runId });
+    })({ repoUrl: stripUserinfo(args.repoUrl), runId });
 
     const run = getRun(db, runId);
     stdout(`status: ${status}`);
-    if (run.reason) stdout(`reason: ${run.reason}`);
+    if (run.reason) stdout(`reason: ${sanitizeForTerminal(run.reason)}`);
     stdout(`cost: $${run.costUsd.toFixed(4)}`);
 
     const render = readStageArtifact<RenderArtifact>(env.dataDir, runId, 'render');

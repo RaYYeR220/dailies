@@ -6,7 +6,7 @@ import { createMockClient, type ChatMessage, type Role } from '@dailies/agent';
 import type { Env } from '@dailies/core';
 import type { GateArtifact, GroundArtifact } from '@dailies/pipeline';
 import { makeRepo, type FixtureSession } from '../../ingest/test/fixture';
-import { runCommand } from '../src/run';
+import { runCommand, sanitizeForTerminal } from '../src/run';
 import { verifyCommand } from '../src/verify';
 
 const dirs: string[] = [];
@@ -190,5 +190,17 @@ describe('dailies run (end-to-end, mock model, real renderer)', () => {
     expect(claims).toHaveLength(2);
     expect(claims.find((c) => c.sessionId === LIAR_SESSION_ID)?.verdict).toBe('contradicted');
     expect(claims.find((c) => c.sessionId === HONEST_SESSION_ID)?.verdict).toBe('verified');
+  });
+});
+
+describe('sanitizeForTerminal', () => {
+  it('escapes control characters so untrusted event text cannot inject terminal escape sequences', () => {
+    const malicious = 'ok\u001b[2J\u001b[1;1Hpwned\r\n';
+
+    expect(sanitizeForTerminal(malicious)).toBe('ok\\x1b[2J\\x1b[1;1Hpwned\\x0d\\x0a');
+  });
+
+  it('leaves ordinary text untouched', () => {
+    expect(sanitizeForTerminal('3 sessions, 2 file diffs')).toBe('3 sessions, 2 file diffs');
   });
 });

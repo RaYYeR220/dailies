@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { CostMeter, createRouter, type ModelClient } from '@dailies/agent';
 import { DEFAULT_BUDGET, loadEnv, type Claim, type Env } from '@dailies/core';
 import { buildStages, createRun, getRun, openDb, runPipeline, type StageDeps } from '@dailies/pipeline';
-import { parseSince } from './run';
+import { parseSince, sanitizeForTerminal } from './run';
 
 export interface VerifyOverrides {
   client?: ModelClient;
@@ -79,11 +79,11 @@ export async function verifyCommand(argv: string[], overrides: VerifyOverrides =
   const run = getRun(db, runId);
 
   if (status === 'blocked') {
-    stdout(run.reason ?? 'blocked');
+    stdout(sanitizeForTerminal(run.reason ?? 'blocked'));
     return 2;
   }
   if (status === 'failed') {
-    stdout(run.reason ?? 'failed');
+    stdout(sanitizeForTerminal(run.reason ?? 'failed'));
     return 1;
   }
 
@@ -96,7 +96,8 @@ export async function verifyCommand(argv: string[], overrides: VerifyOverrides =
 
   stdout(['verdict', 'kind', 'session', 'quote', 'reason'].join('\t'));
   for (const claim of claims) {
-    stdout([claim.verdict ?? 'unverifiable', claim.kind, claim.sessionId, cut(claim.quote, 80), claim.reason ?? ''].join('\t'));
+    const row = [claim.verdict ?? 'unverifiable', claim.kind, claim.sessionId, cut(claim.quote, 80), claim.reason ?? ''];
+    stdout(row.map(sanitizeForTerminal).join('\t'));
   }
   return 0;
 }
