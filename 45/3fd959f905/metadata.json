@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "453fd959f905",
+  "strategy": "manual-commit",
+  "branch": "task/16b-loupe-fixes",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/reel/src/remotion/marks.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/45/3fd959f905/0/metadata.json",
+      "transcript": "/45/3fd959f905/0/full.jsonl",
+      "compact_transcript": "/45/3fd959f905/0/transcript.jsonl",
+      "content_hash": "/45/3fd959f905/0/content_hash.txt",
+      "prompt": "/45/3fd959f905/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 153,
+    "cache_creation_tokens": 472608,
+    "cache_read_tokens": 25744445,
+    "output_tokens": 239053,
+    "api_call_count": 82
+  }
+}
