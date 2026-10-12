@@ -1,6 +1,7 @@
 // Plan against actual: what recorded runs cost, next to the cost of a reel the business plan assumes and the
 // ceiling it allows. Reads the run database and the run artifacts; prints Markdown. No model is involved.
-// usage: tsx src/plan-vs-actual.ts <plan.json> <dataDir> [<dataDir> ...]
+// usage: tsx src/plan-vs-actual.ts <plan.json> <dataDir | rows.json> [...]
+// A rows.json is what `--dump <dataDir>` prints: the same rows, for a data directory on another machine.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -27,19 +28,23 @@ function rowsOf(dataDir: string): Row[] {
     // A run started on a local path (`dailies run .`) is named after the folder that was read.
     const local = /^https?:/.test(r.repo_url) ? null : (ingest?.repo?.dir ?? r.repo_url).replace(/\/+$/, '').split('/').at(-1) || null;
     const render = readJson<{ durationSec: number }>(join(dir, 'render.json'));
-    return { id: r.id, repo: local ?? label(r.repo_url), status: r.status, reason: r.reason, cost: r.cost_usd, created: r.created_at, sessions: ingest?.sessions.length ?? null, seconds: render?.durationSec ?? null, reached };
+    // Only this project's own repositories are named; a run on anyone else's is listed without its name.
+    const own = local ?? label(r.repo_url);
+    const named = /^(RaYYeR220\/|acme-api-demo$)/.test(own) ? own : 'a public repository';
+    return { id: r.id, repo: named, status: r.status, reason: r.reason, cost: r.cost_usd, created: r.created_at, sessions: ingest?.sessions.length ?? null, seconds: render?.durationSec ?? null, reached };
   });
 }
 
 function main() {
+  if (process.argv[2] === '--dump') { console.log(JSON.stringify(rowsOf(process.argv[3] ?? '.dailies'))); return; }
   const [planPath, ...dataDirs] = process.argv.slice(2);
-  if (!planPath || dataDirs.length === 0) { console.error('usage: plan-vs-actual <plan.json> <dataDir> [<dataDir> ...]'); process.exit(1); }
+  if (!planPath || dataDirs.length === 0) { console.error('usage: plan-vs-actual <plan.json> <dataDir | rows.json> [...]'); process.exit(1); }
   const plan = JSON.parse(readFileSync(planPath, 'utf8')) as Plan;
   const ceiling = plan.maxCostPerReelUsd.solo;
   const { pricePerMonth, reelsPerMonth } = plan.pricing.solo;
   const marginAt = (cost: number) => 1 - (cost * reelsPerMonth) / pricePerMonth;
 
-  const rows = dataDirs.flatMap(rowsOf).sort((a, b) => a.created.localeCompare(b.created));
+  const rows = dataDirs.flatMap((d) => (d.endsWith('.json') ? (JSON.parse(readFileSync(d, 'utf8')) as Row[]) : rowsOf(d))).sort((a, b) => a.created.localeCompare(b.created));
   const reels = rows.filter((r) => r.seconds !== null);
   const costs = reels.map((r) => r.cost).sort((a, b) => a - b);
   const mean = costs.reduce((n, c) => n + c, 0) / (costs.length || 1);

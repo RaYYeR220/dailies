@@ -1,12 +1,12 @@
 # Plan against actual
 
-Generated 2026-10-12 02:53 UTC by `eval/src/plan-vs-actual.ts` from the run database. Every run that reached a rendered reel is listed; nothing is left out.
+Generated 2026-10-12 03:28 UTC by `eval/src/plan-vs-actual.ts` from the run database. Every run that reached a rendered reel is listed; nothing is left out.
 
 | | Plan | Actual |
 |---|---|---|
-| Cost of one reel | $0.59 | $0.30 mean, $0.22 median, over 4 reels |
-| Ceiling for a 55% margin on Solo | $0.6525 | 0 of 4 reels cost more |
-| Gross margin on Solo (20 reels for $29) | 59.3% | 79.1% at the mean cost |
+| Cost of one reel | $0.59 | $0.35 mean, $0.25 median, over 5 reels |
+| Ceiling for a 55% margin on Solo | $0.6525 | 0 of 5 reels cost more |
+| Gross margin on Solo (20 reels for $29) | 59.3% | 76.1% at the mean cost |
 
 ## Runs
 
@@ -20,3 +20,4 @@ Generated 2026-10-12 02:53 UTC by `eval/src/plan-vs-actual.ts` from the run data
 | `run_4ef8188a2cd2` | acme-api-demo | 4 | 97 s | $0.22 | 33.4% of it | passed the gate, awaiting approval |
 | `run_3a06918cb956` | acme-api-demo | 4 | 75 s | $0.25 | 39.0% of it | passed the gate, awaiting approval |
 | `run_d11ca83125b4` | acme-api-demo | 4 | 59 s | $0.20 | 31.2% of it | passed the gate, awaiting approval |
+| `run_ddc0645c6ad0` | a public repository | 12 | 36 s | $0.52 | 79.2% of it | passed the gate, awaiting approval |
