@@ -252,7 +252,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
           if (sha === null || patch === undefined || hunkAt === -1) return 'no patch for that commit and path';
           return { id, type: 'diff', lines, sha, path: scene.path, hunk: cut(patch.slice(hunkAt), ON_SCREEN.hunk), ...patchCounts(patch) };
         }
-        const items = STATS.filter(([key]) => Object.hasOwn(facts, key) && facts[key] !== 0).map(([key, label]) => ({
+        const items = STATS.filter(([key]) => Object.hasOwn(facts, key) && Number(facts[key]) > 0).map(([key, label]) => ({
           label,
           value: cut(String(facts[key]), ON_SCREEN.statValue),
           statKey: key,
