@@ -1,0 +1,194 @@
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createMockClient, type ChatMessage, type Role } from '@dailies/agent';
+import type { Env } from '@dailies/core';
+import type { GateArtifact, GroundArtifact } from '@dailies/pipeline';
+import { makeRepo, type FixtureSession } from '../../ingest/test/fixture';
+import { runCommand } from '../src/run';
+import { verifyCommand } from '../src/verify';
+
+const dirs: string[] = [];
+afterEach(() => {
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+function scratchDataDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'dailies-cli-e2e-'));
+  dirs.push(dir);
+  return dir;
+}
+
+function testEnv(dataDir: string): Env {
+  return { neatlogsApiKey: null, neatlogsEndpoint: 'https://ingest.neatlogs.com', gatewayKey: null, gatewayBaseUrl: '', veniceKey: null, geminiKeys: [], dataDir };
+}
+
+const FAILED_TEST_OUTPUT = '1 failed, 0 passed';
+const PASSED_TEST_OUTPUT = '3 passed';
+
+/** A session that runs `pnpm test`, then claims, in a final message, that it passed. */
+function testSession(o: { sessionId: string; createdAt: string; prompt: string; outcome: 'fail' | 'pass'; claim: string }): FixtureSession {
+  return {
+    sessionId: o.sessionId,
+    createdAt: o.createdAt,
+    lines: [
+      { type: 'user', content: [{ text: o.prompt }] },
+      {
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 't1',
+            name: 'Bash',
+            input: { command: 'pnpm test' },
+            result: { output: o.outcome === 'fail' ? FAILED_TEST_OUTPUT : PASSED_TEST_OUTPUT, status: o.outcome === 'fail' ? 'error' : 'success' },
+          },
+        ],
+      },
+      { type: 'assistant', content: [{ type: 'text', text: o.claim }] },
+    ],
+  };
+}
+
+// Entries land at indexes 0 (user), 1 (tool_call), 2 (tool_result), 3 (assistant claim) — see transcript.ts.
+const LIAR_SESSION_ID = 's1';
+const HONEST_SESSION_ID = 's2';
+const LIE = 'The queue test now passes.';
+const TRUTH = 'The health check test now passes.';
+
+/** One checkpoint per session, the way `packages/pipeline/test/stages/ingest.test.ts` builds its fixtures. */
+async function fixtureRepo(sessions: FixtureSession[]): Promise<string> {
+  const dir = await makeRepo({ layout: 'refs', checkpoints: sessions.map((s, n) => ({ id: `ab${n}234ef`, sessions: [s] })) });
+  dirs.push(dir);
+  return dir;
+}
+
+/** The two-session fixture: one session lies about a failed test run, the other is honest. */
+function liarAndHonestSessions(): FixtureSession[] {
+  return [
+    testSession({ sessionId: LIAR_SESSION_ID, createdAt: '2026-10-10T07:00:00Z', prompt: 'Fix the flaky queue test.', outcome: 'fail', claim: LIE }),
+    testSession({ sessionId: HONEST_SESSION_ID, createdAt: '2026-10-10T09:00:00Z', prompt: 'Add a health check endpoint.', outcome: 'pass', claim: TRUTH }),
+  ];
+}
+
+type MockRequest = { role: Role; messages: ChatMessage[] };
+const json = (value: unknown): ChatMessage => ({ role: 'assistant', content: JSON.stringify(value) });
+const text = (messages: ChatMessage[]): string =>
+  messages.filter((m) => m.role === 'system' || m.role === 'user').map((m) => (typeof m.content === 'string' ? m.content : '')).join('\n');
+
+/** Scripted replies for every role the run exercises, tuned to `liarAndHonestSessions()`. */
+function reply(req: MockRequest): ChatMessage {
+  const told = text(req.messages);
+
+  if (req.role === 'editor') {
+    return json({
+      beats: [
+        { kind: 'fix', title: 'Fix the flaky queue test', summary: 'The agent looked at the queue test.', sessionIds: [LIAR_SESSION_ID], entryRanges: [{ sessionId: LIAR_SESSION_ID, from: 0, to: 3 }], commits: [] },
+        { kind: 'feature', title: 'Add a health check endpoint', summary: 'The agent added a health check.', sessionIds: [HONEST_SESSION_ID], entryRanges: [{ sessionId: HONEST_SESSION_ID, from: 0, to: 3 }], commits: [] },
+      ],
+    });
+  }
+
+  if (req.role === 'extractor') {
+    const sessionId = /Messages from session ([^,]+),/.exec(told)?.[1];
+    if (sessionId === LIAR_SESSION_ID) return json({ claims: [{ entryId: `${LIAR_SESSION_ID}:3`, quote: LIE, kind: 'tests_pass' }] });
+    if (sessionId === HONEST_SESSION_ID) return json({ claims: [{ entryId: `${HONEST_SESSION_ID}:3`, quote: TRUTH, kind: 'tests_pass' }] });
+    throw new Error(`extractor: could not find a session id in the prompt: ${told}`);
+  }
+
+  if (req.role === 'judge') {
+    if (told.includes('fact check for Dailies')) return json({ entailed: true });   // the ground stage's entailment check
+    throw new Error(`judge: unexpected prompt (no 'implemented' claim should reach the diff judge): ${told}`);
+  }
+
+  if (req.role === 'writer') {
+    if (told.includes('Rewrite that one line')) throw new Error('writer: no rewrite should be needed — the scripted lines are grounded from the start');
+    return json({
+      scenes: [
+        { type: 'prompt', entryId: `${LIAR_SESSION_ID}:0`, lines: [{ text: 'A developer asked the agent to fix a flaky test in the queue.', evidence: [{ type: 'entry', entryId: `${LIAR_SESSION_ID}:0` }] }] },
+        { type: 'terminal', steps: [{ entryId: `${HONEST_SESSION_ID}:1` }], lines: [{ text: 'In the other session the agent ran the test suite and it passed.', evidence: [{ type: 'entry', entryId: `${HONEST_SESSION_ID}:2` }] }] },
+      ],
+    });
+  }
+
+  throw new Error(`unexpected role: ${req.role}`);
+}
+
+function readArtifact<T>(dataDir: string, runId: string, stage: string): T {
+  return JSON.parse(readFileSync(join(dataDir, 'runs', runId, `${stage}.json`), 'utf8')) as T;
+}
+
+function runIdFromVideoPath(videoPath: string): string {
+  const match = /runs[/\\]([^/\\]+)[/\\]reel[/\\]reel\.mp4$/.exec(videoPath);
+  if (!match) throw new Error(`could not read a run id out of ${videoPath}`);
+  return match[1]!;
+}
+
+describe('dailies run (end-to-end, mock model, real renderer)', () => {
+  it('flags the lie, grounds the honest claim, and renders a reel awaiting approval', async () => {
+    const repoDir = await fixtureRepo(liarAndHonestSessions());
+    const dataDir = scratchDataDir();
+    const lines: string[] = [];
+
+    const code = await runCommand([repoDir, '--since', '2026-10-09T00:00:00Z', '--no-review'], {
+      client: createMockClient(reply),
+      env: testEnv(dataDir),
+      stdout: (line) => lines.push(line),
+    });
+
+    expect(code).toBe(0);
+    expect(lines).toContain('status: needs_approval');
+
+    const videoLine = lines.find((l) => l.startsWith('video: '));
+    expect(videoLine).toBeDefined();
+    const videoPath = videoLine!.slice('video: '.length);
+    expect(existsSync(videoPath)).toBe(true);
+
+    const runId = runIdFromVideoPath(videoPath);
+    const ground = readArtifact<GroundArtifact>(dataDir, runId, 'ground');
+    expect(ground.storyboard.scenes.filter((s) => s.type === 'flag')).toHaveLength(1);
+
+    const render = readArtifact<{ durationSec: number }>(dataDir, runId, 'render');
+    expect(render.durationSec).toBeGreaterThan(8);
+
+    const gate = readArtifact<GateArtifact>(dataDir, runId, 'gate');
+    expect(gate.checks.every((c) => c.pass)).toBe(true);
+    expect(gate.checks).toHaveLength(4);
+  }, 90_000);
+
+  it('exits 2 with a clear message when the repository has no checkpoints', async () => {
+    const repoDir = await fixtureRepo([]);
+    const dataDir = scratchDataDir();
+    const lines: string[] = [];
+
+    const code = await runCommand([repoDir, '--since', '2026-10-09T00:00:00Z'], {
+      client: createMockClient(() => {
+        throw new Error('no model call should happen before a repository with no checkpoints ends the run');
+      }),
+      env: testEnv(dataDir),
+      stdout: (line) => lines.push(line),
+    });
+
+    expect(code).toBe(2);
+    expect(lines).toContain('reason: no agent sessions found in this window');
+  });
+
+  it('dailies verify prints the contradicted and verified claims for the same fixture', async () => {
+    const repoDir = await fixtureRepo(liarAndHonestSessions());
+    const dataDir = scratchDataDir();
+    const lines: string[] = [];
+
+    const code = await verifyCommand([repoDir, '--since', '2026-10-09T00:00:00Z', '--json'], {
+      client: createMockClient(reply),
+      env: testEnv(dataDir),
+      stdout: (line) => lines.push(line),
+    });
+
+    expect(code).toBe(0);
+    const claims = JSON.parse(lines[0]!) as { sessionId: string; verdict: string }[];
+    expect(claims).toHaveLength(2);
+    expect(claims.find((c) => c.sessionId === LIAR_SESSION_ID)?.verdict).toBe('contradicted');
+    expect(claims.find((c) => c.sessionId === HONEST_SESSION_ID)?.verdict).toBe('verified');
+  });
+});
