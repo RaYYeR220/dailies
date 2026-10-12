@@ -51,7 +51,7 @@ describe('verify stage', () => {
         quote: 'All tests pass and the build is green.',
         kind: 'tests_pass',
         verdict: 'contradicted',
-        reason: 'the last recorded run failed',
+        reason: 'the last test run before this message reported 1 failed, 4 passed',
         evidence: [{ type: 'entry', entryId: 's1:4' }, { type: 'entry', entryId: 's1:5' }],
       },
     ]);

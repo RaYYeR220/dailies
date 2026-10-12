@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collectRuns, headlineFor, parseOutcome } from '../src/index';
+import { collectRuns, headlineFor, parseOutcome, summarize } from '../src/index';
 import { session } from './helpers';
 
 describe('parseOutcome', () => {
@@ -105,6 +105,50 @@ describe('parseOutcome', () => {
       { kind: 'tool_result', toolUseId: 't1', text: '$ tsc --noEmit\ndone', isError: false },
     ]);
     expect(collectRuns(sess)[0]!.outcome).toBe('pass');
+  });
+
+  it('a command with several test runs takes the outcome of the last summary, not any failure count anywhere', () => {
+    // A test-first script: it fails on purpose (RED), then the real implementation passes (GREEN).
+    expect(parseOutcome('test', '== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s', false)).toBe('pass');
+  });
+
+  it('the same two summaries in the other order take the outcome of the new last one', () => {
+    expect(parseOutcome('test', '== GREEN: 75 passed in 0.85s == RED: 1 failed in 0.30s', false)).toBe('fail');
+  });
+
+  it('a failure needs a recognised failing summary, not the word: a compound command that aborts with no summary is unknown', () => {
+    expect(parseOutcome('test', "fatal: cannot create '.git/index.lock': File exists\nAborting", false)).toBe('unknown');
+  });
+
+  it('a recognised failing summary with a nonzero count still fails', () => {
+    expect(parseOutcome('test', '18 failed, 265 passed in 1.10s', false)).toBe('fail');
+  });
+});
+
+describe('summarize', () => {
+  it('reads the last of two summaries in one output, in either order', () => {
+    expect(summarize('test', '== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s')).toEqual({ passed: 75, failed: null, outcome: 'pass' });
+    expect(summarize('test', '== GREEN: 75 passed in 0.85s == RED: 1 failed in 0.30s')).toEqual({ passed: null, failed: 1, outcome: 'fail' });
+  });
+
+  it('reads a combined failed/passed summary as one event', () => {
+    expect(summarize('test', '18 failed, 265 passed in 1.10s')).toEqual({ passed: 265, failed: 18, outcome: 'fail' });
+  });
+
+  it('reports no summary at all as unknown, with no counts', () => {
+    expect(summarize('test', "fatal: cannot create '.git/index.lock': File exists\nAborting")).toEqual({ passed: null, failed: null, outcome: 'unknown' });
+  });
+
+  it('reads the jest-style summary with a skipped count in between', () => {
+    expect(summarize('test', 'Tests:       2 failed, 1 skipped, 12 passed, 15 total')).toEqual({ passed: 12, failed: 2, outcome: 'fail' });
+  });
+
+  it('reads a go package pass line with no counts', () => {
+    expect(summarize('test', 'ok  \tgithub.com/x/y\t0.21s')).toEqual({ passed: null, failed: null, outcome: 'pass' });
+  });
+
+  it('reads a cargo result marker with no counts', () => {
+    expect(summarize('test', 'test result: FAILED. 8 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out')).toEqual({ passed: null, failed: 2, outcome: 'fail' });
   });
 });
 

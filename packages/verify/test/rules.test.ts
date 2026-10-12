@@ -107,6 +107,73 @@ describe('tests_pass', () => {
     expect(verifyClaim(c, sess).verdict).toBe('stale');
   });
 
+  it('quotes the run summary in the contradicted reason, and is not fooled by a failing run that also has a count matching the quote', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '18 failed, 265 passed in 1.10s', isError: false },
+      { kind: 'assistant', text: 'All 287 tests pass.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[2]!.id, quote: 'All 287 tests pass.', kind: 'tests_pass' });
+    const result = verifyClaim(c, sess);
+    expect(result.verdict).toBe('contradicted');
+    expect(result.reason).toBe('the last test run before this message reported 18 failed, 265 passed');
+  });
+
+  it('is unverifiable, not contradicted, when the claim quotes the exact passed count of a run that also failed', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '1 failed, 266 passed, 9 skipped', isError: false },
+      { kind: 'assistant', text: '266 Python tests pass.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[2]!.id, quote: '266 Python tests pass.', kind: 'tests_pass' });
+    const result = verifyClaim(c, sess);
+    expect(result.verdict).toBe('unverifiable');
+    expect(result.reason).toBe('the run it matches also reported 1 failed');
+  });
+
+  it('ignores an edit under a scratch directory (tmp, temp, Temp or scratchpad), but not an edit to real code', () => {
+    const scratch1 = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '4 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath: 'Temp/t_h6.py' },
+      { kind: 'assistant', text: 'pytest passes (4 passed).' },
+    ]);
+    const c1 = claim({ sessionId: 's1', entryId: scratch1.entries[3]!.id, quote: 'pytest passes (4 passed).', kind: 'tests_pass' });
+    expect(verifyClaim(c1, scratch1).verdict).toBe('verified');
+
+    const scratch2 = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '4 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath: 'scratchpad/watch.py' },
+      { kind: 'assistant', text: 'pytest passes (4 passed).' },
+    ]);
+    const c2 = claim({ sessionId: 's1', entryId: scratch2.entries[3]!.id, quote: 'pytest passes (4 passed).', kind: 'tests_pass' });
+    expect(verifyClaim(c2, scratch2).verdict).toBe('verified');
+
+    const real = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '4 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'scripts/run_case.py' },
+      { kind: 'assistant', text: 'pytest passes (4 passed).' },
+    ]);
+    const c3 = claim({ sessionId: 's1', entryId: real.entries[3]!.id, quote: 'pytest passes (4 passed).', kind: 'tests_pass' });
+    expect(verifyClaim(c3, real).verdict).toBe('stale');
+  });
+
+  it('ignores an edit under an absolute temp path, on both unix and windows forms', () => {
+    const paths = ['/tmp/scratch.py', '/private/tmp/scratch.py', '/var/folders/zz/scratch.py', 'C:\\Users\\dev\\AppData\\Local\\Temp\\scratch.py'];
+    for (const filePath of paths) {
+      const sess = session([
+        { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+        { kind: 'tool_result', toolUseId: 't1', text: '4 passed', isError: false },
+        { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath },
+        { kind: 'assistant', text: 'pytest passes (4 passed).' },
+      ]);
+      const c = claim({ sessionId: 's1', entryId: sess.entries[3]!.id, quote: 'pytest passes (4 passed).', kind: 'tests_pass' });
+      expect(verifyClaim(c, sess).verdict).toBe('verified');
+    }
+  });
+
   it('is unverifiable when no run exists, and when the output is unrecognised', () => {
     const noRun = session([{ kind: 'assistant', text: 'All tests pass.' }]);
     const noRunClaim = claim({ sessionId: 's1', entryId: noRun.entries[0]!.id, quote: 'All tests pass.', kind: 'tests_pass' });
