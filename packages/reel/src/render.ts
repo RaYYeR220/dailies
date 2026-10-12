@@ -38,8 +38,12 @@ export function renderSettingsFromEnv(env: Record<string, string | undefined> = 
   const rawScale = env.DAILIES_RENDER_SCALE;
   if (rawScale !== undefined) {
     const n = Number(rawScale);
-    if (Number.isFinite(n) && n >= MIN_SCALE && n <= MAX_SCALE) scale = n;
-    else console.warn(`DAILIES_RENDER_SCALE must be a number between ${MIN_SCALE} and ${MAX_SCALE}, got ${JSON.stringify(rawScale)}; ignoring it`);
+    if (Number.isFinite(n) && n >= MIN_SCALE && n <= MAX_SCALE) {
+      // The frame is 1920 by 1080 and the encoder wants whole, even sizes. Quarters give them exactly (480 by 270
+      // at a time); a value like 0.6667 gives a height of 720.036 and the render fails after every frame is drawn.
+      scale = Math.round(n * 4) / 4;
+      if (scale !== n) console.warn(`DAILIES_RENDER_SCALE ${JSON.stringify(rawScale)} does not give a whole frame size; using ${scale}`);
+    } else console.warn(`DAILIES_RENDER_SCALE must be a number between ${MIN_SCALE} and ${MAX_SCALE}, got ${JSON.stringify(rawScale)}; ignoring it`);
   }
 
   return { concurrency, scale };

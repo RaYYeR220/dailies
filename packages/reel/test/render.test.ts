@@ -93,7 +93,18 @@ describe('renderSettingsFromEnv', () => {
   });
 
   it('reads a positive integer concurrency and a scale between 0.25 and 1', () => {
-    expect(renderSettingsFromEnv({ DAILIES_RENDER_CONCURRENCY: '4', DAILIES_RENDER_SCALE: '0.667' })).toEqual({ concurrency: 4, scale: 0.667 });
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_CONCURRENCY: '4', DAILIES_RENDER_SCALE: '0.75' })).toEqual({ concurrency: 4, scale: 0.75 });
+  });
+
+  it('moves a scale to the nearest quarter, the only steps that give a whole and even frame size', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    for (const [raw, scale] of [['0.667', 0.75], ['0.6', 0.5], ['0.3', 0.25], ['0.9', 1]] as const) {
+      const got = renderSettingsFromEnv({ DAILIES_RENDER_SCALE: raw }).scale;
+      expect(got).toBe(scale);
+      expect(Number.isInteger(1920 * got) && Number.isInteger(1080 * got) && (1080 * got) % 2 === 0).toBe(true);
+    }
+    expect(warn).toHaveBeenCalledTimes(4);
+    warn.mockRestore();
   });
 
   it('ignores an invalid concurrency and logs a warning', () => {
