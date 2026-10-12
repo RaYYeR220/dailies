@@ -15,7 +15,10 @@ const SOURCE_EXTENSIONS = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java', '.kt', '.rb', '.php',
   '.c', '.cc', '.cpp', '.h', '.hpp', '.cs', '.swift', '.scala', '.sql', '.sh', '.vue', '.svelte',
 ]);
-const NON_SOURCE_DIRS = new Set(['docs', 'evidence', 'screenshots', 'tmp', 'temp', 'Temp', 'scratchpad', '.claude', 'node_modules', '.git']);
+// Directory names that never hold the code under test. `tmp` and `temp` are deliberately absent: a source tree
+// may have a folder by that name, and an edit there must still make a result stale. Operating-system temp
+// locations are matched by absolute path below.
+const NON_SOURCE_DIRS = new Set(['docs', 'evidence', 'screenshots', 'scratchpad', '.claude', 'node_modules', '.git']);
 const ABS_TEMP_PREFIXES = ['/tmp/', '/private/tmp/', '/var/folders/'];
 const WINDOWS_TEMP_RE = /AppData\\Local\\Temp\\/i;
 

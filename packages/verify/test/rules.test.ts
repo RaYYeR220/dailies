@@ -131,11 +131,22 @@ describe('tests_pass', () => {
     expect(result.reason).toBe('the run it matches also reported 1 failed');
   });
 
-  it('ignores an edit under a scratch directory (tmp, temp, Temp or scratchpad), but not an edit to real code', () => {
+  it('an edit under a folder named temp inside the source tree still makes the result stale', () => {
+    const s = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '4 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'src/temp/handler.py' },
+      { kind: 'assistant', text: 'pytest passes (4 passed).' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: s.entries[3]!.id, quote: 'pytest passes (4 passed).', kind: 'tests_pass' });
+    expect(verifyClaim(c, s).verdict).toBe('stale');
+  });
+
+  it('ignores an edit under an operating-system temp path or a scratchpad, but not an edit to real code', () => {
     const scratch1 = session([
       { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
       { kind: 'tool_result', toolUseId: 't1', text: '4 passed', isError: false },
-      { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath: 'Temp/t_h6.py' },
+      { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath: 'C:\\Users\\dev\\AppData\\Local\\Temp\\t_h6.py' },
       { kind: 'assistant', text: 'pytest passes (4 passed).' },
     ]);
     const c1 = claim({ sessionId: 's1', entryId: scratch1.entries[3]!.id, quote: 'pytest passes (4 passed).', kind: 'tests_pass' });

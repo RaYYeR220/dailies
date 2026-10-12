@@ -80,7 +80,12 @@ function testSummaries(text: string): SummaryEvent[] {
 function summarizeTest(text: string): TestSummary {
   const events = testSummaries(text);
   const last = events[events.length - 1];
-  return last ? { passed: last.passed, failed: last.failed, outcome: last.outcome } : { passed: null, failed: null, outcome: 'unknown' };
+  if (!last) return { passed: null, failed: null, outcome: 'unknown' };
+  // One command can run tests more than once (a test-first script fails on purpose, then passes; two suites
+  // run back to back). The last summary decides a failure. A pass is stricter: an earlier failing summary in
+  // the same output may belong to another suite, so a later pass does not clear it and the result is unknown.
+  if (last.outcome === 'pass' && events.some((e) => e.outcome === 'fail')) return { passed: last.passed, failed: last.failed, outcome: 'unknown' };
+  return { passed: last.passed, failed: last.failed, outcome: last.outcome };
 }
 
 // A pipe, a `;`, or a newline (bash chains statements on one exactly as it does on the other)

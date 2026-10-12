@@ -107,9 +107,10 @@ describe('parseOutcome', () => {
     expect(collectRuns(sess)[0]!.outcome).toBe('pass');
   });
 
-  it('a command with several test runs takes the outcome of the last summary, not any failure count anywhere', () => {
-    // A test-first script: it fails on purpose (RED), then the real implementation passes (GREEN).
-    expect(parseOutcome('test', '== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s', false)).toBe('pass');
+  it('a command whose earlier summary failed and whose last passed is evidence for neither verdict', () => {
+    // A test-first script: it fails on purpose (RED), then the real implementation passes (GREEN). It is not a
+    // failed run, and it is not a clean pass either: the earlier failure may belong to another suite.
+    expect(parseOutcome('test', '== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s', false)).toBe('unknown');
   });
 
   it('the same two summaries in the other order take the outcome of the new last one', () => {
@@ -127,7 +128,7 @@ describe('parseOutcome', () => {
 
 describe('summarize', () => {
   it('reads the last of two summaries in one output, in either order', () => {
-    expect(summarize('test', '== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s')).toEqual({ passed: 75, failed: null, outcome: 'pass' });
+    expect(summarize('test', '== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s')).toEqual({ passed: 75, failed: null, outcome: 'unknown' });
     expect(summarize('test', '== GREEN: 75 passed in 0.85s == RED: 1 failed in 0.30s')).toEqual({ passed: null, failed: 1, outcome: 'fail' });
   });
 
