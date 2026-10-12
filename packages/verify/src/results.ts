@@ -69,9 +69,15 @@ function parseLintOrBuildOutcome(text: string, exitTrusted: boolean): RunOutcome
 }
 
 export function parseOutcome(cls: CommandClass, output: string, isError: boolean, o?: { exitTrusted?: boolean }): RunOutcome {
-  if (isError) return 'fail';
   const text = stripAnsi(output);
-  if (cls === 'test') return parseTestOutcome(text);
+  if (cls === 'test') {
+    // An errored command is not itself a failed test run: the shell can error before the tests ever
+    // ran (a missing module, a bad flag). `fail` requires the recognised summary a test run actually
+    // prints; an error status with no such summary just means the run's result cannot be read.
+    const outcome = parseTestOutcome(text);
+    return isError && outcome !== 'fail' ? 'unknown' : outcome;
+  }
+  if (isError) return 'fail';
   const exitTrusted = o?.exitTrusted ?? false;
   if (cls === 'typecheck') return parseTypecheckOutcome(text, exitTrusted);
   return parseLintOrBuildOutcome(text, exitTrusted);

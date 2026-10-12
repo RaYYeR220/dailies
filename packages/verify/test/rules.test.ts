@@ -54,6 +54,59 @@ describe('tests_pass', () => {
     expect(verifyClaim(c, sess).verdict).toBe('verified');
   });
 
+  it('is unverifiable with the error-exit reason when the last test command errored before reporting any results', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: 'No module named pytest', isError: true },
+      { kind: 'assistant', text: 'All offline tests pass.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[2]!.id, quote: 'All offline tests pass.', kind: 'tests_pass' });
+    const result = verifyClaim(c, sess);
+    expect(result.verdict).toBe('unverifiable');
+    expect(result.reason).toBe('the last test command exited with an error before reporting results');
+  });
+
+  it('is contradicted, not unverifiable, when the errored test command reported a recognised failure', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '2 failed, 8 passed', isError: true },
+      { kind: 'assistant', text: 'All offline tests pass.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[2]!.id, quote: 'All offline tests pass.', kind: 'tests_pass' });
+    expect(verifyClaim(c, sess).verdict).toBe('contradicted');
+  });
+
+  it('leaves the claim verified when a data file is written after the last passing run, not an edit to code', () => {
+    const yamlSess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '12 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath: 'claims.yaml' },
+      { kind: 'assistant', text: 'Tests now pass 12/12.' },
+    ]);
+    const yamlClaim = claim({ sessionId: 's1', entryId: yamlSess.entries[3]!.id, quote: 'Tests now pass 12/12.', kind: 'tests_pass' });
+    expect(verifyClaim(yamlClaim, yamlSess).verdict).toBe('verified');
+
+    const evidenceSess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '12 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Write', toolUseId: 't2', filePath: 'evidence/run.md' },
+      { kind: 'assistant', text: 'Tests now pass 12/12.' },
+    ]);
+    const evidenceClaim = claim({ sessionId: 's1', entryId: evidenceSess.entries[3]!.id, quote: 'Tests now pass 12/12.', kind: 'tests_pass' });
+    expect(verifyClaim(evidenceClaim, evidenceSess).verdict).toBe('verified');
+  });
+
+  it('is stale when a code file is edited after the last passing run', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'pytest' },
+      { kind: 'tool_result', toolUseId: 't1', text: '12 passed', isError: false },
+      { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'src/desk.py' },
+      { kind: 'assistant', text: 'Tests now pass 12/12.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[3]!.id, quote: 'Tests now pass 12/12.', kind: 'tests_pass' });
+    expect(verifyClaim(c, sess).verdict).toBe('stale');
+  });
+
   it('is unverifiable when no run exists, and when the output is unrecognised', () => {
     const noRun = session([{ kind: 'assistant', text: 'All tests pass.' }]);
     const noRunClaim = claim({ sessionId: 's1', entryId: noRun.entries[0]!.id, quote: 'All tests pass.', kind: 'tests_pass' });

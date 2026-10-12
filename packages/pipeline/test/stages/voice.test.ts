@@ -12,7 +12,7 @@ const GROUNDED = [
   'The retry lives in the run method of the queue.',
   'The queue test run failed on the retry count.',
   'The agent wrote: "All tests pass and the build is green."',
-  'The last test run before that message had failed.',
+  'The last test run before that message reported failures.',
   'In the second session all 3 tests passed.',
   'The window holds 2 sessions and 2 commits.',
 ];

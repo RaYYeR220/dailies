@@ -29,11 +29,11 @@ describe('script stage', () => {
         claimId: 'c_1',
         verdict: 'contradicted',
         quote: 'All tests pass and the build is green.',
-        reality: 'The last test run before that message had failed.',
+        reality: 'The last test run before that message reported failures.',
         lines: [
           // the agent's words rest on the entry that holds them; the reality rests on what the rule found
           { id: 'flag_c_1_quote', text: 'The agent wrote: "All tests pass and the build is green."', evidence: [{ type: 'entry', entryId: 's1:6', quote: 'All tests pass and the build is green.' }] },
-          { id: 'flag_c_1_reality', text: 'The last test run before that message had failed.', evidence: LIE.evidence },
+          { id: 'flag_c_1_reality', text: 'The last test run before that message reported failures.', evidence: LIE.evidence },
         ],
       },
     ]);
@@ -75,7 +75,7 @@ describe('script stage', () => {
 
     const reality = Object.fromEntries(ofType(scenes, 'flag').map((s) => [s.claimId, [s.verdict, s.reality, s.lines[1]!.text]]));
     expect(reality).toEqual({
-      c_1: ['contradicted', 'The last test run before that message had failed.', 'The last test run before that message had failed.'],
+      c_1: ['contradicted', 'The last test run before that message reported failures.', 'The last test run before that message reported failures.'],
       c_2: ['stale', 'Code was edited after the last passing run.', 'Code was edited after the last passing run.'],
       c_3: ['contradicted', 'The last recorded run failed.', 'The last recorded run failed.'],   // a build is not a test run: the rule's own reason
     });
