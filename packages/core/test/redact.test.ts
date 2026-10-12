@@ -22,6 +22,32 @@ describe('redact', () => {
   });
   it('leaves git SHAs and ordinary prose alone', () => {
     const src = 'commit 3c66306a912e51b2e07432322d48ad4f63ebce3d fixed the retry loop';
-    expect(redact(src)).toEqual({ text: src, hits: 0 });
+    expect(redact(src)).toEqual({ text: src, hits: 0, homePaths: 0 });
+  });
+
+  it('replaces a macOS or Linux home directory with ~, counted apart from secret hits', () => {
+    const mac = redact('reading /Users/yehor/Desktop/projects/neathack/README.md');
+    expect(mac.text).toBe('reading ~/Desktop/projects/neathack/README.md');
+    expect(mac.homePaths).toBe(1);
+    expect(mac.hits).toBe(0);
+
+    const linux = redact('writing to /home/runner/work/repo/dist/out.js');
+    expect(linux.text).toBe('writing to ~/work/repo/dist/out.js');
+    expect(linux.homePaths).toBe(1);
+    expect(linux.hits).toBe(0);
+  });
+
+  it('replaces a Windows home directory with ~', () => {
+    const win = redact('cd C:\\Users\\yehor\\projects\\neathack');
+    expect(win.text).toBe('cd ~\\projects\\neathack');
+    expect(win.homePaths).toBe(1);
+    expect(win.hits).toBe(0);
+  });
+
+  it('counts several home paths in one string and never touches a secret hit', () => {
+    const r = redact('cp /Users/yehor/a.txt /home/yehor/b.txt # TOKEN=aVeryRealSecretValue123');
+    expect(r.text).toBe('cp ~/a.txt ~/b.txt # TOKEN=[REDACTED:assignment]');
+    expect(r.homePaths).toBe(2);
+    expect(r.hits).toBe(1);
   });
 });

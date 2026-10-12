@@ -9,7 +9,12 @@ const RULES: [string, RegExp][] = [
   ['slack_token', /\bxox[baprs]-[A-Za-z0-9-]{10,}/g],
   ['assignment', /\b([A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD)[A-Z0-9_]*\s*[=:]\s*["']?)([^\s"'\[]{8,})/g],
 ];
-export function redact(input: string): { text: string; hits: number } {
+
+// A user's home directory: the owner's name is itself an identifying string, worth hiding from a terminal
+// scene the same way a secret is, but it is not a secret hit (the gate's secret check must stay unaffected).
+const HOME_DIR = /\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Za-z]:\\Users\\[^\\\s]+/g;
+
+export function redact(input: string): { text: string; hits: number; homePaths: number } {
   let hits = 0; let text = input;
   for (const [kind, re] of RULES) {
     text = text.replace(re, (...m) => {
@@ -18,5 +23,10 @@ export function redact(input: string): { text: string; hits: number } {
       return `${keep}[REDACTED:${kind}]`;
     });
   }
-  return { text, hits };
+  let homePaths = 0;
+  text = text.replace(HOME_DIR, () => {
+    homePaths += 1;
+    return '~';
+  });
+  return { text, hits, homePaths };
 }
