@@ -9,6 +9,8 @@ import { RepoForm } from '../ui/RepoForm';
 import { SampleReel } from '../ui/SampleReel';
 import { SourceFrames } from '../ui/SourceFrames';
 import type { Source } from '../ui/reel-model';
+import { getDb } from '../server/db';
+import { listApproved } from '../server/store';
 import film from '../ui/film.module.css';
 import pill from '../ui/pill.module.css';
 import styles from './landing.module.css';
@@ -43,8 +45,20 @@ const VERDICTS = [
   { kind: 'question', name: 'Unverified', says: 'Nothing in the record either way.' },
 ] as const;
 
+/** The reel the landing shows: the one the deployment names, or else the reel a person approved last. */
+function featuredRun(): string | undefined {
+  // NEXT_PUBLIC_ values are fixed when the image is built; DAILIES_FEATURED_RUN is read when the page is asked for.
+  const named = process.env.DAILIES_FEATURED_RUN || process.env.NEXT_PUBLIC_FEATURED_RUN;
+  if (named) return named;
+  try {
+    return listApproved(getDb(), 1)[0]?.runId;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function Landing() {
-  const featured = process.env.NEXT_PUBLIC_FEATURED_RUN;
+  const featured = featuredRun();
 
   return (
     <>
