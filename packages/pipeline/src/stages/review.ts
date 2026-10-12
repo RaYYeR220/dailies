@@ -154,6 +154,8 @@ export function buildReviewStage(deps: ReviewStageDeps): Stage<{ pass: boolean; 
       // must never let a flood of low-severity findings push a real high-severity one off the end
       // and out of the decision. Highs are kept first in the capped list for the same reason.
       const pass = !findings.some((f) => f.severity === 'high');
+      const high = findings.filter((f) => f.severity === 'high').length;
+      ctx.log(`${render.durationSec.toFixed(1)} s against a ${ground.storyboard.targetSec} s target, ${stills.length} stills read, ${findings.length} findings, ${high} of them high`);
       const bounded = [...findings.filter((f) => f.severity === 'high'), ...findings.filter((f) => f.severity === 'low')].slice(0, MAX_FINDINGS);
       if (!pass) {
         const reason = truncate(bounded.map((f) => `${f.sceneId ?? 'reel'}: ${f.issue}`).join('; '), MAX_REASON_LEN);

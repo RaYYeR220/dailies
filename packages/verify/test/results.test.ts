@@ -232,3 +232,41 @@ describe('silence is a pass only with the exit status of the command itself', ()
     expect(run('npx tsc --noEmit > /dev/null 2>&1', '', true)).toMatchObject({ outcome: 'fail' });
   });
 });
+
+describe('a command line that holds more than one run', () => {
+  const runs = (command: string, text: string, isError = false) =>
+    collectRuns({
+      id: 's1',
+      entries: [
+        { id: 'e1', sessionId: 's1', index: 0, kind: 'tool_call', text: '', command, toolUseId: 't1' },
+        { id: 'e2', sessionId: 's1', index: 1, kind: 'tool_result', text, toolUseId: 't1', isError },
+      ],
+    } as unknown as Parameters<typeof collectRuns>[0]).map((r) => `${r.cls}:${r.outcome}`);
+
+  it('records a test run and a type check from one line, each with its own result', () => {
+    expect(runs('npm test 2>&1 | tail -30 && npx tsc --noEmit', ' Test Files  1 passed (1)\n      Tests  13 passed (13)')).toEqual(['test:pass', 'typecheck:pass']);
+  });
+
+  it('does not blame the type check when the line errored and the tests are what failed', () => {
+    expect(runs('npm test && npx tsc --noEmit', '      Tests  3 failed | 10 passed (13)', true)).toEqual(['test:fail', 'typecheck:unknown']);
+  });
+
+  it('blames the one run on a line that errored when every other step cannot fail', () => {
+    expect(runs('cd web && npm run build', 'something broke', true)).toEqual(['build:fail']);
+    expect(runs('git pull && npm run build', 'fatal: unable to access', true)).toEqual(['build:unknown']);
+  });
+
+  it('does not trust a clean exit that a later step or a background job could have produced', () => {
+    expect(runs('npx tsc --noEmit; echo done', 'done')).toEqual(['typecheck:unknown']);
+    expect(runs('npx tsc --noEmit || true', '')).toEqual(['typecheck:unknown']);
+    expect(runs('npm run build &', '[1] 4242')).toEqual(['build:unknown']);
+    expect(runs('npx tsc --noEmit && echo ok', 'ok')).toEqual(['typecheck:pass']);
+  });
+
+  it('does not read the words of another run as the verdict of a linter or a build on the same line', () => {
+    const vitest = '      Tests  3 failed | 10 passed (13)\n     Errors  1 error';
+    expect(runs('npx vitest run; npx eslint .', vitest)).toEqual(['test:fail', 'lint:unknown']);
+    expect(runs('pnpm test && pnpm build', '      Tests  13 passed (13)\nDone in 2.1s')).toEqual(['test:pass', 'build:pass']);
+    expect(runs('pnpm build; pnpm test', '      Tests  13 passed (13)\nDone in 2.1s')).toEqual(['test:pass', 'build:unknown']);
+  });
+});

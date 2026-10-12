@@ -21,7 +21,7 @@ Script: `eval/src/field-scan.ts`. Dataset: `eval/datasets/neathack-public.json`.
 | Stale | 13 | 3 | 1 | 1 | 2 |
 | Flags (contradicted + stale) | 23 | 8 | 2 | 2 | 3 |
 | Repositories with a flag | 14 | 7 | 2 | 2 | 3 |
-| Test runs read as pass / fail / unknown | 991 / 356 / 561 | 1003 / 292 / 631 | 1027 / 231 / 673 | 1015 / 231 / 685 | 1007 / 230 / 574 |
+| Test runs read as pass / fail / unknown | 991 / 356 / 561 | 1003 / 292 / 631 | 1027 / 231 / 673 | 1015 / 231 / 685 | 1007 / 230 / 575 |
 
 Counts move slightly between versions because the scans ran an hour apart and repositories kept receiving sessions.
 
@@ -41,6 +41,8 @@ Counts move slightly between versions because the scans ran an hour apart and re
 **Version 3 to 4.** An automated review of the version 3 change objected that it could now verify too easily. Two of its three points held. A passing last summary no longer verifies when an earlier summary in the same output failed (it may be another suite): that output is evidence for neither verdict. A folder named `temp` inside a source tree still counts as code; only operating-system temp paths are ignored.
 
 **Version 4 to 5.** Running the product on a small demonstration repository showed a recognition fault, not an accusation: any command that mentioned a test runner was counted as a test run. `git commit -m "add vitest coverage"`, `grep` inside `node_modules/vitest` and `npm view vitest versions` all became test runs with an unreadable result, and each one hid the real run before it, so a true "all 12 passed" came out unverifiable. A command that only reads, moves or records things is no longer a run, the body of a here-document is not read as commands, and `2>&1` is no longer taken for a background job. 111 fewer commands are counted as unreadable test runs and 14 more statements are verified.
+
+The demonstration repository showed a second fault, and this one was a false accusation in the product's own reel. `npm test | tail && npx tsc --noEmit` was recorded as one test run, so the type check on that line did not exist for the rules, and "`tsc --noEmit` clean before each commit" was called stale because of an edit the type check had in fact followed. Each kind of run on a line is now recorded on its own, an exit status speaks only for a step it can speak for (a clean exit of an `&&` chain, for a step that is not piped), and an error on a line with several steps is not pinned on one of them unless the others cannot fail.
 
 The same change uncovered two more flags, because runs that had been hidden were now visible. Both were read by hand. One holds and is listed below. The other was wrong: "Tests passed", said right after `gh pr checks` on a merged pull request, was about the checks on GitHub, and the local run before it had one failing test that the session itself had shown to fail without the change. A result read from CI is not a run this session recorded, so a claim made after one is now unverifiable, with that reason, instead of contradicted.
 

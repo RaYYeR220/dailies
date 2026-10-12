@@ -1,5 +1,5 @@
 import type { Session } from '@dailies/core';
-import { classifyCommand, type CommandClass } from './commands';
+import { RUN_CLASSES, commandShape, errorBelongsTo, type CommandClass } from './commands';
 
 export type RunOutcome = 'pass' | 'fail' | 'unknown';
 
@@ -91,27 +91,12 @@ function summarizeTest(text: string): TestSummary {
   return { passed: last.passed, failed: last.failed, outcome: last.outcome };
 }
 
-// A pipe, a `;`, or a newline (bash chains statements on one exactly as it does on the other)
-// reports the exit status of its last part, not the part that was actually classified; `||` is
-// two `|` characters, so testing for `|` alone already covers it. A backgrounded command (`&`,
-// not `&&`) reports the shell having started the job, never the job's own outcome, so it is just
-// as untrustworthy; `&&` is excluded first so a chain that merely contains that token is not
-// flagged by the lone-`&` check.
-const UNTRUSTED_EXIT = /[|;\n\r]/;
-
-// `2>&1`, `>&2` and `&>file` redirect a stream; none of them backgrounds anything.
-const REDIRECT = /\d*>&\d*|&>>?/g;
-
-function hasUntrustedExit(command: string): boolean {
-  return UNTRUSTED_EXIT.test(command) || command.replace(/&&/g, '').replace(REDIRECT, '').includes('&');
-}
-
 function parseTypecheckOutcome(text: string, exitTrusted: boolean): RunOutcome {
   if (/error TS\d+/.test(text)) return 'fail';
   if (/Found [1-9]\d*\s+errors?/.test(text)) return 'fail';
   if (/Found 0 errors/.test(text)) return 'pass';
   // Silence proves nothing by itself: `tsc >/dev/null; echo` is silent too. It is a pass only together
-  // with an exit status that is the command's own (see `hasUntrustedExit`), which the caller has checked.
+  // with an exit status that is the command's own (see `collectRuns`), which the caller has checked.
   if (exitTrusted) return 'pass';
   return 'unknown';
 }
@@ -155,23 +140,34 @@ export function parseOutcome(cls: CommandClass, output: string, isError: boolean
   return parseLintOrBuildOutcome(text, exitTrusted);
 }
 
+/**
+ * Every test, build, type-check and lint run a session recorded, in order. One command line can hold several
+ * (`npm test && npx tsc --noEmit`): each kind of run on it gets its own entry, read from the same output.
+ */
 export function collectRuns(session: Session): ToolRun[] {
   const runs: ToolRun[] = [];
   for (const call of session.entries) {
     if (call.kind !== 'tool_call' || !call.command || call.toolUseId === undefined) continue;
-    const cls = classifyCommand(call.command);
-    if (cls === 'other') continue;
+    const shape = commandShape(call.command);
+    const present = new Set(shape.segments.flatMap((s) => s.classes));
+    const classes = RUN_CLASSES.filter((cls) => present.has(cls));
+    if (classes.length === 0) continue;
     const result = session.entries.find((e) => e.kind === 'tool_result' && e.toolUseId === call.toolUseId);
-    const exitTrusted = !hasUntrustedExit(call.command);
-    const outcome: RunOutcome = result ? parseOutcome(cls, result.text, result.isError ?? false, { exitTrusted }) : 'unknown';
-    runs.push({
-      callEntryId: call.id,
-      resultEntryId: result?.id ?? null,
-      index: call.index,
-      command: call.command,
-      cls,
-      outcome,
-    });
+    const errored = result?.isError ?? false;
+    for (const cls of classes) {
+      const own = shape.segments.filter((s) => s.classes.includes(cls));
+      // The status the shell reported speaks for a step when the line is one `&&` chain (nothing after a step runs
+      // unless it succeeded, and nothing can mask it) and the step does not pipe into another program.
+      const exitTrusted = !errored && shape.chainOfAnds && own.every((s) => !s.piped);
+      // A test run is read from its own summary, so the bare status is passed on and only ever lowers a pass to
+      // unknown. For the other kinds an error is itself the verdict, so it must be this step's and no other's.
+      const isError = cls === 'test' ? errored : errored && errorBelongsTo(shape, cls);
+      // A linter and a build are read from words any program prints ("4 errors", "Done in 2s"). On a line shared
+      // with another kind of run those words may be the other run's, so only the exit status speaks for them.
+      const shared = classes.length > 1 && (cls === 'lint' || cls === 'build');
+      const outcome: RunOutcome = !result ? 'unknown' : shared ? (isError ? 'fail' : exitTrusted ? 'pass' : 'unknown') : parseOutcome(cls, result.text, isError, { exitTrusted });
+      runs.push({ callEntryId: call.id, resultEntryId: result?.id ?? null, index: call.index, command: call.command, cls, outcome });
+    }
   }
   return runs;
 }

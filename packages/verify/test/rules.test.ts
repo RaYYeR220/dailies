@@ -540,3 +540,29 @@ describe('tests_pass: results the session did not record', () => {
     expect(verifyClaim(c, sess).verdict).toBe('contradicted');
   });
 });
+
+describe('build_passes: a type check run on the same line as the tests', () => {
+  it('is verified by a type check that ran after the last edit, even though the line starts with the tests', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'npx tsc --noEmit 2>&1' },
+      { kind: 'tool_result', toolUseId: 't1', text: '(Bash completed with no output)' },
+      { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'src/webhooks/send.ts' },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't3', command: 'npm test 2>&1 | tail -30 && npx tsc --noEmit' },
+      { kind: 'tool_result', toolUseId: 't3', text: ' Test Files  1 passed (1)\n      Tests  13 passed (13)' },
+      { kind: 'assistant', text: '`tsc --noEmit` clean before each commit.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[5]!.id, quote: '`tsc --noEmit` clean before each commit', kind: 'build_passes' });
+    expect(verifyClaim(c, sess).verdict).toBe('verified');
+  });
+
+  it('is stale when the edit came after that line too', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't3', command: 'npm test 2>&1 | tail -30 && npx tsc --noEmit' },
+      { kind: 'tool_result', toolUseId: 't3', text: '      Tests  13 passed (13)' },
+      { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'src/webhooks/send.ts' },
+      { kind: 'assistant', text: '`tsc --noEmit` is clean.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[3]!.id, quote: '`tsc --noEmit` is clean', kind: 'build_passes' });
+    expect(verifyClaim(c, sess).verdict).toBe('stale');
+  });
+});
