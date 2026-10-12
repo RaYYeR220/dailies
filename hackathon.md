@@ -154,6 +154,8 @@ An automated review of the second change found four ways it now verified too eas
 
 Committed by hand in this period, with no checkpoint: the three rule changes above and their review corrections, the plan tables and the plan-against-actual report, the budget constant, the resume option, the symlink fix in the command-line shims, the scale fix, the budget-aware re-cut, the session-length fix, naming a local repository by its folder, the front page showing the last approved reel, the documents, the evidence files and the demo video. This period has more hand-made commits than any other: the work was reading output and correcting what it showed, a few lines at a time.
 
+**09:00 – 09:40 — the demonstration repository goes public.** `acme-api-demo` was published with its checkpoints, so the central example can be checked by anyone. The service read it from GitHub and made its own cut: 11 claims verified, 1 contradicted, an 87-second reel for $0.23 in ten and a half minutes. The checkpoint branch of this repository was pushed in full: 144 of the 147 checkpoints the commits name are on it. One reel was approved by a person and is in the gallery.
+
 ## Shared while building
 
 - First post, 11 October: https://x.com/BazydloMis57623/status/2109392014827802719

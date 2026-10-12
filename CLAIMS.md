@@ -10,7 +10,7 @@
 | A run that dies resumes at the stage it died in, and pays for nothing twice | [`PROOF.md`](PROOF.md) section 5, `run_3a06918cb956` |
 | A run cannot spend more than the plan's cost ceiling | The meter, the stage shares and the gate; the before run in [`PROOF.md`](PROOF.md) section 1 was stopped by it |
 | The agent reads its own earlier runs back from neatlogs | `[edit] memory: …` in a run's log; `packages/pipeline/src/memory.ts` |
-| The same pipeline runs behind a web page | https://dailies-reel.vercel.app |
+| The same pipeline runs behind a web page | https://dailies-reel.vercel.app; `run_c30fd5c61386` there is the demonstration repository, read from GitHub and cut by the service |
 | It works on a repository that is not ours | One public repository from this hackathon, twelve sessions, end to end from the command line for $0.52; the reel was not published |
 
 ## Works, with a limit worth knowing

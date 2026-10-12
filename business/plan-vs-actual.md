@@ -1,12 +1,12 @@
 # Plan against actual
 
-Generated 2026-10-12 04:04 UTC by `eval/src/plan-vs-actual.ts` from the run rows in `business/runs-laptop.json` and `business/runs-server.json`. Every run on either machine is listed, including the ones made while the pipeline was still being built; nothing is left out.
+Generated 2026-10-12 07:28 UTC by `eval/src/plan-vs-actual.ts` from the run rows in `business/runs-laptop.json` and `business/runs-server.json`. Every run on either machine is listed, including the ones made while the pipeline was still being built; nothing is left out.
 
 | | Plan | Actual |
 |---|---|---|
-| Cost of one reel | $0.59 | $0.44 mean, $0.51 median, over 8 reels |
-| Ceiling for a 55% margin on Solo | $0.6525 | 1 of 8 reels cost more |
-| Gross margin on Solo (20 reels for $29) | 59.3% | 69.7% at the mean cost |
+| Cost of one reel | $0.59 | $0.42 mean, $0.51 median, over 9 reels |
+| Ceiling for a 55% margin on Solo | $0.6525 | 1 of 9 reels cost more |
+| Gross margin on Solo (20 reels for $29) | 59.3% | 71.3% at the mean cost |
 
 ## Runs
 
@@ -24,6 +24,7 @@ Generated 2026-10-12 04:04 UTC by `eval/src/plan-vs-actual.ts` from the run rows
 | `run_76fbb02bc391` | RaYYeR220/dailies | 12 | 71 s | $0.70 | over by $0.049 | refused at the gate: over the ceiling |
 | `run_ddc0645c6ad0` | a public repository | 12 | 36 s | $0.52 | 79.2% of it | passed the gate, awaiting approval |
 | `run_205eb7784f22` | RaYYeR220/dailies | 12 | 80 s | $0.58 | 88.5% of it | passed the gate, awaiting approval |
+| `run_c30fd5c61386` | RaYYeR220/acme-api-demo | 4 | 87 s | $0.23 | 34.7% of it | passed the gate, awaiting approval |
 
 Notes:
 
