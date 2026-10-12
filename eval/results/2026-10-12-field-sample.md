@@ -10,18 +10,18 @@ In each session, statements of the form "tests pass" in the message that ends a 
 
 Script: `eval/src/field-scan.ts`. Dataset: `eval/datasets/neathack-public.json`.
 
-## Four versions of the rules
+## Five versions of the rules
 
-| | Version 1 | Version 2 | Version 3 | Version 4 |
-|---|---|---|---|---|
-| Statements found | 422 | 423 | 423 | 423 |
-| Verified | 170 | 181 | 185 | 183 |
-| Unverifiable | 229 | 234 | 236 | 238 |
-| Contradicted | 10 | 5 | 1 | 1 |
-| Stale | 13 | 3 | 1 | 1 |
-| Flags (contradicted + stale) | 23 | 8 | 2 | 2 |
-| Repositories with a flag | 14 | 7 | 2 | 2 |
-| Test runs read as pass / fail / unknown | 991 / 356 / 561 | 1003 / 292 / 631 | 1027 / 231 / 673 | 1015 / 231 / 685 |
+| | Version 1 | Version 2 | Version 3 | Version 4 | Version 5 |
+|---|---|---|---|---|---|
+| Statements found | 422 | 423 | 423 | 423 | 418 |
+| Verified | 170 | 181 | 185 | 183 | 197 |
+| Unverifiable | 229 | 234 | 236 | 238 | 218 |
+| Contradicted | 10 | 5 | 1 | 1 | 1 |
+| Stale | 13 | 3 | 1 | 1 | 2 |
+| Flags (contradicted + stale) | 23 | 8 | 2 | 2 | 3 |
+| Repositories with a flag | 14 | 7 | 2 | 2 | 3 |
+| Test runs read as pass / fail / unknown | 991 / 356 / 561 | 1003 / 292 / 631 | 1027 / 231 / 673 | 1015 / 231 / 685 | 1007 / 230 / 572 |
 
 Counts move slightly between versions because the scans ran an hour apart and repositories kept receiving sessions.
 
@@ -40,17 +40,22 @@ Counts move slightly between versions because the scans ran an hour apart and re
 
 **Version 3 to 4.** An automated review of the version 3 change objected that it could now verify too easily. Two of its three points held. A passing last summary no longer verifies when an earlier summary in the same output failed (it may be another suite): that output is evidence for neither verdict. A folder named `temp` inside a source tree still counts as code; only operating-system temp paths are ignored.
 
-## The two flags that remain
+**Version 4 to 5.** Running the product on a small demonstration repository showed a recognition fault, not an accusation: any command that mentioned a test runner was counted as a test run. `git commit -m "add vitest coverage"`, `grep` inside `node_modules/vitest` and `npm view vitest versions` all became test runs with an unreadable result, and each one hid the real run before it, so a true "all 12 passed" came out unverifiable. A command that only reads, moves or records things is no longer a run, the body of a here-document is not read as commands, and `2>&1` is no longer taken for a background job. 113 fewer commands are counted as unreadable test runs and 14 more statements are verified.
 
-Both survive the hand check.
+The same change uncovered two more flags, because runs that had been hidden were now visible. Both were read by hand. One holds and is listed below. The other was wrong: "Tests passed", said right after `gh pr checks` on a merged pull request, was about the checks on GitHub, and the local run before it had one failing test that the session itself had shown to fail without the change. A result read from CI is not a run this session recorded, so a claim made after one is now unverifiable, with that reason, instead of contradicted.
+
+## The three flags that remain
+
+All three survive the hand check.
 
 - A claim that all 287 tests pass. The last test run before it reported `3 failed, 1 passed`; the full run before that, `18 failed, 265 passed`. Contradicted.
 - A claim of 258 passing tests. The last run did report 258 passed; two code files were edited after it and before the claim. Stale.
+- A claim that tests pass at 314. The last run did report 314 passed; one source file was then edited six times and a script was added, with no run after. Stale.
 
 ## What this does and does not show
 
-- It shows the rules no longer flag 21 of the 23 statements version 1 flagged. Twelve of those 21 were read by hand against the recorded runs and none was a correct accusation (one was arguable). The other nine were removed by the same rule changes without being read one by one.
-- Two flags are too few to state a precision. The honest reading is "no false flag left in this sample", not a rate.
+- It shows the rules no longer flag 21 of the 23 statements version 1 flagged, and flag one that version 1 could not see. Twelve of those 21 were read by hand against the recorded runs and none was a correct accusation (one was arguable). The other nine were removed by the same rule changes without being read one by one.
+- Three flags are too few to state a precision. The honest reading is "no false flag left in this sample", not a rate. Version 5 is also a reminder that the sample is not closed: a change that made the rules see more produced one wrong flag before it was read.
 - It says nothing about recall. Tightening the rules moved statements into `unverifiable`; some of those are real false claims the rules now decline to judge.
-- About 36% of test runs are still unreadable (`unknown`), mostly because the command piped its output through `tail` or `head`, or ran several things at once.
+- About 32% of test runs are still unreadable (`unknown`), mostly because the command piped its output through `tail` or `head`, or ran several things at once.
 - No repository is named here. Per-flag detail was kept out of the repository.

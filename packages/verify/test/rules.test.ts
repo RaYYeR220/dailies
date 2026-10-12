@@ -487,3 +487,44 @@ describe('verifyClaims', () => {
     expect(results[1]!.verdict).toBe('unverifiable');
   });
 });
+
+describe('tests_pass: results the session did not record', () => {
+  it('does not contradict a claim made after the checks of a pull request were read', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'python -m pytest -q' },
+      { kind: 'tool_result', toolUseId: 't1', text: '1 failed, 296 passed, 61 skipped in 23.86s', isError: true },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't2', command: 'gh pr checks 43 2>&1 | head' },
+      { kind: 'tool_result', toolUseId: 't2', text: 'Tests\tpass\t1m2s\nEntire Gates\tfail\t12s' },
+      { kind: 'assistant', text: 'PR #43: merged. Tests passed. Entire Gates failed.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[4]!.id, quote: 'Tests passed', kind: 'tests_pass' });
+    const result = verifyClaim(c, sess);
+    expect(result.verdict).toBe('unverifiable');
+    expect(result.reason).toMatch(/CI result/);
+  });
+
+  it('still contradicts when the checks were read before the failing run, not after', () => {
+    const sess = session([
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't0', command: 'gh pr checks 43' },
+      { kind: 'tool_result', toolUseId: 't0', text: 'Tests\tpass' },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 't1', command: 'python -m pytest -q' },
+      { kind: 'tool_result', toolUseId: 't1', text: '1 failed, 296 passed in 23.86s', isError: true },
+      { kind: 'assistant', text: 'All tests pass.' },
+    ]);
+    const c = claim({ sessionId: 's1', entryId: sess.entries[4]!.id, quote: 'All tests pass.', kind: 'tests_pass' });
+    expect(verifyClaim(c, sess).verdict).toBe('contradicted');
+  });
+
+  it('counts an edit to a source file under a Windows path, and ignores one under docs', () => {
+    const run = [
+      { kind: 'tool_call' as const, toolName: 'Bash', toolUseId: 't1', command: 'python -m pytest -q' },
+      { kind: 'tool_result' as const, toolUseId: 't1', text: '314 passed, 64 skipped in 21.83s' },
+    ];
+    const say = { kind: 'assistant' as const, text: 'Tests pass at 314.' };
+    const src = session([...run, { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'D:\\work\\app\\src\\app\\receipt.py' }, say]);
+    const docs = session([...run, { kind: 'tool_call', toolName: 'Edit', toolUseId: 't2', filePath: 'D:\\work\\app\\docs\\build.py' }, say]);
+    const at = (s: typeof src) => claim({ sessionId: 's1', entryId: s.entries[3]!.id, quote: 'Tests pass at 314', kind: 'tests_pass' });
+    expect(verifyClaim(at(src), src).verdict).toBe('stale');
+    expect(verifyClaim(at(docs), docs).verdict).toBe('verified');
+  });
+});

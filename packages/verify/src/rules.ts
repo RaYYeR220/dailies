@@ -28,13 +28,16 @@ function isUnderTempPath(filePath: string): boolean {
 
 function isSourceEdit(filePath: string): boolean {
   if (isUnderTempPath(filePath)) return false;
-  const segments = filePath.split('/');
+  const segments = filePath.replace(/\\/g, '/').split('/');
   const base = segments[segments.length - 1] ?? '';
   const dot = base.lastIndexOf('.');
   if (dot <= 0) return false;
   if (!SOURCE_EXTENSIONS.has(base.slice(dot).toLowerCase())) return false;
   return !segments.slice(0, -1).some((dir) => NON_SOURCE_DIRS.has(dir));
 }
+
+// Commands that read the outcome of checks run elsewhere (GitHub Actions and the like).
+const CI_STATUS_RE = /\bgh\s+(?:pr\s+(?:checks|status|view|merge)|run\s+(?:view|watch|list)|workflow\s+view)\b|\bglab\s+ci\s+(?:status|view)\b/;
 
 /** Whether `quote` contains the exact number `n`, not as part of a longer number or word. */
 function quoteHasNumber(quote: string, n: number): boolean {
@@ -70,6 +73,12 @@ function lastRunVerdict(claim: Claim, session: Session, classes: CommandClass[],
 
   const last = runs[runs.length - 1]!;
   if (last.outcome === 'fail') {
+    // "Tests passed" after `gh pr checks` is a statement about the checks on the pull request, and their
+    // result is not a run this session recorded. The local failure before it does not contradict that.
+    const ciRead = session.entries.some(
+      (e) => e.kind === 'tool_call' && e.index > last.index && e.index < claimEntry.index && e.command !== undefined && CI_STATUS_RE.test(e.command)
+    );
+    if (ciRead) return unverifiable('a CI result was read after the last local run, and the message may refer to it');
     if (last.cls === 'test') {
       const resultEntry = last.resultEntryId ? findEntry(session, last.resultEntryId) : undefined;
       const { passed, failed } = summarize('test', resultEntry?.text ?? '');

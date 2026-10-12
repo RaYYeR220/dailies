@@ -14,8 +14,11 @@ export interface ToolRun {
 
 const ANSI = /\x1b\[[0-9;]*[a-zA-Z]/g;
 
+// What Claude Code records as the result of a command that printed nothing.
+const NO_OUTPUT = /^\s*\(Bash completed with no output\)\s*$/;
+
 function stripAnsi(text: string): string {
-  return text.replace(ANSI, '');
+  return text.replace(ANSI, '').replace(NO_OUTPUT, '');
 }
 
 export interface TestSummary {
@@ -96,8 +99,11 @@ function summarizeTest(text: string): TestSummary {
 // flagged by the lone-`&` check.
 const UNTRUSTED_EXIT = /[|;\n\r]/;
 
+// `2>&1`, `>&2` and `&>file` redirect a stream; none of them backgrounds anything.
+const REDIRECT = /\d*>&\d*|&>>?/g;
+
 function hasUntrustedExit(command: string): boolean {
-  return UNTRUSTED_EXIT.test(command) || command.replace(/&&/g, '').includes('&');
+  return UNTRUSTED_EXIT.test(command) || command.replace(/&&/g, '').replace(REDIRECT, '').includes('&');
 }
 
 function parseTypecheckOutcome(text: string, exitTrusted: boolean): RunOutcome {

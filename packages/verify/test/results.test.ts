@@ -186,3 +186,26 @@ describe('headlineFor', () => {
     expect(headline!.length).toBeLessThanOrEqual(24);
   });
 });
+
+describe('collectRuns on what Claude Code records', () => {
+  const session = (command: string, text: string, isError = false) =>
+    ({
+      id: 's1',
+      entries: [
+        { id: 'e1', sessionId: 's1', index: 0, kind: 'tool_call', text: '', command, toolUseId: 't1' },
+        { id: 'e2', sessionId: 's1', index: 1, kind: 'tool_result', text, toolUseId: 't1', isError },
+      ],
+    }) as unknown as Parameters<typeof collectRuns>[0];
+
+  it('reads a silent type check with a stream redirect as a pass', () => {
+    expect(collectRuns(session('npx tsc --noEmit 2>&1', '(Bash completed with no output)'))[0]).toMatchObject({ cls: 'typecheck', outcome: 'pass' });
+  });
+
+  it('still does not trust a backgrounded command', () => {
+    expect(collectRuns(session('pnpm build &', 'started'))[0]).toMatchObject({ cls: 'build', outcome: 'unknown' });
+  });
+
+  it('records no run for a commit whose message names a runner', () => {
+    expect(collectRuns(session('git commit -m "cover it with vitest"', '[main 274af55] cover it with vitest'))).toEqual([]);
+  });
+});

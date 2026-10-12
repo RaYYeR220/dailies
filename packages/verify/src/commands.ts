@@ -50,15 +50,31 @@ const ORDER: [CommandClass, RegExp[]][] = [
   ['build', BUILD_PATTERNS],
 ];
 
+// A part that only reads, moves or records things is never a run, whatever its arguments mention:
+// `git commit -m "add vitest coverage"`, `grep -rn AbortSignal node_modules/vitest`, `npm view vitest versions`.
+const NOT_A_RUN = new Set([
+  'git', 'grep', 'rg', 'ag', 'cat', 'sed', 'awk', 'ls', 'echo', 'printf', 'find', 'head', 'tail', 'wc', 'sort', 'uniq',
+  'mkdir', 'cp', 'mv', 'rm', 'touch', 'chmod', 'which', 'curl', 'wget', 'cd', 'pwd', 'jq', 'open', 'diff', 'tee', 'xargs',
+  'kill', 'pkill', 'sleep', 'export', 'source', 'test', '[', 'true', 'false',
+]);
+const PM_NOT_A_RUN = new RegExp(`^${PM}\\s+(?:ls|list|view|info|show|install|i|ci|add|remove|rm|uninstall|audit|why|outdated|update|up|init|pkg|config|publish|pack|link|store|cache|dlx\\s+\\S*create)\\b`);
+const ENV_ASSIGNMENT = /^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S*)\s+)+/;
+
 function classifyPart(part: string): CommandClass {
+  const bare = part.replace(ENV_ASSIGNMENT, '');
+  const head = bare.split(/\s+/, 1)[0] ?? '';
+  if (NOT_A_RUN.has(head) || PM_NOT_A_RUN.test(bare)) return 'other';
   for (const [cls, patterns] of ORDER) {
-    if (patterns.some((re) => re.test(part))) return cls;
+    if (patterns.some((re) => re.test(bare))) return cls;
   }
   return 'other';
 }
 
+// The body of a here-document is text being written to a file, not commands.
+const HEREDOC = /<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n[\s\S]*?\n\s*\2\b/g;
+
 export function classifyCommand(command: string): CommandClass {
-  const parts = command.split(/&&|\|\||[;|]/).map((p) => p.trim());
+  const parts = command.replace(HEREDOC, '').split(/&&|\|\||[;|\n]/).map((p) => p.trim()).filter(Boolean);
   const classes = new Set(parts.map(classifyPart));
   for (const [cls] of ORDER) {
     if (classes.has(cls)) return cls;
