@@ -1,36 +1,33 @@
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { defineTool, runAgent, type Tool } from '@dailies/agent';
+import { AgentStepLimitError, ModelOutputError, defineTool, runAgent, type ModelClient, type Tool } from '@dailies/agent';
 import { Beat, type Entry, type IngestArtifact, type Session } from '@dailies/core';
 import { editorPrompt } from '../prompts/editor';
+import { fallbackBeats, outlinesWithin } from '../outline';
+import { StageBudgetError, stageMeter } from '../budget';
 import type { Stage } from '../types';
 import type { StageDeps } from './index';
+
+export { cut, oneLine } from '../outline';
+import { cut, oneLine } from '../outline';
 
 export interface EditArtifact { beats: Beat[] }
 
 const MAX_BEATS = 6;
-const MAX_ENTRIES_PER_READ = 40;
-const ENTRY_TEXT_CHARS = 600;
-const FIRST_PROMPT_CHARS = 200;
-const MAX_MATCHES = 20;
-const SNIPPET_CHARS = 200;
+const MAX_ENTRIES_PER_READ = 12;
+const ENTRY_TEXT_CHARS = 300;
+const MAX_MATCHES = 8;
+const SNIPPET_CHARS = 160;
+const MAX_DIFF_FILES = 12;
+const PATCH_CHARS = 1200;
 const MIN_SHA_PREFIX = 7;
 const COMMAND_CHARS = 600;
 const PATH_CHARS = 300;
 const NAME_CHARS = 80;
-const MAX_LISTED_COMMITS = 40;
 const LABEL_CHARS = 80;
-
-/** `text` in at most `max` characters; a cut is marked with an ellipsis that counts towards the limit. */
-export function cut(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
-
-/** `text` as one line of at most `max` characters: line breaks and control characters become single spaces. */
-export function oneLine(text: string, max: number): string {
-  // eslint-disable-next-line no-control-regex
-  return cut(text.replace(/[\u0000-\u001f\u007f\u0085\u2028\u2029\s]+/g, ' ').trim(), max);
-}
+const MAX_STEPS = 8;
+const OUTLINE_BUDGET_CHARS = 9000;
+const EDIT_BUDGET_SHARE = 0.3;
 
 /** Added and removed line counts of one file's patch, headers excluded. */
 export function patchCounts(patch: string): { added: number; removed: number } {
@@ -103,7 +100,11 @@ function entryView(e: Entry) {
   };
 }
 
-/** The editor's read-only view of the ingest artifact. Every result is bounded, whatever the transcript holds. */
+/**
+ * The editor's read-only view of the ingest artifact, for pinning the exact ranges and commits of
+ * beats it has already chosen from the outlines it was given up front. Every result is bounded,
+ * whatever the transcript holds.
+ */
 export function transcriptTools(ingest: IngestArtifact): Tool[] {
   const sessions = new Map(ingest.sessions.map((s) => [s.id, s]));
   const commits = knownCommits(ingest);
@@ -119,22 +120,6 @@ export function transcriptTools(ingest: IngestArtifact): Tool[] {
   };
 
   return [
-    defineTool({
-      name: 'list_sessions',
-      description: 'List every recorded session in the window: id, agent, model, start, end, entry count, linked commits and the first human prompt.',
-      parameters: z.object({}),
-      execute: async () =>
-        ingest.sessions.map((s) => ({
-          id: s.id,
-          agent: cut(s.agent, NAME_CHARS),
-          model: s.model === null ? null : cut(s.model, NAME_CHARS),
-          start: s.startedAt,
-          end: s.endedAt,
-          entryCount: s.entries.length,
-          commits: s.commits.slice(0, MAX_LISTED_COMMITS),
-          firstPrompt: cut(s.entries.find((e) => e.kind === 'user')?.text ?? '', FIRST_PROMPT_CHARS),
-        })),
-    }),
     defineTool({
       name: 'read_entries',
       description: `Read the entries of a session from index "from" to index "to", both included. Returns at most ${MAX_ENTRIES_PER_READ} entries per call; "next" is the index to continue from, or null.`,
@@ -172,24 +157,25 @@ export function transcriptTools(ingest: IngestArtifact): Tool[] {
     }),
     defineTool({
       name: 'get_diff',
-      description: 'List the files a commit changed, with added and removed line counts.',
+      description: `List the files a commit changed, with added and removed line counts. Returns at most ${MAX_DIFF_FILES} files.`,
       parameters: z.object({ sha: z.string() }),
       execute: async ({ sha }) => {
         const prefix = `${commitOf(sha)}:`;
         const files = Object.entries(ingest.diffs)
           .filter(([key]) => key.startsWith(prefix))
+          .slice(0, MAX_DIFF_FILES)
           .map(([key, patch]) => ({ path: key.slice(prefix.length), ...patchCounts(patch) }));
         return { files };
       },
     }),
     defineTool({
       name: 'get_patch',
-      description: 'Read the patch of one file in one commit.',
+      description: `Read the patch of one file in one commit, cut to ${PATCH_CHARS} characters.`,
       parameters: z.object({ sha: z.string(), path: z.string() }),
       execute: async ({ sha, path }) => {
         const patch = ingest.diffs[`${commitOf(sha)}:${path}`];
         if (patch === undefined) throw new Error(`no patch for ${path} in ${sha}`);
-        return { patch };
+        return { patch: cut(patch, PATCH_CHARS) };
       },
     }),
   ];
@@ -220,15 +206,32 @@ export function editStage(deps: StageDeps): Stage<EditArtifact> {
       const ingest = ctx.read<IngestArtifact>('ingest');
       const sessions = new Map(ingest.sessions.map((s) => [s.id, s]));
       const commits = knownCommits(ingest);
+      const fallback = () => fallbackBeats(ingest.sessions, MAX_BEATS);
 
+      const outlines = outlinesWithin(ingest.sessions, OUTLINE_BUDGET_CHARS);
       const { system, user } = editorPrompt({
         repo: repoLabel(ctx.run.repoUrl),
         since: ctx.run.since,
         until: ctx.run.until,
-        sessionCount: ingest.sessions.length,
         maxBeats: MAX_BEATS,
+        outlines,
       });
-      const { output, steps } = await runAgent({ client: deps.client, role: 'editor', name: 'editor', system, user, tools: transcriptTools(ingest), output: EditorReply });
+
+      const budget = stageMeter(deps.meter, ctx.run.budget.maxCostPerReelUsd * EDIT_BUDGET_SHARE);
+      const checkedClient: ModelClient = { complete: async (req) => { budget.check(); return deps.client.complete(req); } };
+
+      let output: z.infer<typeof EditorReply>;
+      try {
+        const result = await runAgent({ client: checkedClient, role: 'editor', name: 'editor', system, user, tools: transcriptTools(ingest), output: EditorReply, maxSteps: MAX_STEPS });
+        output = result.output;
+        ctx.log(`editor replied in ${result.steps} steps`);
+      } catch (err) {
+        if (err instanceof AgentStepLimitError || err instanceof StageBudgetError || err instanceof ModelOutputError) {
+          ctx.log(`editor fallback, whole-session beats: ${err.message}`);
+          return { artifact: { beats: fallback() } };
+        }
+        throw err;
+      }
 
       const usable: z.infer<typeof BeatDraft>[] = [];
       for (const draft of output.beats) {
@@ -236,7 +239,10 @@ export function editStage(deps: StageDeps): Stage<EditArtifact> {
         if (problem) ctx.log(`dropped beat "${draft.title}": ${problem}`);
         else usable.push(draft);
       }
-      if (usable.length === 0) throw new Error('the editor returned no usable beat');
+      if (usable.length === 0) {
+        ctx.log('editor fallback, whole-session beats: no usable beat in the reply');
+        return { artifact: { beats: fallback() } };
+      }
       if (usable.length > MAX_BEATS) ctx.log(`kept the first ${MAX_BEATS} of ${usable.length} beats`);
 
       const beats: Beat[] = usable.slice(0, MAX_BEATS).map((draft, n) => ({
@@ -244,7 +250,7 @@ export function editStage(deps: StageDeps): Stage<EditArtifact> {
         id: `beat_${n + 1}`,
         commits: [...new Set(draft.commits.flatMap((sha) => resolveCommit(sha, commits) ?? []))],
       }));
-      ctx.log(`${beats.length} beats in ${steps} editor steps`);
+      ctx.log(`${beats.length} beats`);
       return { artifact: { beats } };
     },
   };

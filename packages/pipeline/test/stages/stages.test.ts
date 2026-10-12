@@ -45,9 +45,15 @@ describe('buildStages', () => {
   });
 
   it('buildStages records the spend of a stage that fails as well', async () => {
-    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [] }), costPerCall: 0.05 });
+    const h = harness({
+      artifacts: { ingest: twoSessions() },
+      reply: () => {
+        throw new Error('boom');
+      },
+      costPerCall: 0.05,
+    });
 
-    await expect(stage(h.deps, 'edit').run(h.ctx())).rejects.toThrow(/no usable beat/);
+    await expect(stage(h.deps, 'verify').run(h.ctx())).rejects.toThrow(/boom/);
 
     expect(getRun(h.db, h.runId).costUsd).toBeCloseTo(0.05, 10);
   });

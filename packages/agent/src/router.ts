@@ -37,12 +37,17 @@ export interface ModelClient {
 }
 
 const MODEL_BY_ROLE: Record<Role, string> = {
-  editor: 'claude-sonnet-4.6',
+  editor: 'claude-haiku',
   writer: 'claude-sonnet-4.6',
   vision: 'claude-sonnet-4.6',
   extractor: 'claude-haiku',
   judge: 'nova-pro',
 };
+
+/** The model for `role`: an operator override from `DAILIES_MODEL_<ROLE>`, or the role's default. */
+function modelForRole(role: Role): string {
+  return process.env[`DAILIES_MODEL_${role.toUpperCase()}`] || MODEL_BY_ROLE[role];
+}
 
 const COST_PER_MILLION_TOKENS: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4.6': { input: 3, output: 15 },
@@ -134,7 +139,7 @@ export function createRouter(env: Env, meter: CostMeter): ModelClient {
   async function complete(req: { role: Role; messages: ChatMessage[]; tools?: Tool[]; maxTokens?: number }): Promise<Completion> {
     meter.assertWithin();
     await sharedLimiter.acquire();
-    const model = MODEL_BY_ROLE[req.role];
+    const model = modelForRole(req.role);
 
     let lastErr: unknown;
     let retriesExhausted = false;
