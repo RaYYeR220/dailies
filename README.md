@@ -31,7 +31,7 @@ With `packages/cli/bin` on `PATH`, the Entire CLI can also run it as a plugin: `
 
 ## Environment
 
-Configuration comes from a `.env` file at the repository root (see `.env.example`); no secret is ever committed. A run needs at least `LITELLM_API_KEY` — without it, both commands exit with a clear message instead of failing partway through.
+Configuration comes from a `.env` file at the Dailies repository's own root (see `.env.example`) — not the repository you point `dailies run` at, and not whatever directory you happen to run it from; no secret is ever committed. A run needs at least `LITELLM_API_KEY` — without it, both commands exit with a clear message instead of failing partway through.
 
 | Variable | Purpose |
 |---|---|
@@ -42,17 +42,15 @@ Configuration comes from a `.env` file at the repository root (see `.env.example
 | `VENICE_API_KEY` | Fallback model provider, used when the primary gateway is unavailable. |
 | `GEMINI_API_KEYS` | Comma-separated keys for narration text-to-speech. Without one, or with `--no-voice`, the reel still renders — as a captions-only cut. |
 
-`DAILIES_DATA_DIR` (not in `.env.example`, but read the same way) sets where clones, the run database and rendered artifacts live; it defaults to `.dailies` under the current directory.
+`DAILIES_DATA_DIR` (not in `.env.example`, but read the same way) sets where clones, the run database and rendered artifacts live; it defaults to `.dailies` under the Dailies repository's own root, regardless of where `dailies` is invoked from.
 
 ## How a run proceeds
 
 ```
 ingest -> edit -> verify -> script -> ground -> voice -> render -> gate
-                      ^                                     |
-                      +-------- re-cut (at most 2 loops) ----+
 ```
 
-Each stage reads the artifacts of the ones before it and writes its own; a crash resumes from the last completed stage rather than starting over. `gate` checks grounding, secrets, cost and (when not disabled) review, and ends the run `needs_approval` or `blocked` with reasons.
+Each stage reads the artifacts of the ones before it and writes its own; a crash resumes from the last completed stage rather than starting over. `gate` checks grounding, secrets and cost, and ends the run `needs_approval` or `blocked` with reasons. (The spec also places a `review` stage before `gate`, able to send a cut back to `script` for at most two re-cuts; this build of the CLI does not yet have a way to run it.)
 
 ## Limits
 

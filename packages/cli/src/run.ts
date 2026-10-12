@@ -1,11 +1,24 @@
 import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CostMeter, createRouter, initTracing, shutdownTracing, traced, type ModelClient } from '@dailies/agent';
 import { DEFAULT_BUDGET, loadEnv, type Env, type RenderArtifact } from '@dailies/core';
 import { buildStages, createRun, getRun, listEvents, openDb, runPipeline, type StageDeps } from '@dailies/pipeline';
 import { createGeminiTts, type TtsProvider } from '@dailies/voice';
 
 const EVENT_POLL_MS = 50;
+
+// `loadEnv`'s default `cwd` is `process.cwd()`. The Entire CLI plugin flow runs `entire dailies
+// run .` from inside the *target* repository being summarized, not from Dailies' own checkout,
+// so a default cwd would miss Dailies' own `.env` and write `.dailies` into the wrong repository.
+// The CLI always resolves its env and data directory relative to its own package instead.
+export const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
+
+// The same filename the web app's `getDb()` uses (apps/web/src/server/db.ts) — spec section 3
+// is explicit that a deployment has one SQLite database. Sharing the name means a CLI run shows
+// up to the web app (its /inbox, its read-back) when both point at the same DAILIES_DATA_DIR;
+// run.ts and verify.ts are the only two places this name needs to agree.
+export const DB_FILENAME = 'dailies.db';
 
 export interface RunOverrides {
   client?: ModelClient;
@@ -35,8 +48,12 @@ export function parseRunArgs(argv: string[]): RunArgs {
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]!;
     if (arg === '--since') since = argv[(i += 1)];
-    else if (arg === '--max-sessions') maxSessions = Number(argv[(i += 1)]);
-    else if (arg === '--out') out = argv[(i += 1)];
+    else if (arg === '--max-sessions') {
+      const raw = argv[(i += 1)];
+      const parsed = Number(raw);
+      if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`--max-sessions must be a positive integer, got ${JSON.stringify(raw)}`);
+      maxSessions = parsed;
+    } else if (arg === '--out') out = argv[(i += 1)];
     else if (arg === '--no-voice') noVoice = true;
     else if (arg === '--no-review') noReview = true;
     else positional.push(arg);
@@ -116,7 +133,7 @@ export function sanitizeForTerminal(text: string): string {
 
 export async function runCommand(argv: string[], overrides: RunOverrides = {}): Promise<number> {
   const args = parseRunArgs(argv);
-  const env = overrides.env ?? loadEnv();
+  const env = overrides.env ?? loadEnv(REPO_ROOT);
   const stdout = overrides.stdout ?? ((line: string) => console.log(line));
 
   let client = overrides.client;
@@ -129,7 +146,7 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
   const since = parseSince(args.since ?? '24h', until);
 
   mkdirSync(env.dataDir, { recursive: true });
-  const db = openDb(join(env.dataDir, 'db.sqlite'));
+  const db = openDb(join(env.dataDir, DB_FILENAME));
   const runId = createRun(db, { repoUrl: args.repoUrl, since, until: until.toISOString(), budget: DEFAULT_BUDGET });
 
   const meter = new CostMeter(DEFAULT_BUDGET.maxCostPerReelUsd);

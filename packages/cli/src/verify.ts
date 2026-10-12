@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { CostMeter, createRouter, type ModelClient } from '@dailies/agent';
 import { DEFAULT_BUDGET, loadEnv, type Claim, type Env } from '@dailies/core';
 import { buildStages, createRun, getRun, openDb, runPipeline, type StageDeps } from '@dailies/pipeline';
-import { parseSince, sanitizeForTerminal } from './run';
+import { parseSince, REPO_ROOT, sanitizeForTerminal } from './run';
 
 export interface VerifyOverrides {
   client?: ModelClient;
@@ -50,11 +50,14 @@ const cut = (text: string, max: number): string => (text.length <= max ? text : 
 /**
  * Runs ingest and the verify stage only, through the same `buildStages` composition `run` uses — the
  * verify stage itself is not exported from `@dailies/pipeline` (only through this one way in), and
- * reusing it here avoids a second copy of claim extraction and its prompt.
+ * reusing it here avoids a second copy of claim extraction and its prompt. The run record this needs
+ * internally lives in its own private, in-memory database: `verify` renders nothing, so a row for it
+ * sitting in the shared `dailies.db` — the one the web app's /inbox reads — would be a reel with no
+ * reel, forever "awaiting approval" and approvable by no one.
  */
 export async function verifyCommand(argv: string[], overrides: VerifyOverrides = {}): Promise<number> {
   const args = parseVerifyArgs(argv);
-  const env = overrides.env ?? loadEnv();
+  const env = overrides.env ?? loadEnv(REPO_ROOT);
   const stdout = overrides.stdout ?? ((line: string) => console.log(line));
 
   let client = overrides.client;
@@ -67,7 +70,7 @@ export async function verifyCommand(argv: string[], overrides: VerifyOverrides =
   const since = parseSince(args.since ?? '24h', until);
 
   mkdirSync(env.dataDir, { recursive: true });
-  const db = openDb(join(env.dataDir, 'db.sqlite'));
+  const db = openDb(':memory:');
   const runId = createRun(db, { repoUrl: args.repoUrl, since, until: until.toISOString(), budget: DEFAULT_BUDGET });
 
   const meter = new CostMeter(DEFAULT_BUDGET.maxCostPerReelUsd);

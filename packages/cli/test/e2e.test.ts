@@ -1,12 +1,14 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createMockClient, type ChatMessage, type Role } from '@dailies/agent';
 import type { Env } from '@dailies/core';
-import type { GateArtifact, GroundArtifact } from '@dailies/pipeline';
+import { openDb, type GateArtifact, type GroundArtifact } from '@dailies/pipeline';
 import { makeRepo, type FixtureSession } from '../../ingest/test/fixture';
-import { runCommand, sanitizeForTerminal, stripUserinfo } from '../src/run';
+import { isMainModule } from '../src/index';
+import { parseRunArgs, REPO_ROOT, runCommand, sanitizeForTerminal, stripUserinfo } from '../src/run';
 import { verifyCommand } from '../src/verify';
 
 const dirs: string[] = [];
@@ -174,6 +176,23 @@ describe('dailies run (end-to-end, mock model, real renderer)', () => {
     expect(lines).toContain('reason: no agent sessions found in this window');
   });
 
+  it('writes the run into dailies.db, the same database file the web app reads', async () => {
+    const repoDir = await fixtureRepo([]);
+    const dataDir = scratchDataDir();
+
+    await runCommand([repoDir, '--since', '2026-10-09T00:00:00Z'], {
+      client: createMockClient(() => {
+        throw new Error('no model call should happen before a repository with no checkpoints ends the run');
+      }),
+      env: testEnv(dataDir),
+      stdout: () => {},
+    });
+
+    const db = openDb(join(dataDir, 'dailies.db'));
+    const row = db.prepare('SELECT status, reason FROM runs').get() as { status: string; reason: string } | undefined;
+    expect(row).toEqual({ status: 'blocked', reason: 'no agent sessions found in this window' });
+  });
+
   it('dailies verify prints the contradicted and verified claims for the same fixture', async () => {
     const repoDir = await fixtureRepo(liarAndHonestSessions());
     const dataDir = scratchDataDir();
@@ -190,6 +209,19 @@ describe('dailies run (end-to-end, mock model, real renderer)', () => {
     expect(claims).toHaveLength(2);
     expect(claims.find((c) => c.sessionId === LIAR_SESSION_ID)?.verdict).toBe('contradicted');
     expect(claims.find((c) => c.sessionId === HONEST_SESSION_ID)?.verdict).toBe('verified');
+  });
+
+  it('does not leave a phantom run in the shared database — it has no reel to show for one', async () => {
+    const repoDir = await fixtureRepo(liarAndHonestSessions());
+    const dataDir = scratchDataDir();
+
+    await verifyCommand([repoDir, '--since', '2026-10-09T00:00:00Z', '--json'], {
+      client: createMockClient(reply),
+      env: testEnv(dataDir),
+      stdout: () => {},
+    });
+
+    expect(existsSync(join(dataDir, 'dailies.db'))).toBe(false);
   });
 });
 
@@ -212,6 +244,67 @@ describe('sanitizeForTerminal', () => {
 
   it('leaves ordinary text untouched', () => {
     expect(sanitizeForTerminal('3 sessions, 2 file diffs')).toBe('3 sessions, 2 file diffs');
+  });
+});
+
+describe('REPO_ROOT', () => {
+  it('resolves to the Dailies monorepo root, not wherever the CLI happens to be invoked from — needed for the entire-dailies plugin flow, which runs from inside the target repository', () => {
+    expect(existsSync(join(REPO_ROOT, 'pnpm-workspace.yaml'))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, 'packages', 'cli', 'package.json'))).toBe(true);
+  });
+});
+
+describe('parseRunArgs', () => {
+  it('parses --max-sessions as a positive integer', () => {
+    expect(parseRunArgs(['repo', '--max-sessions', '5']).maxSessions).toBe(5);
+  });
+
+  it('rejects a non-numeric --max-sessions instead of silently becoming NaN', () => {
+    expect(() => parseRunArgs(['repo', '--max-sessions', 'abc'])).toThrow(/--max-sessions/);
+  });
+
+  it('rejects a zero or negative --max-sessions instead of silently dropping every session', () => {
+    expect(() => parseRunArgs(['repo', '--max-sessions', '0'])).toThrow(/--max-sessions/);
+    expect(() => parseRunArgs(['repo', '--max-sessions', '-3'])).toThrow(/--max-sessions/);
+  });
+});
+
+describe('isMainModule', () => {
+  it('recognizes the same file reached through a symlink, not just an identical path string', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dailies-cli-mainmod-'));
+    dirs.push(dir);
+    const real = join(dir, 'index.ts');
+    writeFileSync(real, 'export {};');
+    const linkDir = join(dir, 'link');
+    mkdirSync(linkDir);
+    const link = join(linkDir, 'index.ts');
+    symlinkSync(real, link);
+
+    expect(isMainModule(pathToFileURL(real).toString(), link)).toBe(true);
+  });
+
+  it('recognizes the same file when its path contains a space the URL would percent-encode', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dailies cli mainmod '));
+    dirs.push(dir);
+    const file = join(dir, 'index.ts');
+    writeFileSync(file, 'export {};');
+
+    expect(isMainModule(pathToFileURL(file).toString(), file)).toBe(true);
+  });
+
+  it('rejects two unrelated files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dailies-cli-mainmod-'));
+    dirs.push(dir);
+    const a = join(dir, 'a.ts');
+    const b = join(dir, 'b.ts');
+    writeFileSync(a, 'export {};');
+    writeFileSync(b, 'export {};');
+
+    expect(isMainModule(pathToFileURL(a).toString(), b)).toBe(false);
+  });
+
+  it('rejects when argv1 is absent, as it is when node evaluates a module that only imports this one', () => {
+    expect(isMainModule('file:///anything', undefined)).toBe(false);
   });
 });
 

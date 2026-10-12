@@ -1,3 +1,5 @@
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { RUN_USAGE, runCommand } from './run';
 import { VERIFY_USAGE, verifyCommand } from './verify';
 
@@ -12,8 +14,22 @@ async function main(): Promise<number> {
   return 1;
 }
 
-const isMain = import.meta.url === `file://${process.argv[1]}`;
-if (isMain) {
+/**
+ * Whether `moduleUrl` (an `import.meta.url`) and `argv1` (`process.argv[1]`) name the same file,
+ * resolving symlinks and decoding the URL first. A literal string comparison breaks on a path
+ * with a space (percent-encoded in the URL, not in argv) or reached through a symlink (`/tmp` is
+ * `/private/tmp` on macOS) — either would make the CLI silently do nothing instead of running.
+ */
+export function isMainModule(moduleUrl: string, argv1: string | undefined): boolean {
+  if (!argv1) return false;
+  try {
+    return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(argv1);
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule(import.meta.url, process.argv[1])) {
   main()
     .then((code) => {
       process.exitCode = code;
