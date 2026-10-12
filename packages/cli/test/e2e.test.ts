@@ -255,6 +255,12 @@ describe('REPO_ROOT', () => {
 });
 
 describe('parseRunArgs', () => {
+  it('takes --resume with a run id and no repository', () => {
+    expect(parseRunArgs(['--resume', 'run_3a06918cb956', '--out', 'x'])).toMatchObject({ resume: 'run_3a06918cb956', out: 'x' });
+    expect(() => parseRunArgs(['--resume', '../../etc/passwd'])).toThrow(/--resume/);
+    expect(() => parseRunArgs(['--resume'])).toThrow();
+  });
+
   it('parses --max-sessions as a positive integer', () => {
     expect(parseRunArgs(['repo', '--max-sessions', '5']).maxSessions).toBe(5);
   });

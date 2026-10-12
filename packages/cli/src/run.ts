@@ -28,6 +28,8 @@ export interface RunOverrides {
 
 interface RunArgs {
   repoUrl: string;
+  /** The id of an unfinished run to pick up at its first unfinished stage, instead of starting a new one. */
+  resume?: string;
   since?: string;
   maxSessions?: number;
   out?: string;
@@ -35,7 +37,7 @@ interface RunArgs {
   noReview: boolean;
 }
 
-export const RUN_USAGE = 'usage: dailies run <repo-url|path> [--since 24h|<ISO>] [--max-sessions N] [--out <dir>] [--no-voice] [--no-review]';
+export const RUN_USAGE = 'usage: dailies run <repo-url|path> [--since 24h|<ISO>] [--max-sessions N] [--out <dir>] [--no-voice] [--no-review]\n       dailies run --resume <run-id> [--out <dir>] [--no-voice] [--no-review]';
 
 export function parseRunArgs(argv: string[]): RunArgs {
   const positional: string[] = [];
@@ -44,10 +46,12 @@ export function parseRunArgs(argv: string[]): RunArgs {
   let out: string | undefined;
   let noVoice = false;
   let noReview = false;
+  let resume: string | undefined;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]!;
     if (arg === '--since') since = argv[(i += 1)];
+    else if (arg === '--resume') resume = argv[(i += 1)];
     else if (arg === '--max-sessions') {
       const raw = argv[(i += 1)];
       const parsed = Number(raw);
@@ -59,6 +63,10 @@ export function parseRunArgs(argv: string[]): RunArgs {
     else positional.push(arg);
   }
 
+  if (resume !== undefined) {
+    if (!/^run_[0-9a-f]+$/.test(resume)) throw new Error(`--resume takes a run id like run_3a06918cb956, got ${JSON.stringify(resume)}`);
+    return { repoUrl: '', resume, out, noVoice, noReview };
+  }
   const repoUrl = positional[0];
   if (!repoUrl) throw new Error(RUN_USAGE);
   return { repoUrl, since, maxSessions, out, noVoice, noReview };
@@ -142,12 +150,32 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
     return 1;
   }
 
-  const until = new Date();
-  const since = parseSince(args.since ?? '24h', until);
-
   mkdirSync(env.dataDir, { recursive: true });
   const db = openDb(join(env.dataDir, DB_FILENAME));
-  const runId = createRun(db, { repoUrl: args.repoUrl, since, until: until.toISOString(), budget: DEFAULT_BUDGET });
+  let runId: string;
+  let repoUrl = args.repoUrl;
+  if (args.resume) {
+    // The runner starts at the first stage that is not done, and reads what the finished ones wrote: a run
+    // whose process died in the render does not pay for its model calls or its narration a second time.
+    let existing;
+    try {
+      existing = getRun(db, args.resume);
+    } catch {
+      console.error(`no run ${args.resume} in ${env.dataDir}`);
+      return 1;
+    }
+    if (existing.status !== 'running') {
+      console.error(`run ${args.resume} is ${existing.status}, not unfinished`);
+      return 1;
+    }
+    runId = existing.id;
+    repoUrl = existing.repoUrl;
+    stdout(`resuming ${runId}, spent so far $${existing.costUsd.toFixed(4)}`);
+  } else {
+    const until = new Date();
+    const since = parseSince(args.since ?? '24h', until);
+    runId = createRun(db, { repoUrl, since, until: until.toISOString(), budget: DEFAULT_BUDGET });
+  }
 
   const meter = new CostMeter(DEFAULT_BUDGET.maxCostPerReelUsd);
   client = client ?? createRouter(env, meter);
@@ -174,7 +202,7 @@ export async function runCommand(argv: string[], overrides: RunOverrides = {}): 
         clearInterval(timer);
         flush();
       }
-    })({ repoUrl: stripUserinfo(args.repoUrl), runId });
+    })({ repoUrl: stripUserinfo(repoUrl), runId });
 
     const run = getRun(db, runId);
     stdout(`status: ${status}`);
