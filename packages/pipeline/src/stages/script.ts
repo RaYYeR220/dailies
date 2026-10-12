@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { completeJson } from '@dailies/agent';
 import { computeFacts, EvidenceRef, Storyboard, type Beat, type Claim, type Entry, type Facts, type IngestArtifact, type Line, type Scene, type Session } from '@dailies/core';
-import { collectRuns, type ToolRun } from '@dailies/verify';
+import { collectRuns, headlineFor, type ToolRun } from '@dailies/verify';
 import { writerPrompt, type WriterMaterial } from '../prompts/writer';
 import type { Stage } from '../types';
 import { cut, knownCommits, patchCounts, repoLabel, resolveCommit, type EditArtifact } from './edit';
@@ -17,6 +17,10 @@ type FlaggedClaim = Claim & { verdict: 'contradicted' | 'stale' };
 const TARGET_SEC = 75;
 const MAX_FLAGS = 3;
 const SPOKEN_QUOTE_CHARS = 120;
+const MAX_LINES_TOTAL = 11;
+const MAX_WORDS_PER_LINE = 18;
+const MAX_TERMINAL_SCENES = 2;
+const MAX_DIFF_SCENES = 2;
 // What the scene schema allows on screen.
 const ON_SCREEN = { promptQuote: 280, command: 200, output: 600, hunk: 2400, steps: 4, statValue: 16, flagQuote: 240, flagReality: 200 };
 // What the writer is shown of each beat.
@@ -105,6 +109,59 @@ function typeName(raw: unknown): string {
   return typeof type === 'string' ? cut(flat(type), 20) : 'untyped';
 }
 
+const wordCount = (text: string): number => text.trim().split(/\s+/).filter(Boolean).length;
+
+/**
+ * The hard limits the writer is told about but code enforces regardless: a line over the word
+ * limit is dropped outright; a terminal or diff scene past the per-type cap is dropped whole,
+ * earliest kept; the remaining lines are then capped at the total, dropped from the end across
+ * the whole sequence. A scene left with no lines is removed.
+ */
+function applyHardLimits(scenes: Scene[], discarded: string[]): Scene[] {
+  const byWordLimit = scenes.flatMap((scene) => {
+    const lines = scene.lines.filter((line) => {
+      const words = wordCount(line.text);
+      if (words <= MAX_WORDS_PER_LINE) return true;
+      discarded.push(`${scene.id}: a line of ${words} words is over the ${MAX_WORDS_PER_LINE}-word limit`);
+      return false;
+    });
+    if (lines.length === 0) {
+      discarded.push(`${scene.id}: left with no lines after the ${MAX_WORDS_PER_LINE}-word limit`);
+      return [];
+    }
+    return lines.length === scene.lines.length ? [scene] : [{ ...scene, lines } as Scene];
+  });
+
+  let terminalSeen = 0;
+  let diffSeen = 0;
+  const byTypeCap = byWordLimit.filter((scene) => {
+    if (scene.type === 'terminal' && (terminalSeen += 1) > MAX_TERMINAL_SCENES) {
+      discarded.push(`${scene.id}: over the ${MAX_TERMINAL_SCENES}-terminal-scene limit`);
+      return false;
+    }
+    if (scene.type === 'diff' && (diffSeen += 1) > MAX_DIFF_SCENES) {
+      discarded.push(`${scene.id}: over the ${MAX_DIFF_SCENES}-diff-scene limit`);
+      return false;
+    }
+    return true;
+  });
+
+  let total = 0;
+  const capped: Scene[] = [];
+  for (const scene of byTypeCap) {
+    if (total >= MAX_LINES_TOTAL) {
+      discarded.push(`${scene.id}: dropped past the ${MAX_LINES_TOTAL}-line total`);
+      continue;
+    }
+    const room = MAX_LINES_TOTAL - total;
+    const lines = scene.lines.length <= room ? scene.lines : scene.lines.slice(0, room);
+    if (lines.length < scene.lines.length) discarded.push(`${scene.id}: ${scene.lines.length - lines.length} line(s) dropped past the ${MAX_LINES_TOTAL}-line total`);
+    total += lines.length;
+    if (lines.length > 0) capped.push(lines.length === scene.lines.length ? scene : ({ ...scene, lines } as Scene));
+  }
+  return capped;
+}
+
 export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
   return {
     name: 'script',
@@ -148,7 +205,8 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
         const run = runsOf(session).find((r) => r.callEntryId === call.id);
         if (run?.outcome === 'unknown') return null;
         const ok = run ? run.outcome === 'pass' : !(result.isError ?? false);
-        return { command: cut(flat(call.command), ON_SCREEN.command), output: tail(result.text, ON_SCREEN.output), ok, entryId: call.id };
+        const headline = run ? headlineFor(run.cls, result.text) ?? undefined : undefined;
+        return { command: cut(flat(call.command), ON_SCREEN.command), output: tail(result.text, ON_SCREEN.output), ok, entryId: call.id, headline };
       };
 
       /** The scene the writer pointed at, filled from the record; or the reason there is nothing there to show. */
@@ -170,7 +228,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
           if (sha === null || patch === undefined || hunkAt === -1) return 'no patch for that commit and path';
           return { id, type: 'diff', lines, sha, path: scene.path, hunk: cut(patch.slice(hunkAt), ON_SCREEN.hunk), ...patchCounts(patch) };
         }
-        const items = STATS.filter(([key]) => Object.hasOwn(facts, key) && !(key === 'duration.minutes' && facts[key] === 0)).map(([key, label]) => ({
+        const items = STATS.filter(([key]) => Object.hasOwn(facts, key) && facts[key] !== 0).map(([key, label]) => ({
           label,
           value: cut(String(facts[key]), ON_SCREEN.statValue),
           statKey: key,
@@ -215,8 +273,11 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
       });
       if (written.length === 0) throw new Error(`the writer returned no usable scene (${discarded.length} discarded)`);
 
+      const limited = applyHardLimits(written, discarded);
+      if (limited.length === 0) throw new Error(`the writer returned no usable scene (${discarded.length} discarded)`);
+
       // The arc closes on the stats scene. A flag follows the last validation scene of its session, or precedes the stats.
-      const body = [...written.filter((s) => s.type !== 'stats'), ...written.filter((s) => s.type === 'stats')];
+      const body = [...limited.filter((s) => s.type !== 'stats'), ...limited.filter((s) => s.type === 'stats')];
       const validations = body.filter((s) => s.type === 'terminal').reverse();
       const flags = flagged.map((claim) => ({
         scene: flagScene(claim),
@@ -231,7 +292,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
       scenes.push(...loose, { id: 'end', type: 'end', lines: [], repo, verified: verify.counts.verified, flagged: verify.counts.contradicted + verify.counts.stale, unverified: verify.counts.unverifiable });
 
       const storyboard = Storyboard.parse({ runId: ctx.run.id, repo, targetSec: TARGET_SEC, facts, scenes });
-      ctx.log(`${written.length} written scenes, ${flags.length} flag scenes, ${discarded.length} pieces of writer output discarded`);
+      ctx.log(`${limited.length} written scenes, ${flags.length} flag scenes, ${discarded.length} pieces of writer output discarded`);
       return { artifact: { storyboard, discarded } };
     },
   };

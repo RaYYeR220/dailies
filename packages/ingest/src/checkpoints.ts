@@ -78,7 +78,9 @@ export interface SessionMetaOnly {
   branch: string | null;
   filesTouched: string[];
   tokens: { input: number; output: number; cacheRead: number; cacheWrite: number };
-  turnCount: number;
+  // null when the metadata carries no session_metrics at all (a headless session): the caller
+  // falls back to counting the session's own user entries once the transcript is parsed.
+  turnCount: number | null;
   transcriptOid: string | null;
 }
 
@@ -188,7 +190,7 @@ export async function readCheckpointMetadata(
         cacheRead: meta.token_usage?.cache_read_tokens ?? 0,
         cacheWrite: meta.token_usage?.cache_creation_tokens ?? 0,
       },
-      turnCount: meta.session_metrics?.turn_count ?? 0,
+      turnCount: meta.session_metrics?.turn_count ?? null,
       transcriptOid: entry.transcriptOid ?? null,
     });
   }

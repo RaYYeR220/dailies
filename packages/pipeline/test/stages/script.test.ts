@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { computeFacts, Storyboard, type Claim, type Scene } from '@dailies/core';
 import { scriptStage } from '../../src/stages/script';
-import { cleanup, harness, json, promptText, session, threeClaims, twoBeats, twoSessions, writerReply, FAILED_RUN, LIE, QUEUE_PATCH, SHA_A } from './fixture';
+import { cleanup, harness, json, promptText, session, threeClaims, twoBeats, twoSessions, writerReply, FAILED_RUN, LIE, PASSED_RUN, QUEUE_PATCH, SHA_A, SHA_B } from './fixture';
 
 afterEach(cleanup);
 
@@ -132,7 +132,7 @@ describe('script stage', () => {
     const { scenes } = await run({ reply, claims: [] });
 
     expect(ofType(scenes, 'prompt')[0]).toMatchObject({ quote: 'The queue drops jobs when the worker restarts. Add a retry with backoff.', sessionId: 's1', entryId: 's1:0' });
-    expect(ofType(scenes, 'terminal')[0]!.steps).toEqual([{ command: 'pnpm vitest run test/queue.test.ts', output: FAILED_RUN, ok: false, entryId: 's1:4' }]);
+    expect(ofType(scenes, 'terminal')[0]!.steps).toEqual([{ command: 'pnpm vitest run test/queue.test.ts', output: FAILED_RUN, ok: false, entryId: 's1:4', headline: '1 failed' }]);
     expect(ofType(scenes, 'diff')[0]).toMatchObject({ sha: SHA_A, path: 'src/queue.ts', hunk: QUEUE_PATCH.slice(QUEUE_PATCH.indexOf('@@')), added: 5, removed: 1 });
     expect(ofType(scenes, 'stats')[0]!.items).toEqual([
       { label: 'Sessions', value: '2', statKey: 'sessions.count' },
@@ -143,6 +143,95 @@ describe('script stage', () => {
       { label: 'Minutes', value: '50', statKey: 'duration.minutes' },
     ]);
     expect(JSON.stringify(scenes)).not.toMatch(/web scale|echo fine|99 passed|rewrite everything|999|Bugs/);
+  });
+
+  it('script gives a terminal step its headline from the parsed run, and none for an unclassified command', async () => {
+    const base = twoSessions();
+    const odd = session('odd', [
+      { kind: 'user', text: 'check it' },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 'a', command: 'pnpm vitest run', text: '{}' },
+      { kind: 'tool_result', toolUseId: 'a', text: PASSED_RUN },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 'b', command: 'ls src', text: '{}' },
+      { kind: 'tool_result', toolUseId: 'b', text: 'queue.ts' },
+      { kind: 'assistant', text: 'Checked.' },
+    ]);
+    const steps = (...ids: string[]) => ({ type: 'terminal', steps: ids.map((entryId) => ({ entryId })), lines: [{ text: 'The agent ran checks.', evidence: [{ type: 'entry', entryId: 'odd:1' }] }] });
+    const h = harness({
+      artifacts: { ...artifacts({ claims: [] }), ingest: { ...base, sessions: [...base.sessions, odd] } },
+      reply: () => json({ scenes: [steps('odd:1', 'odd:3')] }),
+    });
+
+    const { artifact } = await scriptStage(h.deps).run(h.ctx());
+
+    const terminal = ofType(artifact.storyboard.scenes, 'terminal')[0]!;
+    expect(terminal.steps.map((s) => [s.entryId, s.headline])).toEqual([
+      ['odd:1', '3 passed'],
+      ['odd:3', undefined],
+    ]);
+  });
+
+  it('script drops a narration line over the 18-word limit, removing a scene left with none', async () => {
+    const over = Array.from({ length: 20 }, (_, i) => `w${i}`).join(' ');
+    const reply = { scenes: [{ type: 'prompt', entryId: 's1:0', lines: [{ text: over, evidence: [{ type: 'entry', entryId: 's1:0' }] }] }, ...writerReply().scenes.slice(1)] };
+
+    const { scenes, result } = await run({ reply, claims: [] });
+
+    expect(ofType(scenes, 'prompt')).toEqual([]);
+    expect(result.artifact.discarded.join('\n')).toMatch(/18-word/);
+  });
+
+  it('script trims a 15-line writer reply to 11 lines and keeps at most two terminal scenes', async () => {
+    const lines = (n: number, prefix: string, entryId: string) =>
+      Array.from({ length: n }, (_, i) => ({ text: `${prefix} detail number ${i} about the session.`, evidence: [{ type: 'entry', entryId }] }));
+    const reply = {
+      scenes: [
+        { type: 'prompt', entryId: 's1:0', lines: lines(3, 'Prompt', 's1:0') },
+        { type: 'terminal', steps: [{ entryId: 's1:4' }], lines: lines(2, 'First run', 's1:5') },
+        { type: 'terminal', steps: [{ entryId: 's2:4' }], lines: lines(2, 'Second run', 's2:5') },
+        { type: 'terminal', steps: [{ entryId: 's2:8' }], lines: lines(2, 'Third run', 's2:9') },
+        {
+          type: 'diff',
+          sha: SHA_A,
+          path: 'src/queue.ts',
+          lines: [{ text: 'The retry lives in the run method.', evidence: [{ type: 'diff', sha: SHA_A, path: 'src/queue.ts', quote: 'return this.run(job);' }] }, ...lines(2, 'Diff', 's1:2')],
+        },
+        { type: 'stats', lines: lines(3, 'Stat', 's1:0') },
+      ],
+    };
+
+    const { scenes } = await run({ reply, claims: [] });
+
+    expect(scenes.flatMap((s) => s.lines)).toHaveLength(11);
+    expect(ofType(scenes, 'terminal')).toHaveLength(2);
+    expect(scenes.map((s) => s.type)).toEqual(['title', 'prompt', 'terminal', 'terminal', 'diff', 'stats', 'end']);
+    expect(ofType(scenes, 'stats')[0]!.lines).toHaveLength(1);
+  });
+
+  it('script keeps at most two diff scenes, dropping the third', async () => {
+    const line = (text: string) => [{ text, evidence: [{ type: 'diff', sha: SHA_A, path: 'src/queue.ts', quote: 'return this.run(job);' }] }];
+    const reply = {
+      scenes: [
+        { type: 'diff', sha: SHA_A, path: 'src/queue.ts', lines: line('The retry change is in the queue.') },
+        { type: 'diff', sha: SHA_B, path: 'src/status.ts', lines: line('The status command gained a flag.') },
+        { type: 'diff', sha: SHA_A, path: 'src/queue.ts', lines: line('A third look at the same change.') },
+      ],
+    };
+
+    const { scenes } = await run({ reply, claims: [] });
+
+    expect(ofType(scenes, 'diff')).toHaveLength(2);
+  });
+
+  it('script leaves out a stats item whose computed value is zero', async () => {
+    const base = twoSessions();
+    const ingest = { ...base, sessions: base.sessions.map((s) => ({ ...s, filesTouched: [] })) };
+    const h = harness({ artifacts: { ...artifacts({ claims: [] }), ingest }, reply: () => json({ scenes: writerReply().scenes.slice(4) }) });
+
+    const { artifact } = await scriptStage(h.deps).run(h.ctx());
+
+    const statKeys = ofType(artifact.storyboard.scenes, 'stats')[0]!.items.map((i) => i.statKey);
+    expect(statKeys).not.toContain('files.count');
+    expect(statKeys).toContain('sessions.count');
   });
 
   it('script marks a run passed or failed only as the record shows, and leaves out one it cannot read', async () => {
@@ -252,6 +341,16 @@ describe('script stage', () => {
       expect(told).toContain(part);
     }
     expect(told).not.toMatch(/Feedback on the previous cut/);
+  });
+
+  it('script tells the writer the hard limits code enforces: 11 lines, 18 words, two terminal and two diff scenes', async () => {
+    const { h } = await run();
+
+    const told = promptText(h.calls[0]!.messages);
+    expect(told).toMatch(/\b11 lines\b/);
+    expect(told).toMatch(/\b18 words\b/);
+    expect(told).toMatch(/\btwo terminal scenes\b/);
+    expect(told).toMatch(/\btwo diff scenes\b/);
   });
 
   it('script shows recorded text to the writer as quoted material that cannot pose as part of the prompt', async () => {

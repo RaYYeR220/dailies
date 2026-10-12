@@ -12,7 +12,7 @@ export * from './wav';
 export * from './silence';
 export * from './align';
 
-const NARRATOR_PREFIX = 'Read as a calm, dry documentary narrator. Pause for a full second between paragraphs.\n\n';
+const NARRATOR_PREFIX = 'Read as a calm, dry documentary narrator. Pause briefly between paragraphs.\n\n';
 
 export async function voiceLines(
   lines: { id: string; text: string }[],

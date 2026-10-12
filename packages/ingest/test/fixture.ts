@@ -18,6 +18,10 @@ export interface FixtureSession {
   sessionId: string;
   createdAt: string;
   lines: FixtureLine[];
+  /** A headless session's metadata.json carries no session_metrics, so no turn_count either. */
+  headless?: boolean;
+  /** Overrides the metadata's turn_count; defaults to lines.length. */
+  turnCount?: number;
 }
 
 export interface FixtureCheckpoint {
@@ -93,7 +97,7 @@ async function buildSessionNode(repoDir: string, session: FixtureSession): Promi
     branch: 'main',
     files_touched: [],
     token_usage: { input_tokens: 100, output_tokens: 50, cache_read_tokens: 0, cache_creation_tokens: 0 },
-    session_metrics: { turn_count: session.lines.length },
+    ...(session.headless ? {} : { session_metrics: { turn_count: session.turnCount ?? session.lines.length } }),
   };
   const transcript = session.lines.map((l) => JSON.stringify(l)).join('\n');
   const [metaSha, promptSha, transcriptSha, fullSha] = await Promise.all([

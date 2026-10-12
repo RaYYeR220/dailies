@@ -231,7 +231,9 @@ describe('ground stage', () => {
 
     const { result, artifact } = await ground({ reply, claims: [], rewrites: Array.from({ length: 30 }, () => ({ text: '' })) });
 
-    expect(artifact.dropped).toHaveLength(15);
+    // the script stage's own 11-line-total hard limit (Task 8c) trims the writer's 5 scenes x 3
+    // lines = 15 down to 11 before ground ever sees them
+    expect(artifact.dropped).toHaveLength(11);
     expect(artifact.dropped[0]!.reasons).toHaveLength(13);
     expect(result.loopBackTo).toBe('script');
     expect(result.reason!.length).toBe(1500);

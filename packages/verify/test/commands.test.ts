@@ -21,4 +21,10 @@ describe('classifyCommand', () => {
   it('prefers test over build when a command chain has both', () => {
     expect(classifyCommand('next build && pnpm test')).toBe('test');
   });
+
+  it('classifies pm typecheck scripts as typecheck', () => {
+    expect(classifyCommand('pnpm typecheck')).toBe('typecheck');
+    expect(classifyCommand('pnpm run type-check')).toBe('typecheck');
+    expect(classifyCommand('yarn check-types')).toBe('typecheck');
+  });
 });

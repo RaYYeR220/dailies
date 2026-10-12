@@ -73,4 +73,22 @@ describe('voiceLines', () => {
     expect(calls).toBe(1);
     expect(second.audioPath).toBe(first.audioPath);
   });
+
+  it('asks for a short pause between paragraphs, not a full second', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'voice-lines-'));
+    const lines = [{ id: 'a', text: 'Hello there.' }, { id: 'b', text: 'Goodbye now.' }];
+    let seenText = '';
+    const provider: TtsProvider = {
+      name: 'mock',
+      synthesize: async (text) => {
+        seenText = text;
+        return { pcm: silentPcm(1), sampleRate: 24000 };
+      },
+    };
+
+    await voiceLines(lines, { provider, voice: 'Kore', outDir: dir, maxCalls: 1 });
+
+    expect(seenText).toContain('Pause briefly between paragraphs.');
+    expect(seenText).not.toMatch(/a full second/);
+  });
 });

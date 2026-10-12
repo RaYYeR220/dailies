@@ -78,7 +78,7 @@ const silent = { id: z.string(), lines: z.array(Line).max(0).default([]) };
 export const Scene = z.discriminatedUnion('type', [
   z.object({ ...silent, type: z.literal('title'), repo: z.string(), windowLabel: z.string(), sessionCount: z.number().int(), commitCount: z.number().int() }),
   z.object({ ...spoken, type: z.literal('prompt'), quote: z.string().max(280), sessionId: z.string(), entryId: z.string() }),
-  z.object({ ...spoken, type: z.literal('terminal'), steps: z.array(z.object({ command: z.string().max(200), output: z.string().max(600), ok: z.boolean(), entryId: z.string() })).min(1).max(4) }),
+  z.object({ ...spoken, type: z.literal('terminal'), steps: z.array(z.object({ command: z.string().max(200), output: z.string().max(600), ok: z.boolean(), entryId: z.string(), headline: z.string().max(24).optional() })).min(1).max(4) }),
   z.object({ ...spoken, type: z.literal('diff'), sha: z.string(), path: z.string(), hunk: z.string().max(2400), added: z.number().int(), removed: z.number().int() }),
   z.object({ ...spoken, type: z.literal('stats'), items: z.array(z.object({ label: z.string().max(24), value: z.string().max(16), statKey: z.string() })).min(1).max(6) }),
   z.object({ ...spoken, type: z.literal('flag'), claimId: z.string(), quote: z.string().max(240), verdict: z.enum(['contradicted', 'stale']), reality: z.string().max(200) }),
