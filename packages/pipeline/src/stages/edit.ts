@@ -223,12 +223,20 @@ export function editStage(deps: StageDeps): Stage<EditArtifact> {
       const commits = knownCommits(ingest);
       const fallback = () => fallbackBeats(ingest.sessions, MAX_BEATS);
 
-      const memory = await recallRepo(deps.mcp ?? null, ctx.run.repoUrl);
+      const repo = repoLabel(ctx.run.repoUrl);
+      // Credential-free by construction (repoLabel never carries a URL's userinfo): the run's repoUrl can
+      // hold a token the user pasted into it, and recallRepo's query goes out to neatlogs, a third party.
+      const memory = await recallRepo(deps.mcp ?? null, repo).catch((err: unknown): RunMemory => ({
+        status: 'skipped',
+        reason: err instanceof Error ? err.message : String(err),
+        previousRuns: 0,
+        notes: [],
+      }));
       ctx.log(memory.status === 'used' ? `memory: ${memory.previousRuns} earlier runs, ${memory.notes.length} with failures` : `memory: skipped, ${memory.reason}`);
 
       const outlines = outlinesWithin(ingest.sessions, OUTLINE_BUDGET_CHARS);
       const { system, user } = editorPrompt({
-        repo: repoLabel(ctx.run.repoUrl),
+        repo,
         since: ctx.run.since,
         until: ctx.run.until,
         maxBeats: MAX_BEATS,

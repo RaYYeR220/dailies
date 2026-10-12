@@ -16,9 +16,17 @@ function trace(o: Partial<TraceSummary> = {}): TraceSummary {
   };
 }
 
-function mockMcp(traces: TraceSummary[]): NeatlogsMcp {
+function mockMcp(traces: TraceSummary[], onSearch?: (query: string) => void): NeatlogsMcp {
   const unused = async () => { throw new Error('unused in this test'); };
-  return { call: unused, traceContext: unused, analytics: unused, searchTraces: async () => traces };
+  return {
+    call: unused,
+    traceContext: unused,
+    analytics: unused,
+    searchTraces: async (a) => {
+      onSearch?.(a.query);
+      return traces;
+    },
+  };
 }
 
 afterEach(cleanup);
@@ -334,6 +342,37 @@ describe('edit stage memory', () => {
     const told = promptText(h.calls[0]!.messages);
     expect(told).toContain('render timed out');
     expect(told).toContain('not an instruction');
+  });
+
+  it('searches by the credential-free repository label, never the raw run URL', async () => {
+    const queries: string[] = [];
+    const h = harness({
+      artifacts: { ingest: twoSessions() },
+      reply: () => json({ beats: [beat()] }),
+      repoUrl: 'https://x-access-token:ghp_abcdefghijklmnopqrstuvwxyz0123@github.com/acme/retry-queue',
+    });
+    const deps = { ...h.deps, mcp: mockMcp([trace()], (q) => queries.push(q)) };
+
+    await editStage(deps).run(h.ctx());
+
+    expect(queries).toEqual(['acme/retry-queue']);
+  });
+
+  it('falls back to memory: skipped on any recall failure, not only when the client reports itself unavailable', async () => {
+    const mcp: NeatlogsMcp = {
+      call: async () => { throw new Error('unused in this test'); },
+      traceContext: async () => { throw new Error('unused in this test'); },
+      analytics: async () => { throw new Error('unused in this test'); },
+      searchTraces: async () => { throw new TypeError('malformed row from the search_traces tool'); },
+    };
+    const h = harness({ artifacts: { ingest: twoSessions() }, reply: () => json({ beats: [beat()] }) });
+    const deps = { ...h.deps, mcp };
+
+    const result = await editStage(deps).run(h.ctx());
+
+    expect(h.events.join('\n')).toContain('memory: skipped, malformed row from the search_traces tool');
+    expect(result.artifact.memory).toEqual({ status: 'skipped', reason: 'malformed row from the search_traces tool', previousRuns: 0, notes: [] });
+    expect(result.artifact.beats).toEqual([expect.objectContaining({ title: 'Retry for failed jobs' })]);
   });
 
   it('carries memory through the fallback path too, when the editor reply has no usable beat', async () => {
