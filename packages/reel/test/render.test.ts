@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureBrowser } from '@remotion/renderer';
 import { buildTimeline, renderReel, renderStills, toSrt } from '../src/index';
-import { stillName } from '../src/render';
+import { renderSettingsFromEnv, stillName } from '../src/render';
 import { fixtureStoryboard, fixtureTimings, shortStoryboard, stressStoryboard, stressTimings } from './fixture';
 
 const RENDER_TIMEOUT = 120_000;
@@ -84,6 +84,34 @@ describe('renderReel', () => {
 
   it('fails before rendering when a line has no timing', async () => {
     await expect(renderReel({ storyboard: fixtureStoryboard(), timings: [], audioPath: null, outDir: scratch() })).rejects.toThrow(/no timing for line l1/);
+  });
+});
+
+describe('renderSettingsFromEnv', () => {
+  it('defaults to scale 1 and leaves concurrency to the renderer when nothing is set', () => {
+    expect(renderSettingsFromEnv({})).toEqual({ concurrency: undefined, scale: 1 });
+  });
+
+  it('reads a positive integer concurrency and a scale between 0.25 and 1', () => {
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_CONCURRENCY: '4', DAILIES_RENDER_SCALE: '0.667' })).toEqual({ concurrency: 4, scale: 0.667 });
+  });
+
+  it('ignores an invalid concurrency and logs a warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_CONCURRENCY: '-1' })).toEqual({ concurrency: undefined, scale: 1 });
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_CONCURRENCY: 'abc' })).toEqual({ concurrency: undefined, scale: 1 });
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_CONCURRENCY: '2.5' })).toEqual({ concurrency: undefined, scale: 1 });
+    expect(warn).toHaveBeenCalledTimes(3);
+    warn.mockRestore();
+  });
+
+  it('ignores a scale outside 0.25 to 1 and logs a warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_SCALE: '0.1' })).toEqual({ concurrency: undefined, scale: 1 });
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_SCALE: '2' })).toEqual({ concurrency: undefined, scale: 1 });
+    expect(renderSettingsFromEnv({ DAILIES_RENDER_SCALE: 'not-a-number' })).toEqual({ concurrency: undefined, scale: 1 });
+    expect(warn).toHaveBeenCalledTimes(3);
+    warn.mockRestore();
   });
 });
 
