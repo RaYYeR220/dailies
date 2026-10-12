@@ -12,7 +12,10 @@ const RULES: [string, RegExp][] = [
 
 // A user's home directory: the owner's name is itself an identifying string, worth hiding from a terminal
 // scene the same way a secret is, but it is not a secret hit (the gate's secret check must stay unaffected).
-const HOME_DIR = /\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Za-z]:\\Users\\[^\\\s]+/g;
+// The name itself is bounded to realistic account-name characters so the match cannot run on past a quote,
+// a comma or other trailing punctuation a real path would never contain.
+const USER = '[A-Za-z0-9_-]{1,64}';
+const HOME_DIR = new RegExp(`/Users/${USER}|/home/${USER}|[A-Za-z]:\\\\Users\\\\${USER}`, 'g');
 
 export function redact(input: string): { text: string; hits: number; homePaths: number } {
   let hits = 0; let text = input;

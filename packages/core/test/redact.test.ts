@@ -44,6 +44,12 @@ describe('redact', () => {
     expect(win.hits).toBe(0);
   });
 
+  it('does not swallow trailing punctuation into the username', () => {
+    const r = redact('see /Users/yehor, then check /home/yehor.');
+    expect(r.text).toBe('see ~, then check ~.');
+    expect(r.homePaths).toBe(2);
+  });
+
   it('counts several home paths in one string and never touches a secret hit', () => {
     const r = redact('cp /Users/yehor/a.txt /home/yehor/b.txt # TOKEN=aVeryRealSecretValue123');
     expect(r.text).toBe('cp ~/a.txt ~/b.txt # TOKEN=[REDACTED:assignment]');
