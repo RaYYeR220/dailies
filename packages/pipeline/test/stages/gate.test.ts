@@ -76,6 +76,12 @@ describe('gate stage', () => {
     expect(check('cost').reasons).toEqual(['spent $0.7000 of a $0.6525 budget']);
   });
 
+  it('gate lets through a cut the runner kept for want of budget, and carries its finding to the approver', async () => {
+    const kept = await gate({ review: { pass: false, keptForBudget: true, findings: [finding()] } });
+    expect(kept.check('review')).toEqual({ name: 'review', pass: true, reasons: ['for the approver, no budget for another cut: sc_2: text overflows the frame'] });
+    expect(kept.result.final?.status).toBe('needs_approval');
+  });
+
   it('gate blocks on a high-severity review finding and passes low ones', async () => {
     const high = await gate({ review: { pass: false, findings: [finding({ severity: 'low', issue: 'short silent gap' }), finding()] } });
     expect(high.result.final).toEqual({ status: 'blocked', reason: 'review' });

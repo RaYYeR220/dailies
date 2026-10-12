@@ -13,7 +13,7 @@ type Check = GateArtifact['checks'][number];
 const MAX_REASONS = 20;
 const REASON_CHARS = 200;
 
-const ReviewArtifact = z.object({ findings: z.array(Finding) });
+const ReviewArtifact = z.object({ findings: z.array(Finding), keptForBudget: z.boolean().optional() });
 
 const check = (name: string, reasons: string[]): Check => ({ name, pass: reasons.length === 0, reasons: reasons.slice(0, MAX_REASONS) });
 
@@ -74,7 +74,11 @@ function review(ctx: StageContext): Check {
   }
   const parsed = ReviewArtifact.safeParse(artifact);
   if (!parsed.success) return check('review', ['the review artifact could not be read']);
-  return check('review', parsed.data.findings.filter((f) => f.severity === 'high').map((f) => oneLine(`${f.sceneId ?? 'reel'}: ${f.issue}`, REASON_CHARS)));
+  const high = parsed.data.findings.filter((f) => f.severity === 'high').map((f) => oneLine(`${f.sceneId ?? 'reel'}: ${f.issue}`, REASON_CHARS));
+  // The runner kept this cut because the budget could not pay for another. The finding is not waved through: it is
+  // carried to the approver in the gate's report, and the reel still needs a person's yes.
+  if (parsed.data.keptForBudget) return { name: 'review', pass: true, reasons: high.slice(0, MAX_REASONS).map((r) => `for the approver, no budget for another cut: ${r}`) };
+  return check('review', high);
 }
 
 export function gateStage(deps: StageDeps): Stage<GateArtifact> {

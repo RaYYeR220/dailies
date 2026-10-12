@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_BUDGET, BudgetExceededError } from '@dailies/core';
 import { openDb, createRun, getRun, listEvents, addCost, unfinishedRuns, runPipeline, recut } from '../src/index';
+import { readArtifact } from '../src/store';
 import type { Database, Stage, StageName } from '../src/index';
 
 // Captures what the runner hands to @dailies/agent's traced(), without a real neatlogs export: the kind and
@@ -170,6 +171,36 @@ describe('runPipeline', () => {
     const run = getRun(db, id);
     expect(run.loops).toBe(2);
     expect(run.reason).toBe('not enough evidence');
+  });
+
+  it('makes the re-cut of the review stage only when the budget can pay for another cut', async () => {
+    const cut = (usd: number, reviewCalls: { n: number }): Stage[] => [
+      { name: 'script', maxAttempts: 1, run: async (ctx) => { addCost(db, ctx.run.id, usd); return { artifact: {} }; } },
+      {
+        name: 'review',
+        maxAttempts: 1,
+        run: async () => {
+          reviewCalls.n += 1;
+          return reviewCalls.n === 1 ? { artifact: { pass: false, findings: [] }, loopBackTo: 'script', reason: 'frame 3 is unreadable' } : { artifact: { pass: true, findings: [] } };
+        },
+      },
+    ];
+
+    // $0.20 a cut inside a $0.6525 budget: the second cut is affordable and is made.
+    const cheap = { n: 0 };
+    const a = createRun(db, input);
+    expect(await runPipeline(db, a, cut(0.2, cheap), { dataDir, sleep: noSleep })).toBe('needs_approval');
+    expect(cheap.n).toBe(2);
+    expect(getRun(db, a).loops).toBe(1);
+
+    // $0.40 a cut: a second one would end at $0.80. The first cut is kept and marked.
+    const dear = { n: 0 };
+    const b = createRun(db, input);
+    expect(await runPipeline(db, b, cut(0.4, dear), { dataDir, sleep: noSleep })).toBe('needs_approval');
+    expect(dear.n).toBe(1);
+    expect(getRun(db, b).loops).toBe(0);
+    expect(readArtifact<{ keptForBudget?: boolean }>(dataDir, b, 'review').keptForBudget).toBe(true);
+    expect(listEvents(db, b, 0).some((e) => e.stage === 'review' && /this cut is kept/.test(e.message))).toBe(true);
   });
 
   it('passes the loop-back reason to the stage as ctx.feedback', async () => {

@@ -18,6 +18,9 @@ import type { Database, RunStatus, Stage, StageContext, StageName } from './type
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+// After a restart the price of the last cut is not in memory; a cut has cost about this share of a run so far.
+const RECUT_SHARE_WHEN_UNKNOWN = 0.3;
+
 const STAGE_ORDER: StageName[] = ['ingest', 'edit', 'verify', 'script', 'ground', 'voice', 'render', 'review', 'gate'];
 
 function ensureRecutFeedbackTable(db: Database): void {
@@ -57,6 +60,8 @@ async function executeRun(
   const sleep = o.sleep;
   const runDir = join(o.dataDir, 'runs', runId);
   let feedback: string | null = readRecutFeedback(db, runId);
+  // What the run had spent when each stage last began, so that the price of one cut can be told from the record.
+  const spentAtStart = new Map<StageName, number>();
 
   let i = stages.findIndex((s) => !isStageDone(db, runId, s.name));
   if (i === -1) i = stages.length;
@@ -73,6 +78,7 @@ async function executeRun(
     };
 
     const attempt = beginStageAttempt(db, runId, stage.name);
+    spentAtStart.set(stage.name, ctx.run.costUsd);
     try {
       const result = await traced('CHAIN', stage.name, () => stage.run(ctx))();
       writeArtifact(o.dataDir, runId, stage.name, result.artifact);
@@ -88,6 +94,21 @@ async function executeRun(
       if (result.loopBackTo) {
         const target = stages.findIndex((s) => s.name === result.loopBackTo);
         if (target === -1) throw new Error(`loopBackTo names an unknown stage: ${result.loopBackTo}`);
+        // The review's re-cut is for quality, and it is made only when the budget can pay for it: a second cut
+        // that pushes the run past its ceiling would be refused at the gate, finding or no finding. The cut that
+        // exists is kept instead, and the finding goes to the person who approves.
+        if (stage.name === 'review') {
+          const now = getRun(db, runId);
+          const startedAt = spentAtStart.get(result.loopBackTo);
+          const oneCut = startedAt === undefined ? now.costUsd * RECUT_SHARE_WHEN_UNKNOWN : now.costUsd - startedAt;
+          if (now.costUsd + oneCut > now.budget.maxCostPerReelUsd) {
+            writeArtifact(o.dataDir, runId, stage.name, { ...(result.artifact as Record<string, unknown>), keptForBudget: true });
+            appendEvent(db, runId, stage.name, `another cut would cost about $${oneCut.toFixed(2)} on top of $${now.costUsd.toFixed(2)} and pass the $${Number(now.budget.maxCostPerReelUsd.toFixed(4))} ceiling: this cut is kept, and the finding goes to the person who approves`);
+            markStageDone(db, runId, stage.name);
+            i += 1;
+            continue;
+          }
+        }
         if (getRun(db, runId).loops < 2) {
           db.transaction(() => {
             markStageDone(db, runId, stage.name);

@@ -36,7 +36,10 @@ export function gateFrames(gate: { checks: GateCheck[] } | null, budgetUsd: numb
   const frames: GateFrame[] = known.map((k) => {
     const check = checks.get(k.key);
     checks.delete(k.key);
-    return { ...k, state: check ? (check.pass ? 'pass' : 'fail') : 'pending', reasons: check?.reasons ?? [] };
+    // A review that passed and still has something to say kept a cut the budget could not pay to redo.
+    const kept = k.key === 'review' && check?.pass === true && check.reasons.some((r) => r.startsWith('for the approver'));
+    const blurb = kept ? 'The self-review found something, and the budget could not pay for another cut. It is yours to judge.' : k.blurb;
+    return { ...k, blurb, state: check ? (check.pass ? 'pass' : 'fail') : 'pending', reasons: check?.reasons ?? [] };
   });
   for (const [key, check] of checks) {
     frames.push({ key, title: titled(key), blurb: '', state: check.pass ? 'pass' : 'fail', reasons: check.reasons });
