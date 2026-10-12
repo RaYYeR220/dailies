@@ -5,7 +5,7 @@
 1. **The video** (2 min 38 s): [`evidence/video/dailies-demo.mp4`](evidence/video/dailies-demo.mp4), and linked from the submission post.
 2. **A finished reel**, without running anything: [`evidence/reels/acme-api-demo/reel.mp4`](evidence/reels/acme-api-demo/reel.mp4). 59 seconds, one command, $0.20.
 3. **The service:** https://dailies-reel.vercel.app. The reel on the front page is the demonstration reel: the same pipeline made it from the command line, and the run was copied to the server because its repository is a local one. Open it with its sources and click a narration line to see the session entry or the diff it rests on.
-4. **Your own repository:** paste any public GitHub repository that has Entire checkpoints. A run takes a few minutes, most of it rendering on a small server with no graphics card. Three runs a day per address.
+4. **Your own repository:** paste any public GitHub repository that has Entire checkpoints (this one works: `github.com/RaYYeR220/dailies`). A run takes about ten minutes, most of it rendering on a small server with no graphics card, and runs are taken one at a time. Three runs a day per address.
 
 From a checkout, `pnpm dailies verify <repository URL> --since 7d` prints the verdicts and renders nothing.
 
