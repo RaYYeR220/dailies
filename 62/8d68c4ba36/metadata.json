@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "628d68c4ba36",
+  "strategy": "manual-commit",
+  "branch": "task/8e-rule-precision-2",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/pipeline/test/stages/verify.test.ts",
+    "packages/verify/src/results.ts",
+    "packages/verify/src/rules.ts",
+    "packages/verify/test/results.test.ts",
+    "packages/verify/test/rules.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/62/8d68c4ba36/0/metadata.json",
+      "transcript": "/62/8d68c4ba36/0/full.jsonl",
+      "compact_transcript": "/62/8d68c4ba36/0/transcript.jsonl",
+      "content_hash": "/62/8d68c4ba36/0/content_hash.txt",
+      "prompt": "/62/8d68c4ba36/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 110,
+    "cache_creation_tokens": 194610,
+    "cache_read_tokens": 8066179,
+    "output_tokens": 72324,
+    "api_call_count": 55
+  }
+}
