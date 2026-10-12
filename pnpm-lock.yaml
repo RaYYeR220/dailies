@@ -84,12 +84,18 @@ importers:
 
   packages/cli:
     dependencies:
+      '@dailies/agent':
+        specifier: workspace:*
+        version: link:../agent
       '@dailies/core':
         specifier: workspace:*
         version: link:../core
       '@dailies/pipeline':
         specifier: workspace:*
         version: link:../pipeline
+      '@dailies/voice':
+        specifier: workspace:*
+        version: link:../voice
 
   packages/core:
     dependencies:
@@ -3355,7 +3361,7 @@ snapshots:
 
   '@types/better-sqlite3@9.6.0':
     dependencies:
-      '@types/node': 26.6.5
+      '@types/node': 20.19.43
 
   '@types/chai@5.2.3':
     dependencies:

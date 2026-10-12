@@ -18,7 +18,7 @@ export type { GroundArtifact } from './ground';
 export type { VoiceArtifact } from './voice';
 export type { GateArtifact } from './gate';
 
-export interface StageDeps { db: Database; client: ModelClient; meter: CostMeter; tts: TtsProvider | null; voice: string }
+export interface StageDeps { db: Database; client: ModelClient; meter: CostMeter; tts: TtsProvider | null; voice: string; maxSessions?: number }
 
 /**
  * The stage, with whatever it adds to the meter recorded against the run. A failed attempt is recorded too:
@@ -41,6 +41,6 @@ export function recordSpend<T>(deps: Pick<StageDeps, 'db' | 'meter'>, stage: Sta
 
 /** ingest, edit, verify, script, ground, voice, render, gate. The review stage is built apart and goes before the gate. */
 export function buildStages(deps: StageDeps): Stage[] {
-  const stages: Stage[] = [ingestStage(), editStage(deps), verifyStage(deps), scriptStage(deps), groundStage(deps), voiceStage(deps), renderStage(), gateStage(deps)];
+  const stages: Stage[] = [ingestStage(deps), editStage(deps), verifyStage(deps), scriptStage(deps), groundStage(deps), voiceStage(deps), renderStage(), gateStage(deps)];
   return stages.map((stage) => recordSpend(deps, stage));
 }

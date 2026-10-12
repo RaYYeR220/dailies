@@ -65,6 +65,20 @@ describe('voice stage', () => {
     expect(artifact.mode).toBe('captions');   // voiceLines falls back when the quota is gone
   });
 
+  it('voice falls back to a captions cut, with estimated timings, when the provider fails with something other than quota', async () => {
+    const { tts, asked } = provider(() => {
+      throw new Error('network error: ECONNRESET');
+    });
+    const h = harness({ artifacts: await artifacts(), tts });
+
+    const { artifact } = await voiceStage(h.deps).run(h.ctx());
+
+    expect(asked).toHaveLength(1);
+    const ids = ['l1', 'l2', 'l3', 'flag_c_1_quote', 'flag_c_1_reality', 'l4', 'l5'];
+    expect(artifact).toEqual({ mode: 'captions', audioPath: null, timings: estimateTimings(ids.map((id, n) => ({ id, text: GROUNDED[n]! }))), calls: 0 });
+    expect(h.events.some((e) => e.includes('ECONNRESET'))).toBe(true);
+  });
+
   it('voice makes no TTS call when the run budget allows none', async () => {
     const { tts, asked } = provider(() => ({ pcm: Buffer.alloc(0), sampleRate: 24000 }));
     const h = harness({ artifacts: await artifacts(), tts, budget: { maxCostPerReelUsd: 0.6, maxTtsCalls: 0, maxRenderSec: 300 } });

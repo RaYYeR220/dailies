@@ -195,6 +195,7 @@ export function harness(o: {
   tts?: TtsProvider | null;
   costPerCall?: number;
   repoUrl?: string;
+  maxSessions?: number;
 } = {}) {
   const budget = o.budget ?? DEFAULT_BUDGET;
   const db: Database = openDb(':memory:');
@@ -235,7 +236,7 @@ export function harness(o: {
     feedback,
   });
 
-  const deps: StageDeps = { db, client, meter, tts: o.tts ?? null, voice: 'Charon' };
+  const deps: StageDeps = { db, client, meter, tts: o.tts ?? null, voice: 'Charon', maxSessions: o.maxSessions };
   return { db, dataDir, runId, deps, meter, calls, artifacts, events, ctx };
 }
 

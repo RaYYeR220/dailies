@@ -932,8 +932,10 @@ Depends on Tasks 8 and 9.
 **Files:** `packages/cli/src/{index.ts,run.ts,verify.ts}`, `packages/cli/bin/{dailies,entire-dailies}`, `packages/cli/test/e2e.test.ts`, `README.md`
 
 **Interfaces:**
-- Consumes: `buildStages`, `recordSpend`, `reviewStage`, `openDb`, `createRun`, `runPipeline`, `getRun`, `listEvents`; `ingest`; `createRouter`, `CostMeter`, `initTracing`, `shutdownTracing`, `completeJson`; `verifyClaims`; `createGeminiTts`; `loadEnv`, `DEFAULT_BUDGET`.
+- Consumes: `buildStages`, `openDb`, `createRun`, `runPipeline`, `getRun`, `listEvents`; `createRouter`, `CostMeter`, `initTracing`, `shutdownTracing`, `traced`; `createGeminiTts`; `loadEnv`, `DEFAULT_BUDGET`.
 - Produces: the commands below.
+- Corrected from the plan as written: `@dailies/pipeline`'s index exports `buildStages`/`recordSpend` and only the stage *artifact types*, not `ingestStage`, `verifyStage` or `reviewStage` themselves — the plan's `reviewStage`, bare `ingest` and `completeJson` are not reachable through that one door and are not used. `run` inserts no review stage (see the note below); `verify` reuses `buildStages(deps)` filtered to `ingest` and `verify` rather than calling `ingest()`/`completeJson()` directly, so claim extraction has exactly one implementation.
+- `reviewStage` is not exported from `@dailies/pipeline` (only its artifact type is) — an omission in Task 9's work, outside the files Task 10 may touch to fix. `--no-review` is accepted on the command line for the documented surface below, but there is currently nothing for it to disable: every run executes `buildStages`' eight stages unmodified.
 
 ```
 dailies run <repo-url|path> [--since 24h|<ISO>] [--max-sessions 12] [--out <dir>] [--no-voice] [--no-review]

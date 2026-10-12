@@ -99,4 +99,28 @@ describe('ingest stage', () => {
     expect(result.final).toEqual(NO_SESSIONS);
     expect(result.artifact.repo.url).toBe('file://fileserver/acme/nothing-here');
   });
+
+  it('ingest passes the deps maxSessions cap through to ingest()', async () => {
+    const dir = await repo([
+      recorded('one', '2026-10-10T07:00:00Z'),
+      recorded('two', '2026-10-10T08:00:00Z'),
+      recorded('three', '2026-10-10T09:00:00Z'),
+    ]);
+    const h = harness({ repoUrl: dir, maxSessions: 1 });
+
+    const result = await ingestStage(h.deps).run(h.ctx());
+
+    expect(result.artifact.sessions.map((s) => s.id)).toEqual(['three']);
+  });
+
+  it('ingest forwards onProgress messages from ingest() into ctx.log', async () => {
+    const dir = await repo([recorded('fresh', '2026-10-10T07:00:00Z')]);
+    const h = harness({ repoUrl: dir });
+
+    await ingestStage(h.deps).run(h.ctx());
+
+    expect(h.events).toContain('cloning');
+    expect(h.events.some((e) => /checkpoints/.test(e))).toBe(true);
+    expect(h.events.some((e) => /sessions in window/.test(e))).toBe(true);
+  });
 });
