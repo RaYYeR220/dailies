@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { traced } from '@dailies/agent';
 import { BudgetExceededError } from '@dailies/core';
 import {
   appendEvent,
@@ -47,16 +48,13 @@ export function recut(db: Database, runId: string, feedback: string): void {
   })();
 }
 
-export async function runPipeline(
+async function executeRun(
   db: Database,
   runId: string,
   stages: Stage[],
-  o: { dataDir: string; sleep?: (ms: number) => Promise<void> },
+  o: { dataDir: string; sleep: (ms: number) => Promise<void> },
 ): Promise<RunStatus> {
-  const initial = getRun(db, runId);
-  if (initial.status !== 'running') return initial.status;
-
-  const sleep = o.sleep ?? defaultSleep;
+  const sleep = o.sleep;
   const runDir = join(o.dataDir, 'runs', runId);
   let feedback: string | null = readRecutFeedback(db, runId);
 
@@ -76,7 +74,7 @@ export async function runPipeline(
 
     const attempt = beginStageAttempt(db, runId, stage.name);
     try {
-      const result = await stage.run(ctx);
+      const result = await traced('CHAIN', stage.name, () => stage.run(ctx))();
       writeArtifact(o.dataDir, runId, stage.name, result.artifact);
 
       if (result.final) {
@@ -129,4 +127,26 @@ export async function runPipeline(
 
   setRunFinal(db, runId, 'needs_approval', null);
   return 'needs_approval';
+}
+
+export async function runPipeline(
+  db: Database,
+  runId: string,
+  stages: Stage[],
+  o: { dataDir: string; sleep?: (ms: number) => Promise<void> },
+): Promise<RunStatus> {
+  const initial = getRun(db, runId);
+  if (initial.status !== 'running') return initial.status;
+
+  const sleep = o.sleep ?? defaultSleep;
+  // The run's own span, nested under whatever span the caller already has open (the command-line tool and the
+  // worker each start one per run). Each stage's CHAIN span, opened inside executeRun, nests under this one.
+  // Its captured output carries what the trace previously had no way to show: a run that ends failed used to
+  // look like a successful trace, because runPipeline itself never throws — it returns a status string.
+  const outcome = await traced('CHAIN', 'run', async () => {
+    const status = await executeRun(db, runId, stages, { dataDir: o.dataDir, sleep });
+    const run = getRun(db, runId);
+    return { status, reason: run.reason, costUsd: run.costUsd };
+  })();
+  return outcome.status;
 }
