@@ -49,7 +49,7 @@ function frameGlyph(scene: Scene): string {
   if (scene.type === 'prompt') return '“ ”';
   if (scene.type === 'terminal') {
     const last = scene.steps.at(-1)!;
-    return decisive(last.output) ?? (last.ok ? 'ran' : 'failed');
+    return last.headline ?? decisive(last.output) ?? (last.ok ? 'ran' : 'failed');
   }
   if (scene.type === 'diff') return `+${scene.added} −${scene.removed}`;
   if (scene.type === 'stats') return scene.items[0]?.value ?? '';

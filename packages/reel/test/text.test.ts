@@ -229,6 +229,12 @@ describe('decisive', () => {
   it('gives the last line of output that has no count in it', () => {
     expect(decisive('compiling…\n\nerror: could not   find `Cargo.toml`\n', false)).toEqual({ kind: 'line', headline: 'error: could not find `Cargo.toml`', detail: null });
   });
+  it('shows the result the pipeline read, not a later count in the same output', () => {
+    const vitest = ' Test Files  1 failed (1)\n      Tests  3 failed | 10 passed (13)\n     Errors  1 error\n   Start at  03:45:55';
+    expect(decisive(vitest, false)).toMatchObject({ headline: '1 error' });
+    expect(decisive(vitest, false, '3 failed')).toEqual({ kind: 'count', headline: '3 failed', detail: '10 passed' });
+    expect(decisive('$ tsc --noEmit', true, '0 errors')).toEqual({ kind: 'count', headline: '0 errors', detail: null });
+  });
   it('says only what the step itself says when there is no output', () => {
     expect(decisive(' \n', true)).toEqual({ kind: 'status', headline: 'ok', detail: null });
     expect(decisive('', false)).toEqual({ kind: 'status', headline: 'failed', detail: null });

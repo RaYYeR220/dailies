@@ -31,7 +31,7 @@ function useSteps(scene: SceneOf<'terminal'>) {
     steps: steps.map((step, i) => ({
       ok: step.ok,
       command: `$ ${step.command.replace(/\s+/g, ' ').trim()}`,
-      result: decisive(clampEnd(step.output, LIMITS.output), step.ok),
+      result: decisive(clampEnd(step.output, LIMITS.output), step.ok, step.headline),
       entryId: step.entryId,
       // The pencil waits for the lens: after the landing for the first step, after the strip has moved on for the others.
       cue: cueFrame(spans[i]!, m.fps, i === 0 ? m.landing : spans[i]!.start + advance),

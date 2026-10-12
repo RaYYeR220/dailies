@@ -275,11 +275,24 @@ const GOOD = /^(passed|passing)$/;
  * What a command's output comes down to. A test runner's summary gives a count (`2 failed`, with `12 passed` as the
  * rest); the last such line wins, since that is where a runner prints its totals. Output with no count gives its last
  * line. `ok` is the step's own verdict and decides which count leads; it is also all there is when the output is empty.
+ * A `said` result is the one the pipeline already read from the run (a runner can print `3 failed` and then `1 error`
+ * on a later line): it is shown as given, with the rest of the line it stands on.
  */
-export function decisive(output: string, ok: boolean): Decisive {
+export function decisive(output: string, ok: boolean, said?: string): Decisive {
   const lines = output.split('\n').map(monoLine).map((l) => l.trim()).filter(Boolean);
   const pairsOf = (line: string) =>
     [...line.matchAll(COUNTED)].map((m) => ({ count: m[1]!, word: m[2]!.toLowerCase() })).filter((p) => Number(p.count.replace(/,/g, '')) > 0);
+  const headline = said?.replace(/\s+/g, ' ').trim();
+  if (headline) {
+    for (const line of [...lines].reverse()) {
+      const pairs = pairsOf(line);
+      const lead = pairs.find((p) => `${p.count} ${p.word}` === headline.toLowerCase());
+      if (!lead) continue;
+      const rest = pairs.filter((p) => p !== lead && p.word !== lead.word).slice(0, 2);
+      return { kind: 'count', headline, detail: rest.length > 0 ? rest.map((p) => `${p.count} ${p.word}`).join(', ') : null };
+    }
+    return { kind: 'count', headline, detail: null };
+  }
   const summary = (test: (word: string) => boolean) => {
     for (const line of [...lines].reverse()) {
       const pairs = pairsOf(line);
