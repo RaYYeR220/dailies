@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Scene, Storyboard } from '@dailies/core';
-import { BREAKS, LIMITS, boxRoom, clampEnd, clampStart, clampWidth, closingCount, commonIndent, countUp, cutToWidth, decisive, estimateEm, fitText, parseHunk, sourceRef, splitLast, tailLines, textUnits, windowRows, wrap, type Em } from '../src/remotion/text';
+import { BREAKS, LIMITS, PROMPT_SHOWN, abbreviate, boxRoom, clampEnd, clampStart, clampWidth, clampWords, closingCount, commonIndent, countUp, cutToWidth, decisive, estimateEm, fitText, parseHunk, promptShown, sourceRef, splitLast, tailLines, textUnits, windowRows, wrap, type Em } from '../src/remotion/text';
 import { fixtureStoryboard, stressStoryboard } from './fixture';
 
 describe('clampEnd', () => {
@@ -16,6 +16,49 @@ describe('clampEnd', () => {
   });
   it('never splits an emoji', () => {
     expect(clampEnd('ok 🎉🎉🎉', 5)).toBe('ok 🎉…');
+  });
+});
+
+describe('clampWords', () => {
+  it('leaves text within the limit untouched', () => {
+    expect(clampWords('add a retry', 11)).toBe('add a retry');
+  });
+  it('cuts after the last whole word that fits, ellipsis included in the limit', () => {
+    expect(clampWords('Add a retry with backoff to the sender', 20)).toBe('Add a retry with…');
+    expect(clampWords('Add a retry with backoff to the sender', 25)).toBe('Add a retry with backoff…');
+    expect(Array.from(clampWords('word '.repeat(60), 190))).toHaveLength(190);
+  });
+  it('drops punctuation left hanging before the ellipsis', () => {
+    expect(clampWords('Refactor the pipeline, and keep the flag', 23)).toBe('Refactor the pipeline…');
+    expect(clampWords('Add a retry – with backoff', 14)).toBe('Add a retry…');
+  });
+  it('cuts inside a word only when there is no word to end on', () => {
+    expect(clampWords('abcdefghijklmnop', 8)).toBe('abcdefg…');
+    expect(clampWords('a bcdefghijklmnopqrstuvwxyz', 12)).toBe('a bcdefghij…');
+  });
+  it('never splits an emoji', () => {
+    expect(clampWords('🎉🎉🎉🎉🎉🎉', 4)).toBe('🎉🎉🎉…');
+  });
+});
+
+describe('promptShown', () => {
+  it('shows a request of up to 190 characters whole, its line breaks flattened', () => {
+    expect(PROMPT_SHOWN).toBe(190);
+    expect(promptShown('  Add a retry.\n\n- with backoff\n- and a test ')).toBe('Add a retry. - with backoff - and a test');
+    const whole = 'word '.repeat(38).trim();
+    expect(whole).toHaveLength(189);
+    expect(promptShown(whole)).toBe(whole);
+  });
+  it('cuts a longer request at a word and closes it with an ellipsis', () => {
+    const [, prompt] = stressStoryboard().scenes as [unknown, { quote: string }];
+    expect(prompt.quote).toHaveLength(LIMITS.promptQuote);
+    const shown = promptShown(prompt.quote);
+    expect(Array.from(shown).length).toBeLessThanOrEqual(PROMPT_SHOWN);
+    expect(Array.from(shown).length).toBeGreaterThan(PROMPT_SHOWN - 20);
+    expect(shown.endsWith('…')).toBe(true);
+    const kept = shown.slice(0, -1);
+    expect(prompt.quote.startsWith(kept)).toBe(true);
+    expect(prompt.quote.slice(kept.length)).toMatch(/^[.,;:]?\s/);   // what was left out starts a new word
   });
 });
 
@@ -105,6 +148,37 @@ describe('countUp', () => {
   });
 });
 
+describe('abbreviate', () => {
+  it('rounds a count of a thousand or more to one decimal of its unit', () => {
+    expect(abbreviate('1493')).toBe('1.5k');
+    expect(abbreviate('2000')).toBe('2k');
+    expect(abbreviate('1234567')).toBe('1.2M');
+    expect(abbreviate('2500000000')).toBe('2.5B');
+  });
+  it('drops the decimal from ten of a unit up', () => {
+    expect(abbreviate('12345')).toBe('12k');
+    expect(abbreviate('48210')).toBe('48k');
+    expect(abbreviate('128900')).toBe('129k');
+  });
+  it('moves up a unit instead of writing a thousand of the smaller one', () => {
+    expect(abbreviate('9960')).toBe('10k');
+    expect(abbreviate('999950')).toBe('1M');
+  });
+  it('reads grouped digits and keeps what stands around the number', () => {
+    expect(abbreviate('1,493')).toBe('1.5k');
+    expect(abbreviate('1,234,567 tokens')).toBe('1.2M tokens');
+    expect(abbreviate('$12,400')).toBe('$12k');
+    expect(abbreviate('-1493')).toBe('-1.5k');
+  });
+  it('leaves alone a value under a thousand and a value that is not one number', () => {
+    for (const value of ['0', '128', '999', '99.5%', 'n/a', '', '2026-10-11', '3 of 1493', '23:05']) expect(abbreviate(value), value).toBe(value);
+  });
+  it('still counts up to an abbreviated value', () => {
+    expect(countUp(abbreviate('1493'), 0.5)).toBe('0.8k');
+    expect(countUp(abbreviate('1493'), 1)).toBe('1.5k');
+  });
+});
+
 describe('textUnits', () => {
   it('counts plain lowercase Latin text one unit per character', () => {
     expect(textUnits('retry queue')).toBe(11);
@@ -137,6 +211,11 @@ describe('wrap', () => {
   });
   it('returns nothing for blank text', () => {
     expect(wrap('  \n ', () => 10, em)).toEqual([]);
+  });
+  it('never starts a line with a dash: the dash of a range stays with the word before it', () => {
+    expect(wrap('11 Oct, 14:00 – 18:30', () => 6, em)).toEqual(['11 Oct,', '14:00 –', '18:30']);
+    expect(wrap('11 Oct, 14:00 – 18:30', () => 7, em)).toEqual(['11 Oct,', '14:00 – 18:30']);
+    expect(wrap('retry — then stop', () => 3.5, em)).toEqual(['retry —', 'then', 'stop']);
   });
 });
 

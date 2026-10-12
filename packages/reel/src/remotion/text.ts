@@ -22,6 +22,30 @@ export function clampEnd(text: string, max: number): string {
   return chars.slice(0, Math.max(0, max - 1)).join('').trimEnd() + ELLIPSIS;
 }
 
+const HANGING = /[\s,;:([{–—-]+$/u;   // what may not be left standing in front of an ellipsis
+
+/**
+ * Cut to `max` characters, ellipsis included, after the last whole word that fits. A word is cut inside only
+ * when there is no word to end on in the second half of what is kept.
+ */
+export function clampWords(text: string, max: number): string {
+  const chars = Array.from(text);
+  if (chars.length <= max) return text;
+  const head = chars.slice(0, Math.max(0, max - 1));
+  let space = head.length - 1;
+  while (space >= 0 && !/\s/.test(head[space]!)) space -= 1;
+  const whole = /\s/.test(chars[head.length] ?? '') || space <= max / 2 ? head : head.slice(0, space);
+  return whole.join('').replace(HANGING, '') + ELLIPSIS;
+}
+
+/** The most of a request the prompt scene shows. The schema allows more than a glass holds at a size worth reading. */
+export const PROMPT_SHOWN = 190;
+
+/** A human's request as the prompt scene shows it. Line breaks are flattened: it is fitted as running text, and a pasted list would outgrow its rows. */
+export function promptShown(quote: string): string {
+  return clampWords(quote.replace(/\s+/g, ' ').trim(), PROMPT_SHOWN);
+}
+
 /** Like `clampEnd` but keeps the tail, which is the part of a path worth reading. */
 export function clampStart(text: string, max: number): string {
   const chars = Array.from(text);
@@ -91,6 +115,28 @@ export function countUp(value: string, progress: number): string {
   return prefix + grouped + (fraction === undefined ? '' : `.${fraction}`) + suffix;
 }
 
+const UNITS = ['k', 'M', 'B', 'T'];
+
+/**
+ * A count of a thousand or more in the short form a person reads at a glance: `1493` as `1.5k`, `48210` as `48k`.
+ * One decimal below ten of a unit, none from there up. What stands around the number is kept. A value under a
+ * thousand, or one that is not a single number (a date, a ratio), comes back as it is.
+ */
+export function abbreviate(value: string): string {
+  const m = /^(\D*?)(\d[\d,]*(?:\.\d+)?)(\D*)$/s.exec(value);
+  if (!m) return value;
+  const [, prefix, digits, suffix] = m as unknown as [string, string, string, string];
+  const n = Number(digits.replace(/,/g, ''));
+  if (!Number.isFinite(n) || n < 1000) return value;
+  let unit = 1;
+  while (unit < UNITS.length && n >= 1000 ** (unit + 1)) unit += 1;
+  const short = (scaled: number) => (scaled < 9.95 ? Math.round(scaled * 10) / 10 : Math.round(scaled));
+  let shown = short(n / 1000 ** unit);
+  // Rounding can reach a thousand of a unit (999,950 as `1000k`): that is one of the next.
+  if (shown >= 1000 && unit < UNITS.length) shown = short(n / 1000 ** (unit += 1));
+  return `${prefix}${shown}${UNITS[unit - 1]}${suffix}`;
+}
+
 const WIDE = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]|\p{Extended_Pictographic}/u;
 const NARROW = /[\p{Ll}\p{N}\p{P}\p{Z}]/u;
 
@@ -122,9 +168,18 @@ export const BREAKS = { prose: /[-/]/, name: /[-/_.]/ } as const;
 
 interface Atom { text: string; width: number; space: boolean }   // `space`: a space comes before it when it does not start a line
 
+const DASH = /^[-–—]+$/;
+
 function atoms(text: string, em: Em, soft: RegExp): Atom[] {
   const out: Atom[] = [];
   for (const word of text.trim().split(/\s+/).filter(Boolean)) {
+    // A dash standing alone stays with the word before it, so no line starts with the dash of a range or of an aside.
+    const before = out.at(-1);
+    if (before && DASH.test(word)) {
+      before.text += ` ${word}`;
+      before.width = em(before.text);
+      continue;
+    }
     let piece = '';
     let first = true;
     const push = () => { if (piece) out.push({ text: piece, width: em(piece), space: first && out.length > 0 }); first = false; piece = ''; };

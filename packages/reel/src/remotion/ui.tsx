@@ -6,7 +6,7 @@ import type { Span } from './cues';
 import type { Shot } from './lens';
 import { ringAround } from './pencil';
 import { FACE, emOf, faceStyle, forgetMeasures, type Face } from './measure';
-import { BREAKS, clampWidth, fitText, sourceRef, splitLast, type Fitted } from './text';
+import { BREAKS, abbreviate, clampWidth, fitText, sourceRef, splitLast, type Fitted } from './text';
 
 const { color, motion, pencil, size, leading, space } = theme;
 
@@ -34,6 +34,8 @@ export interface Clock {
   bottom: number;
   /** A still: every cue counts as already passed, so the frame shows the scene as it ends up. */
   settled: boolean;
+  /** The lens is at rest on this scene: nothing of the scene is being scaled, only moved. */
+  resting: boolean;
 }
 
 export const SceneContext = createContext<Clock | null>(null);
@@ -131,6 +133,24 @@ export function fitRoles(text: string, roles: Role[], room: Room, opts: { maxLin
     if (!last.cut && last.lines.length > 0) return last;
   }
   if (!last) throw new Error('fitRoles needs at least one role');
+  return last;
+}
+
+/**
+ * A stat value, on one line: a figure broken in two reads as two figures. It is fitted by its size, down to the
+ * floor of the display face; a value still too wide there is abbreviated (`1493` as `1.5k`). What fits in neither
+ * form is set in the text face, whole if it can be, and only the text face at its floor cuts it with an ellipsis.
+ */
+export function fitFigure(value: string, roles: Role[], room: Room): Fitted & { role: Role } {
+  const forms = [...new Set([value, abbreviate(value)])];
+  let last: (Fitted & { role: Role }) | null = null;
+  for (const role of roles) {
+    for (const form of forms) {
+      last = fitRoles(form, [role], room, { maxLines: 1 });
+      if (!last.cut && last.lines.length > 0) return last;
+    }
+  }
+  if (!last) throw new Error('fitFigure needs at least one role');
   return last;
 }
 

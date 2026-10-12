@@ -60,6 +60,30 @@ function day(iso: string): string {
   return Number.isNaN(ms) ? cut(flat(iso), 24) : new Date(ms).toISOString().slice(0, 10);
 }
 
+const DAY_MS = 86_400_000;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * The window the way a person would say it, in UTC: `11 Oct, 23:05 – 12 Oct, 02:25`, or `11 Oct, 14:00 – 18:30`
+ * within one date. It runs from the first session's start to the last session's end, which is when the work
+ * happened; the dates the run was asked for only bound it. A session with no recorded end ends where it started.
+ * When no session carries a time that can be read, the label is the two dates of the run.
+ */
+function windowLabelOf(sessions: Session[], run: { since: string; until: string }): string {
+  const starts = sessions.map((s) => Date.parse(s.startedAt)).filter((ms) => !Number.isNaN(ms));
+  const ends = sessions.map((s) => Date.parse(s.endedAt ?? s.startedAt)).filter((ms) => !Number.isNaN(ms));
+  if (starts.length === 0 || ends.length === 0) return [...new Set([day(run.since), day(run.until)])].join(' – ');
+  const two = (n: number) => String(n).padStart(2, '0');
+  const said = (ms: number) => {
+    const at = new Date(ms);
+    return { date: `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]}`, time: `${two(at.getUTCHours())}:${two(at.getUTCMinutes())}` };
+  };
+  const [first, last] = [Math.min(...starts), Math.max(...ends, ...starts)];
+  const [from, to] = [said(first), said(last)];
+  if (Math.floor(first / DAY_MS) !== Math.floor(last / DAY_MS)) return `${from.date}, ${from.time} – ${to.date}, ${to.time}`;
+  return from.time === to.time ? `${from.date}, ${from.time}` : `${from.date}, ${from.time} – ${to.time}`;
+}
+
 function realityOf(claim: FlaggedClaim): string {
   if (claim.verdict === 'stale') return 'Code was edited after the last passing run.';
   if (claim.kind === 'tests_pass') return 'The last test run before that message reported failures.';
@@ -176,7 +200,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
       const commits = knownCommits(ingest);
       const facts = computeFacts(ingest.sessions);
       const repo = repoLabel(ctx.run.repoUrl);
-      const windowLabel = [...new Set([day(ctx.run.since), day(ctx.run.until)])].join(' – ');
+      const windowLabel = windowLabelOf(ingest.sessions, ctx.run);
 
       const runs = new Map<string, ToolRun[]>();
       const runsOf = (session: Session): ToolRun[] => {

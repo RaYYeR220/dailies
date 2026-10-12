@@ -106,6 +106,7 @@ export const Reel: React.FC<ReelProps> = ({ storyboard, timings, audio, settled 
       shot: take.shot,
       bottom: captions && scene.lines.length > 0 ? HEIGHT - layout.captionInset : HEIGHT,
       settled,
+      resting: view.lens.from === view.lens.to,
     };
   };
   const drawn = view.takes.map((take) => ({ take, clock: clock(take), parts: layers(storyboard.scenes[take.index]!) }));

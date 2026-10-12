@@ -3,17 +3,27 @@ import { OnFrame } from '../Film';
 import { glassRoom, linesRoom } from '../lens';
 import { FACE, emOf } from '../measure';
 import { frameBox, stripOf } from '../strip';
-import { LIMITS, boxRoom, clampEnd, countUp, fitText } from '../text';
-import { GlassBlock, Lines, ROLES, fitRoles, heightOf, useScene, type SceneParts } from '../ui';
+import { LIMITS, boxRoom, clampEnd, countUp, fitText, type Fitted } from '../text';
+import { GlassBlock, Lines, ROLES, fitFigure, heightOf, useScene, type Role, type Room, type SceneParts } from '../ui';
 
 const { color, size, leading, space } = theme;
 
 const MAX_ITEMS = 6;
 const LABEL_LINES = 2;
-const VALUE_LINES = 2;
 
-/** A figure counting up to its value. Only a figure on one line counts; a wrapped one is shown as it is. */
-const counting = <T extends { lines: string[] }>(fitted: T, progress: number): T => (fitted.lines.length === 1 ? { ...fitted, lines: [countUp(fitted.lines[0]!, progress)] } : fitted);
+/** A figure counting up to its value. */
+const counting = <T extends { lines: string[] }>(fitted: T, progress: number): T => ({ ...fitted, lines: fitted.lines.map((line) => countUp(line, progress)) });
+
+/**
+ * The values of the frames after the first, each on one line. The figures of a row are set at one size: the size
+ * the longest of them fits at.
+ */
+export function fitRow(values: string[], room: Room): (Fitted & { role: Role })[] {
+  const display = ROLES.value[0]!;
+  const free = values.map((value) => fitFigure(value, ROLES.value, room));
+  const common = Math.min(...free.filter((v) => v.role === display).map((v) => v.size));
+  return free.map((v) => (v.role === display && v.size > common ? { ...v, size: common } : v));
+}
 
 export const Stats: SceneParts<'stats'> = {
   Film: ({ scene }) => {
@@ -27,11 +37,7 @@ export const Stats: SceneParts<'stats'> = {
       return { label, text: clampEnd(item.value, LIMITS.statValue) };
     });
     const labelHeight = Math.max(0, ...items.map((item) => item.label.lines.length)) * labelType.max * labelType.leading;
-    const room = boxRoom(width, box.height - 2 * space.md - space.sm - labelHeight);
-    // The figures of a row are set at one size: the size the longest of them fits at.
-    const free = items.map((item) => fitRoles(item.text, ROLES.value, room, { maxLines: VALUE_LINES }));
-    const common = Math.min(...free.filter((v) => v.role === ROLES.value[0]).map((v) => v.size));
-    const values = free.map((v, i) => (v.role === ROLES.value[0] && v.size > common ? fitRoles(items[i]!.text, [{ ...v.role, type: { ...v.role.type, max: common, min: common } }], room, { maxLines: VALUE_LINES }) : v));
+    const values = fitRow(items.map((item) => item.text), boxRoom(width, box.height - 2 * space.md - space.sm - labelHeight));
     const valueHeight = Math.max(0, ...values.map(heightOf));
     return (
       <>
@@ -56,7 +62,7 @@ export const Stats: SceneParts<'stats'> = {
     const room = glassRoom(m.shot.lens, m.bottom);
     const labelType = { max: size.text.figure, min: size.text.label, leading: leading.text };
     // The figure is fitted with room for two lines of label under it; the label then takes the chords that are left.
-    const value = fitRoles(clampEnd(item.value, LIMITS.statValue), ROLES.figure, linesRoom(room, 0, space.sm + LABEL_LINES * labelType.min * labelType.leading), { maxLines: VALUE_LINES });
+    const value = fitFigure(clampEnd(item.value, LIMITS.statValue), ROLES.figure, linesRoom(room, 0, space.sm + LABEL_LINES * labelType.min * labelType.leading));
     const label = fitText(clampEnd(item.label, LIMITS.statLabel), labelType, linesRoom(room, heightOf(value) + space.sm, 0), emOf(FACE.text), { maxLines: LABEL_LINES, fewest: true });
     return (
       <GlassBlock at={room}>

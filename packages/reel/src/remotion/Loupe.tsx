@@ -1,5 +1,6 @@
 import React from 'react';
 import { theme } from '../theme';
+import { ticks } from './knurl';
 import type { LensRest } from './lens';
 import { FACE } from './measure';
 
@@ -9,6 +10,8 @@ const BOX = loupe.skirt.outer + 8;   // half the side of the square the loupe is
 const ID = { lit: 'loupe-lit', barrel: 'loupe-barrel', rim: 'loupe-rim', spec: 'loupe-spec', glow: 'loupe-glow', engrave: 'loupe-engrave' } as const;
 const dark = color.film.base;
 const paint = (id: string) => `url(#${id})`;
+// The knurling of the barrel: a ring of dark cuts, and the light caught on one side of each.
+const KNURL = { cut: ticks(loupe.barrel.knurl, loupe.barrel.knurlWidth, 2.1, 3.1), lit: ticks(loupe.barrel.knurl, loupe.barrel.knurlWidth, 0.9, 4.3, 1.4) };
 
 /** A disc of `r` px (at scale 1) centred on the lens. */
 const disc = (lens: LensRest, r: number): React.CSSProperties => {
@@ -91,8 +94,8 @@ export const Loupe: React.FC<{ lens: LensRest; transit?: number; skirt?: React.R
         <g fill="none">
           <circle r={barrel.radius} stroke={barrel.body} strokeWidth={barrel.width} />
           <circle r={barrel.radius} stroke={paint(ID.barrel)} strokeWidth={barrel.width - 2} />
-          <circle r={barrel.knurl} stroke={dark} strokeOpacity={0.66} strokeWidth={barrel.knurlWidth} strokeDasharray="2.1 3.1" />
-          <circle r={barrel.knurl} stroke={color.white} strokeOpacity={0.1} strokeWidth={barrel.knurlWidth} strokeDasharray=".9 4.3" strokeDashoffset={1.4} />
+          <path d={KNURL.cut} fill={dark} fillOpacity={0.66} />
+          <path d={KNURL.lit} fill={color.white} fillOpacity={0.1} />
           <circle r={barrel.knurl - barrel.knurlWidth / 2 - 1.5} stroke={dark} strokeOpacity={0.7} strokeWidth={1.6} />
           <circle r={glass + 3} stroke={dark} strokeWidth={3.5} />
           <circle r={glass + 6} stroke={paint(ID.rim)} strokeWidth={1.3} />
