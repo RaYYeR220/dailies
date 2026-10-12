@@ -288,6 +288,26 @@ Reference mock-ups of all seven frames exist as static HTML outside the reposito
 
 ---
 
+### Task 16b: Loupe reel, corrections from the first real render
+
+The Loupe scenes were rendered from a real storyboard of this repository (12 sessions) and looked at frame by frame. Four things need correcting.
+
+**Files:** `packages/reel/src/remotion/**`, `packages/reel/src/theme.ts`, `packages/reel/test/**`, `packages/pipeline/src/stages/script.ts` and its test (window label only), `docs/design.md`
+
+1. **A four-digit value breaks onto two lines.** The stats frame showed `1493` as `149` over `3`. A stat value never wraps: it is fitted to its frame by reducing its size down to the display floor, and below that the value is abbreviated (`1.5k`).
+2. **The window label is two ISO dates.** The title showed `2026-10-11 – 2026-10-12`. The script stage writes a label a person would say: `11 Oct, 23:05 – 12 Oct, 02:25` when the window spans two dates, `11 Oct, 14:00 – 18:30` within one, in UTC, built from the first session's start and the last session's end.
+3. **A long prompt fills the glass edge to edge.** A 280-character request is set in nine lines that touch the rim. The prompt scene shows at most 190 characters, cut at a word with an ellipsis, and keeps a clear margin inside the rim.
+4. **Rendering is four times slower without a graphics card** (6 frames per second on the server against 26 on a laptop). Find what is expensive under software rendering and remove it without changing how a frame looks: live blur and turbulence filters, large blurred shadows, backdrop filters and per-frame SVG filter regions are the usual causes. Replace them with static gradients, pre-composed layers or opacity. Measure before and after with the fixture reel, forcing software rendering through the renderer's `gl: 'swiftshader'` option so the measurement on a laptop predicts the server, and report both numbers.
+
+- [ ] **Step 1: Write failing tests** for the stat fitting and abbreviation, the window label (two cases), and the prompt cut.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement items 1 to 3.**
+- [ ] **Step 4: Measure** the fixture reel under software rendering, then do item 4, then measure again. Render stills before and after and compare them side by side; a visible loss of quality is not acceptable.
+- [ ] **Step 5: Run the reel and pipeline tests and the type check.**
+- [ ] **Step 6: Commit.**
+
+---
+
 ### Task 14: Web interface
 
 Depends on Task 11. Visual direction: "Loupe", the same language as the reel (Task 16): green-black emulsion `#0d1211` to `#1a2421`, cool white `#eef3f1`, grease-pencil yellow `#ffd60a`; Unbounded, Figtree, Martian Mono; a film strip, one loupe, and four pencil marks (ring = verified, cross = contradicted, dashed ring = stale, question mark = unverified).
