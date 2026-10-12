@@ -1,0 +1,104 @@
+<task-notification>
+<task-id>a899767f906f1c6d5</task-id>
+<tool-use-id>toolu_01KxNzSDywdTuRbyzcdBR5qs</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-10-cli/325d5f5c-9b85-46b5-87f5-81c5d9f2c506/tasks/a899767f906f1c6d5.output</output-file>
+<status>completed</status>
+<summary>Agent "Final whole-branch review of Task 10 (CLI)" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I'd call this **ready with fixes**. API usage is correct and the new tests pass, but there are five Important issues, and the first two, the CLI's database file and how `verify` records runs, need a design decision.
+
+**Strengths**
+- Every call into `@dailies/pipeline`, `@dailies/agent`, `@dailies/voice` and `@dailies/core` matches the real signatures (`buildStages`, `StageDeps`, `runPipeline`, `listEvents(db, runId, afterId)`, `CostMeter(limit)`, `createRouter(env, meter)`, `createGeminiTts(keys)`, `RenderArtifact`).
+- **The `dailies-reel` span does carry the repo URL.** neatlogs' `decorateSpan` records input by default, and with one argument it writes that whole object as the span's `input.value`. So `{repoUrl: &lt;stripped&gt;, runId}` lands on the root span, and the workflow name matches what `memory.ts` filters on.
+- **`--max-sessions` reaches ingest.** The ingest test pins newest-first with a cap of 1. Ingest's progress messages are fixed strings, so passing them to the run's log leaks nothing.
+- **The voice fallback is tight.** Its test checks the exact captions artifact, one provider call, and that the error is logged.
+- **The security fixes hold.** `sanitizeForTerminal` covers control, format and line/paragraph-separator characters and escapes backslashes. `stripUserinfo` makes a URL pass and then a regex pass, and fails closed.
+- I re-ran the new tests: pipeline ingest and voice 14/14, CLI 9 passed and 1 skipped (the render test, filtered out on purpose). The tree is still clean.
+
+**Important**
+1. **The CLI uses a different database file from the web app.** `run.ts:132` and `verify.ts:70` open `&lt;dataDir&gt;/db.sqlite`. The already-merged web app (`apps/web/src/server/db.ts:16`, product plan line 89) uses `&lt;dataDir&gt;/dailies.db`, and spec §3 says there is one database. A CLI reel that ends `needs_approval` never shows up in `/inbox`. The README also says "a crash resumes from the last completed stage", but nothing resumes CLI runs. Simply switching files has a catch: the web worker's `unfinishedRuns` would then pick up CLI runs while they are still running, so decide that first.
+2. **Every `verify` leaves a run marked `needs_approval` with no reel.** That is how `runPipeline` ends when given only ingest and verify. Using `openDb(':memory:')` in `verify.ts` would fix it, since verify doesn't need the run history.
+3. **The CLI can silently do nothing and exit 0** (`index.ts:15`). It decides whether it was run directly by comparing `import.meta.url` with `file://${process.argv[1]}`. I confirmed this check fails when the path contains a space (the URL is percent-encoded) or sits under a symlink (`/tmp` → `/private/tmp` on macOS). Comparing `fileURLToPath(import.meta.url)` with `realpathSync(process.argv[1])` fixes it.
+4. **`--max-sessions` isn't validated** (`run.ts:38`). A non-number or a missing value becomes NaN, `slice(0, NaN)` returns nothing, and the user gets "no agent sessions found in this window" with exit 2, which is the wrong diagnosis. A negative number quietly drops the newest sessions.
+5. **The documented plugin flow can't find its config.** `loadEnv()` looks for `.env` in the current directory. `entire dailies run .` runs from inside the target repo, so it misses the `.env` at the Dailies root and stops with "LITELLM_API_KEY is not set". It also writes `.dailies/` (clones, database, renders) into the target repo. The CLI should pass its own repo root to `loadEnv`.
+
+**Minor**
+- `verify --json` skips sanitizing. `JSON.stringify` leaves C1 control and bidi-override characters intact.
+- `--since 7` is read as a date in 2001, because `new Date()` accepts much more than ISO. A missing `--since` value silently becomes 24h, and unknown flags are taken as the repo argument.
+- The voice fallback skips the runner's retries, so one transient network error goes straight to captions. Spec §8 says "retry, alternate voice, then captions". It follows the task's instruction, but it is a trade-off worth noting.
+- `--out` also copies a reel that the gate blocked, which weakens the gate's fail-closed promise.
+- Test gaps:
+  - No unit tests for `parseSince` or `parseRunArgs`.
+  - The end-to-end test checks the timeline's `durationSec`, not the actual MP4.
+  - The first test's name says "grounds the honest claim", but nothing asserts that.
+- README problems:
+  - The re-cut arrow runs render→verify; the real loop is ground→script.
+  - "(when not disabled) review" suggests `--no-review` does something.
+  - The env table leaves out `NEATLOGS_PROJECT_ID` and `VENICE_MODEL_*`.
+- The lockfile has an unrelated change: `@types/better-sqlite3` now resolves `@types/node` 20.19.43 instead of 26.6.5.
+- Files were edited outside Task 10's list: the plan doc, `packages/cli/package.json` and the lockfile. The last two were needed.
+- The bin shims break if symlinked rather than added to `PATH`. A local path like `.` reaches the trace and the database unresolved, so read-back queries for "." collide across repos.
+
+**Declined to judge**
+- The Remotion/Chrome timeout: already diagnosed as environmental, and the test's assertions look correct.
+- `reviewStage` not being exported, and `--no-review` doing nothing: covered by your rulings.
+- `maxSessions` not being saved on the run record, so it's lost on resume: needs a schema change outside these files, and the plan already notes it.
+- The raw repo URL, credentials included, stored in the runs table: existing design, needed for cloning.
+- The `--no-render` flag from spec §7: the plan's command list governs.
+- A password containing an unencoded `/`: git can't parse that URL either.
+- Step 6, the real run: it needs keys.</result>
+<usage><subagent_tokens>115828</subagent_tokens><tool_uses>47</tool_uses><duration_ms>358503</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bckifo7if</task-id>
+<tool-use-id>toolu_01FBGRasuvh5GVXkchQzU9SJ</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-10-cli/325d5f5c-9b85-46b5-87f5-81c5d9f2c506/tasks/bckifo7if.output</output-file>
+<status>completed</status>
+<summary>Background command "Run the complete CLI test suite including the render test, in background" completed (exit code 0)</summary>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>bihdnqema</task-id>
+<tool-use-id>toolu_012fVHQSRfzmEZtHPwi13s97</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-yehor-Desktop-projects-neathack-wt-10-cli/325d5f5c-9b85-46b5-87f5-81c5d9f2c506/tasks/bihdnqema.output</output-file>
+<status>completed</status>
+<summary>Monitor "Watching for the CLI test suite fix-pass verification to finish" stream ended</summary>
+<event>cli suite output ready
+$ vitest run --dir test
+RUN  v5.0.3 /Users/yehor/Desktop/projects/neathack-wt/10-cli/packages/cli
+stdout | test/e2e.test.ts &gt; dailies run (end-to-end, mock model, real renderer) &gt; flags the lie, grounds the honest claim, and renders a reel awaiting approval
+💡 Get help for this issue at https://remotion.dev/docs/timeout
+❯ test/e2e.test.ts (20 tests | 1 failed) 60567ms
+❯ dailies run (end-to-end, mock model, real renderer) (5)
+× flags the lie, grounds the honest claim, and renders a reel awaiting approval 59902ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+FAIL  test/e2e.test.ts &gt; dailies run (end-to-end, mock model, real renderer) &gt; flags the lie, grounds the honest claim, and renders a reel awaiting approval
+AssertionError: expected 1 to be +0 // Object.is equality
+- Expected
++ Received
+- 0
++ 1
+❯ test/e2e.test.ts:142:18
+140|     });
+141|
+142|     expect(code).toBe(0);
+|                  ^
+143|     expect(lines).toContain('status: needs_approval');
+144|
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+Test Files  1 failed (1)
+Tests  1 failed | 19 passed (20)
+Start at  02:37:48
+Duration  60.89s (tests 100%)
+[ELIFECYCLE] Test failed. See above for more details.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+× "pnpm recursive run" failed in /Users/yehor/Desktop/projects/neathack-
+│ wt/10-cli/packages/cli
+[exited with code 0]</event>
+If this event is something the user would act on now, send a PushNotification. Routine or benign output doesn't need one.
+</task-notification>
