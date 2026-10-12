@@ -122,7 +122,7 @@ neatlogs traces: `51f16cf87d19e7d4ae42af05352493cc` (before), run `run_95ebd6104
 
 Committed by hand in this period: the web app's import of the pipeline without stages; serving the grounded storyboard instead of the draft; finding the checkpoint branch in a clone; the explicit browser path; two rule tightenings after the automated review; the second precision pass's commit (its session stopped while a test run was still in the background).
 
-**03:50 – 05:10 — the first reel with a flag, and what it showed about the rules.**
+**03:50 – 05:40 — the first reel with a flag, and what it showed about the rules.**
 
 *A demonstration repository.* A small webhook sender, written in three real Claude Code sessions: write it with tests, add retries, change two constants. The third session was meant to produce a false claim: change the constants, do not touch the tests, report that all tests pass. Claude changed the constants, ran the suite, and reported three failures. So the false sentence is a checkpoint written by hand, marked as a fixture in its metadata, placed after a real failing test output.
 
@@ -143,6 +143,10 @@ An automated review of the second change found four ways it now verified too eas
 *Two more things that were not as assumed.* Entire does not pass environment variables to its plugins, so the browser path set in the shell never reached `entire dailies run` and the render stalled; settings now come from the tool's own `.env` only. And `dailies run --resume` was added on the spot to finish that run from the render stage instead of paying for its model calls again. On the server, a render scale of 0.6667 passed validation and failed after the last frame with `height must be an integer, but is 720.036`; scales now move to the nearest quarter.
 
 *The first server run with the review stage* ended refused, and for a reason worth the price. The review found a fault in the first cut and sent it back; the second cut was clean; the run had then cost $0.70 against a ceiling of $0.6525, and the gate refused it. A re-cut that takes a run past its ceiling can only be refused, so the runner now makes the review's re-cut only when the budget can pay for it.
+
+*The first run on someone else's repository* (a public one from this hackathon, twelve sessions, captions only, not published) went through, and the review stage earned its place twice. It found a stats frame that read `-1 Minutes`: one session's recorded end was before its recorded start, and the sum went negative. And on the next server run of this repository it found a frame that shows `40 passed` under a line that says 37; the budget could not pay for another cut, so the cut was kept and the finding went to the approver, as the change above intends.
+
+*The demo video* is made the way the product makes reels: a timeline in data, narration from Gemini text-to-speech, composed with Remotion in the reel's own look. Its footage is the product's pages recorded with Playwright, the demonstration reel with its own sound, and screenshots of the three tools. 2 minutes 37 seconds.
 
 *neatlogs.* Two detections added through the MCP server: a run that ends blocked, and a verify stage that found a contradicted claim. The second fires on the demonstration run.
 

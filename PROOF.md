@@ -81,6 +81,10 @@ Found while building: a short `sk-` key written as a bare value in a prompt is n
 
 **The review found a fault and sent the cut back; then the gate refused the run for what that had cost.** `run_76fbb02bc391`, on the server, twelve sessions of this repository. The review stage read stills of the first cut (50.5 seconds), found one high-severity fault and sent the cut back to the script stage. The second cut (71.2 seconds) passed the review with nothing found. By then the run had spent $0.70 against the plan's ceiling of $0.6525, and the gate refused it: `grounding passed, secrets passed, cost failed, review passed`. Each half is the product doing what it was built to do, and together they wasted a run, because a re-cut that takes a run past its ceiling can only be refused. The runner now prices a cut from what the last one cost and makes the review's re-cut only when the budget can pay for it; otherwise it keeps the cut that exists and the gate carries the finding to the person who approves (commit `e7f47e6`).
 
+The same input after that change, `run_205eb7784f22`: the review read eight stills of a 79.6-second cut and found that one frame shows `40 passed` while the line spoken over it says 37 tests. The log goes on: `another cut would cost about $0.21 on top of $0.58 and pass the $0.6525 ceiling: this cut is kept, and the finding goes to the person who approves`. The gate passed with the finding listed for the approver, and the run ended `needs_approval` at $0.58.
+
+On a public repository that is not ours the review stage also caught a real fault in the product: a stats frame that read `-1 Minutes`. One session's recorded end was before its recorded start. Fixed in `packages/core/src/facts.ts`.
+
 ## 6. A public repository with commits dated during the hackathon
 
 This repository. First commit 11 October 2026, 21:26. The hackathon ran 10 to 12 October.
