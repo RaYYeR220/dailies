@@ -121,11 +121,16 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
       const ingest = ctx.read<IngestArtifact>('ingest');
       const sessions = new Map(ingest.sessions.map((s) => [s.id, s]));
 
-      // Extraction is never budget-gated: it is what finds the deterministic-kind claims (tests_pass,
-      // build_passes, ran_command, fixed_error), and those are judged by rule, with no model call of
-      // their own, so cutting extraction short would be the one way the budget could still silently
-      // skip a session's lie. Only the implemented-claim judge calls, which are genuinely optional
-      // model spend on top of extraction, are capped by the stage's share.
+      // The share's baseline starts here, before extraction, so extraction's real spend counts
+      // against it — but extraction is never itself budget-gated (no check() call below): it is
+      // what finds the deterministic-kind claims (tests_pass, build_passes, ran_command,
+      // fixed_error), and those are judged by rule, with no model call of their own, so cutting
+      // extraction short would be the one way the budget could still silently skip a session's
+      // lie. Only the implemented-claim judge calls, which are genuinely optional model spend on
+      // top of extraction, are capped by the stage's share.
+      const budget = stageMeter(deps.meter, ctx.run.budget.maxCostPerReelUsd * VERIFY_BUDGET_SHARE);
+      const checkedClient: ModelClient = { complete: async (req) => { budget.check(); return deps.client.complete(req); } };
+
       let n = 0;
       const nextId = () => `c_${(n += 1)}`;
       const seen = new Set<string>();
@@ -136,9 +141,6 @@ export function verifyStage(deps: StageDeps): Stage<VerifyArtifact> {
         extracted.push(...found.kept);
         dropped += found.dropped;
       }
-
-      const budget = stageMeter(deps.meter, ctx.run.budget.maxCostPerReelUsd * VERIFY_BUDGET_SHARE);
-      const checkedClient: ModelClient = { complete: async (req) => { budget.check(); return deps.client.complete(req); } };
       let budgetReached = false;
 
       const claims: Claim[] = [];

@@ -302,7 +302,7 @@ describe('verify stage', () => {
     const ingest: IngestArtifact = { ...twoSessions(), sessions: [implementedSession('s1'), implementedSession('s2'), implementedSession('s3')], diffs: { [`${SHA_B}:src/status.ts`]: STATUS_PATCH } };
     const h = harness({
       artifacts: { ingest },
-      budget: { maxCostPerReelUsd: 0.5, maxTtsCalls: 3, maxRenderSec: 300 },   // verify's share is 30% = $0.15
+      budget: { maxCostPerReelUsd: 1.5, maxTtsCalls: 3, maxRenderSec: 300 },   // verify's share is 30% = $0.45
       costPerCall: 0.1,
       reply: (req) => {
         if (req.role === 'judge') return json({ supported: true, path: 'src/status.ts', quote: PATCH_LINE });
@@ -313,10 +313,10 @@ describe('verify stage', () => {
 
     const { artifact } = await verifyStage(h.deps).run(h.ctx());
 
-    // Extraction is never budget-gated (a separate test pins that), so the share here only tracks
-    // judge-call spend: the judge call for s1's claim passes its check at 0.00 and brings spend to
-    // 0.10; s2's claim's check still passes at 0.10 and brings spend to 0.20. s3's claim's check
-    // then sees 0.20 > 0.15 and is skipped.
+    // The share's baseline is taken before extraction, so extraction's own 3 calls (0.1 each)
+    // already count: spend is 0.30 before any judge call. The judge call for s1's claim passes its
+    // check at 0.30 and brings spend to 0.40; s2's claim's check still passes at 0.40 and brings
+    // spend to 0.50. s3's claim's check then sees 0.50 > 0.45 and is skipped.
     expect(artifact.claims.map((c) => c.verdict)).toEqual(['verified', 'verified', 'unverifiable']);
     expect(artifact.claims[0]!.sessionId).toBe('s1');
     expect(artifact.claims[1]!.sessionId).toBe('s2');
