@@ -50,6 +50,12 @@ describe('redact', () => {
     expect(r.homePaths).toBe(2);
   });
 
+  it('redacts dotted, unicode and email-shaped account names in full', () => {
+    expect(redact('cd /Users/john.doe/code').text).toBe('cd ~/code');
+    expect(redact('cd /home/Єгор/code').text).toBe('cd ~/code');
+    expect(redact('cd /home/user@corp.com/code').text).toBe('cd ~/code');
+  });
+
   it('counts several home paths in one string and never touches a secret hit', () => {
     const r = redact('cp /Users/yehor/a.txt /home/yehor/b.txt # TOKEN=aVeryRealSecretValue123');
     expect(r.text).toBe('cp ~/a.txt ~/b.txt # TOKEN=[REDACTED:assignment]');
