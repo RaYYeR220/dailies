@@ -62,6 +62,12 @@ describe('redact', () => {
     expect(r.homePaths).toBe(1);
   });
 
+  it('stops at the marker even with no delimiter between the name and it', () => {
+    const r = redact('path is /home/x-----BEGIN RSA PRIVATE KEY-----\nMIIEpA...');
+    expect(r.text).toContain('-----BEGIN RSA PRIVATE KEY-----');
+    expect(r.homePaths).toBe(1);
+  });
+
   it('redacts dotted, unicode and email-shaped account names in full', () => {
     expect(redact('cd /Users/john.doe/code').text).toBe('cd ~/code');
     expect(redact('cd /home/Єгор/code').text).toBe('cd ~/code');
