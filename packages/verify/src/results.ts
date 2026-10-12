@@ -18,20 +18,69 @@ function stripAnsi(text: string): string {
   return text.replace(ANSI, '');
 }
 
-function parseTestOutcome(text: string): RunOutcome {
-  for (const m of text.matchAll(/(\d+)\s+(?:failed|failing)/g)) {
-    if (Number(m[1]) > 0) return 'fail';
+export interface TestSummary {
+  passed: number | null;
+  failed: number | null;
+  outcome: RunOutcome;
+}
+
+interface SummaryEvent {
+  failed: number | null;
+  passed: number | null;
+  outcome: 'pass' | 'fail';
+}
+
+// Every form of "a test run just reported its result" we recognise. A combined failed+passed clause
+// is tried first, so "1 failed, 2 passed" reads as one summary and not two; a runner's explicit
+// marker (a go package line, a cargo result) carries no count but still decides pass or fail. Matched
+// per line (not across the whole text with a multiline flag) so a comma on an unrelated later line can
+// never glue itself onto an earlier bare count.
+const LINE_SUMMARY_RE = new RegExp(
+  [
+    String.raw`(?<cf>\d+)\s+(?:failed|failing)\s*[,|]\s*(?:\d+\s+\w+\s*,\s*)*(?<cp>\d+)\s+passed`,
+    String.raw`(?<lf>\d+)\s+(?:failed|failing)\b`,
+    String.raw`(?<lp>\d+)\s+passed\b`,
+    String.raw`^(?<goOk>ok\s+\S)`,
+    String.raw`^(?<goFail>FAIL)\b`,
+    String.raw`^---\s+FAIL:\s+(?<goTestFail>\S)`,
+    String.raw`^(?<filePass>PASS)\b`,
+    String.raw`test result:\s*(?<cargo>ok|FAILED)`,
+  ].join('|'),
+  'g'
+);
+
+/** Every recognised test summary in `text`, in the order it appears. The last one is the run's outcome. */
+function testSummaries(text: string): SummaryEvent[] {
+  const events: SummaryEvent[] = [];
+  for (const line of text.split('\n')) {
+    for (const m of line.matchAll(LINE_SUMMARY_RE)) {
+      const g = m.groups!;
+      if (g.cf !== undefined) {
+        const failed = Number(g.cf);
+        events.push({ failed, passed: Number(g.cp), outcome: failed > 0 ? 'fail' : 'pass' });
+      } else if (g.lf !== undefined) {
+        const failed = Number(g.lf);
+        events.push({ failed, passed: null, outcome: failed > 0 ? 'fail' : 'pass' });
+      } else if (g.lp !== undefined) {
+        events.push({ failed: null, passed: Number(g.lp), outcome: 'pass' });
+      } else if (g.cargo !== undefined) {
+        events.push({ failed: null, passed: null, outcome: g.cargo === 'ok' ? 'pass' : 'fail' });
+      } else if (g.goOk !== undefined || g.filePass !== undefined) {
+        events.push({ failed: null, passed: null, outcome: 'pass' });
+      } else {
+        // goFail or goTestFail: a runner's explicit failing marker, no count to report.
+        events.push({ failed: null, passed: null, outcome: 'fail' });
+      }
+    }
   }
-  if (/Tests?:\s+\d+\s+failed/.test(text)) return 'fail';
-  if (/^FAIL\b/m.test(text)) return 'fail';
-  if (/AssertionError/.test(text)) return 'fail';
+  return events;
+}
 
-  if (/\d+\s+passed/.test(text)) return 'pass';
-  if (/^PASS\b/m.test(text)) return 'pass';
-  if (/^ok\s+\S/m.test(text)) return 'pass';
-  if (/test result: ok/.test(text)) return 'pass';
-
-  return 'unknown';
+/** The decisive test summary of a run's output: the last recognised one, or `unknown` with no counts. */
+function summarizeTest(text: string): TestSummary {
+  const events = testSummaries(text);
+  const last = events[events.length - 1];
+  return last ? { passed: last.passed, failed: last.failed, outcome: last.outcome } : { passed: null, failed: null, outcome: 'unknown' };
 }
 
 // A pipe, a `;`, or a newline (bash chains statements on one exactly as it does on the other)
@@ -68,15 +117,27 @@ function parseLintOrBuildOutcome(text: string, exitTrusted: boolean): RunOutcome
   return 'unknown';
 }
 
-export function parseOutcome(cls: CommandClass, output: string, isError: boolean, o?: { exitTrusted?: boolean }): RunOutcome {
+/**
+ * The decisive summary of a run's output: for the test class, the last recognised summary and its
+ * counts (see `testSummaries`); for the others, a single pass/fail/unknown read with no counts.
+ */
+export function summarize(cls: CommandClass, output: string): TestSummary {
   const text = stripAnsi(output);
+  if (cls === 'test') return summarizeTest(text);
+  if (cls === 'typecheck') return { passed: null, failed: null, outcome: parseTypecheckOutcome(text, false) };
+  if (cls === 'lint' || cls === 'build') return { passed: null, failed: null, outcome: parseLintOrBuildOutcome(text, false) };
+  return { passed: null, failed: null, outcome: 'unknown' };
+}
+
+export function parseOutcome(cls: CommandClass, output: string, isError: boolean, o?: { exitTrusted?: boolean }): RunOutcome {
   if (cls === 'test') {
     // An errored command is not itself a failed test run: the shell can error before the tests ever
     // ran (a missing module, a bad flag). `fail` requires the recognised summary a test run actually
     // prints; an error status with no such summary just means the run's result cannot be read.
-    const outcome = parseTestOutcome(text);
+    const { outcome } = summarize(cls, output);
     return isError && outcome !== 'fail' ? 'unknown' : outcome;
   }
+  const text = stripAnsi(output);
   if (isError) return 'fail';
   const exitTrusted = o?.exitTrusted ?? false;
   if (cls === 'typecheck') return parseTypecheckOutcome(text, exitTrusted);
