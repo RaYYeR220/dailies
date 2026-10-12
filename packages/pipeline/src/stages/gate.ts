@@ -60,7 +60,7 @@ function secrets(storyboard: Storyboard): Check {
 function cost(metered: number, ctx: StageContext): Check {
   const spent = Math.max(metered, ctx.run.costUsd);
   const limit = ctx.run.budget.maxCostPerReelUsd;
-  return check('cost', spent <= limit ? [] : [`spent $${spent.toFixed(4)} of a $${limit.toFixed(2)} budget`]);
+  return check('cost', spent <= limit ? [] : [`spent $${spent.toFixed(4)} of a $${Number(limit.toFixed(4))} budget`]);
 }
 
 /** No high-severity finding. Only a run without a review stage has no artifact; one that cannot be read fails. */

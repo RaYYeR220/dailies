@@ -60,20 +60,20 @@ describe('gate stage', () => {
   });
 
   it('gate blocks when cost exceeds the budget', async () => {
-    const over = await gate({ spend: 1.01 });   // the default budget is $1.00 a reel
+    const over = await gate({ spend: 0.66 });   // the default budget is the plan's ceiling, $0.6525 a reel
     expect(over.result.final).toEqual({ status: 'blocked', reason: 'cost' });
-    expect(over.check('cost')).toEqual({ name: 'cost', pass: false, reasons: ['spent $1.0100 of a $1.00 budget'] });
+    expect(over.check('cost')).toEqual({ name: 'cost', pass: false, reasons: ['spent $0.6600 of a $0.6525 budget'] });
 
-    const atLimit = await gate({ spend: 1.0 });
+    const atLimit = await gate({ spend: 0.6525 });
     expect(atLimit.check('cost').pass).toBe(true);
     expect(atLimit.result.final?.status).toBe('needs_approval');
   });
 
   it('gate counts spend recorded against the run before a restart, when the meter starts again from zero', async () => {
-    const { result, check } = await gate({ recorded: 1.05 });
+    const { result, check } = await gate({ recorded: 0.7 });
 
     expect(result.final).toEqual({ status: 'blocked', reason: 'cost' });
-    expect(check('cost').reasons).toEqual(['spent $1.0500 of a $1.00 budget']);
+    expect(check('cost').reasons).toEqual(['spent $0.7000 of a $0.6525 budget']);
   });
 
   it('gate blocks on a high-severity review finding and passes low ones', async () => {
