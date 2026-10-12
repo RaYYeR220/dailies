@@ -1106,3 +1106,26 @@ Each item was observed, not anticipated.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run every package's tests, the web tests and the type check.**
 - [ ] **Step 5: Commit.**
+
+---
+
+### Task 8e: Rule precision, second pass, from hand-labelling eight real flags
+
+After Task 8d a pattern-based scan of 391 public sessions left eight flags. Each was checked by hand against the recorded runs. One is clearly right, two are arguable, five are wrong. A tool that accuses has to do better than that. The five wrong ones fall into three causes, and one of the arguable ones into a fourth.
+
+**Files:** `packages/verify/src/{results,rules}.ts` and tests
+
+**Interfaces:** unchanged, except `parseOutcome` may return its evidence: add an exported `summarize(cls: CommandClass, output: string): { passed: number | null; failed: number | null; outcome: RunOutcome }` and have `parseOutcome` use it.
+
+1. **One command, several test runs.** `"== RED: 1 failed in 0.30s == GREEN: 75 passed in 0.85s"` is a test-first script that fails on purpose and then passes. It was read as a failure because a failed count appears anywhere in the output. The outcome of a command is the outcome of the **last** test summary in its output. Collect every summary in order (pytest `N failed, M passed` / `M passed`, vitest and jest `Tests  N failed | M passed` / `Tests  M passed`, go `ok`/`FAIL` package lines and `--- FAIL:`, cargo `test result: ok|FAILED`); the last one decides.
+2. **A failure needs a failing summary, not the word.** A compound command that ended with git printing `Aborting` was read as failed tests. `fail` for the test class is returned only by a matched summary from the list above with a failed count above zero (or a runner's explicit failed-result line). The loose patterns (`FAIL` anywhere, `AssertionError` anywhere) are removed.
+3. **Scratch files are not the code under test.** "pytest passes (4 passed)" was marked stale because `Temp/t_h6.py` was written afterwards; another because of files under `scratchpad/`. An edit makes a result stale only if its path is not under a directory named `tmp`, `temp`, `Temp`, `scratchpad`, `.claude`, `node_modules`, `.git`, and is not an absolute path under `/tmp`, `/private/tmp`, `/var/folders` or a Windows `AppData\Local\Temp`.
+4. **A true count next to an unmentioned failure.** "Test results: 266 Python tests pass" was marked contradicted; the last run reported `1 failed, 266 passed`. The count is right; calling the statement contradicted is too strong. When the claim's quote contains a number equal to the last run's passed count and that run also has failures, the verdict is `unverifiable` with the reason `the run it matches also reported <n> failed`. `contradicted` remains for a claim with no such matching count (for example "all tests pass") when the last summary reports failures.
+
+The reason attached to a `contradicted` test claim now quotes the summary: `the last test run before this message reported <n> failed, <m> passed`.
+
+- [ ] **Step 1: Write failing tests** from the real cases, using the recorded output fragments above verbatim: the RED/GREEN line gives `pass`; the same fragments in the other order give `fail`; output ending in `Aborting` with no summary gives `unknown`; `18 failed, 265 passed in 1.10s` gives `fail` and a claim "All 287 tests pass" is `contradicted` with the quoted reason; an edit to `Temp/t_h6.py` or `scratchpad/watch.py` after a passing run leaves the claim `verified`, an edit to `scripts/run_case.py` makes it `stale`; "266 Python tests pass" against `1 failed, 266 passed, 9 skipped` is `unverifiable` with the new reason.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run every package's tests, including `eval/`.** The mutation benchmark must still flip every eligible case.
+- [ ] **Step 5: Commit.**
