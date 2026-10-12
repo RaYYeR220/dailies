@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "74c8b95a7ea4",
+  "strategy": "manual-commit",
+  "branch": "task/10-cli",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "packages/cli/bin/dailies",
+    "packages/cli/package.json",
+    "packages/cli/src/index.ts",
+    "packages/cli/src/run.ts",
+    "packages/cli/src/verify.ts",
+    "packages/cli/test/e2e.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/74/c8b95a7ea4/0/metadata.json",
+      "transcript": "/74/c8b95a7ea4/0/full.jsonl",
+      "compact_transcript": "/74/c8b95a7ea4/0/transcript.jsonl",
+      "content_hash": "/74/c8b95a7ea4/0/content_hash.txt",
+      "prompt": "/74/c8b95a7ea4/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 184,
+    "cache_creation_tokens": 119604,
+    "cache_read_tokens": 31043669,
+    "output_tokens": 72713,
+    "api_call_count": 92
+  }
+}
