@@ -39,8 +39,12 @@ async function withComposition<T>(inputProps: ReelProps, publicDir: string | nul
     const emptyPublic = join(work, 'public');
     await mkdir(emptyPublic);
     const serveUrl = await bundle({ entryPoint: ENTRY_POINT, publicDir: publicDir ?? emptyPublic, outDir: join(work, 'bundle') });
-    await ensureBrowser();
-    browser = await openBrowser('chrome');
+    // A browser binary can be named explicitly. On macOS a binary that lives under a privacy-protected folder
+    // (Desktop, Documents) stops producing frames once the screen locks, and every render then times out waiting
+    // for the root component; pointing this at a copy outside those folders avoids it.
+    const browserExecutable = process.env.DAILIES_BROWSER_EXECUTABLE || null;
+    if (!browserExecutable) await ensureBrowser();
+    browser = await openBrowser('chrome', { browserExecutable });
     const composition = await selectComposition({ serveUrl, id: COMPOSITION_ID, inputProps, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
     return await fn({ serveUrl, composition, browser });
   } finally {
