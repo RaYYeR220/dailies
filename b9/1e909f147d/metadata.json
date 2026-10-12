@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "b91e909f147d",
+  "strategy": "manual-commit",
+  "branch": "task/17-integration",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "packages/core/src/redact.ts",
+    "packages/core/test/redact.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b9/1e909f147d/0/metadata.json",
+      "transcript": "/b9/1e909f147d/0/full.jsonl",
+      "compact_transcript": "/b9/1e909f147d/0/transcript.jsonl",
+      "content_hash": "/b9/1e909f147d/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 10102,
+    "cache_read_tokens": 2306164,
+    "output_tokens": 6168,
+    "api_call_count": 8
+  }
+}
