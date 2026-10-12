@@ -228,7 +228,7 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
         if (scene.type === 'stats') scenes.push(...loose.splice(0));
         scenes.push(scene, ...flags.filter((f) => f.anchor === scene.id).map((f) => f.scene));
       }
-      scenes.push(...loose, { id: 'end', type: 'end', lines: [], repo, verified: verify.counts.verified, flagged: verify.counts.contradicted + verify.counts.stale });
+      scenes.push(...loose, { id: 'end', type: 'end', lines: [], repo, verified: verify.counts.verified, flagged: verify.counts.contradicted + verify.counts.stale, unverified: verify.counts.unverifiable });
 
       const storyboard = Storyboard.parse({ runId: ctx.run.id, repo, targetSec: TARGET_SEC, facts, scenes });
       ctx.log(`${written.length} written scenes, ${flags.length} flag scenes, ${discarded.length} pieces of writer output discarded`);

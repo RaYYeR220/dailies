@@ -75,7 +75,7 @@ export function storyboard(runId = 'run_fixture'): Storyboard {
           { id: 'l7', text: 'The last test run before that message had failed.', evidence: [{ type: 'entry', entryId: 's3:204' }] },
         ],
       },
-      { id: 'sc_end', type: 'end', lines: [], repo: 'acme/api', verified: 5, flagged: 2 },
+      { id: 'sc_end', type: 'end', lines: [], repo: 'acme/api', verified: 5, flagged: 2, unverified: 1 },
     ],
   };
 }

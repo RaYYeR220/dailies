@@ -10,6 +10,10 @@ import { toSrt } from './srt';
 import { buildTimeline } from './timeline';
 
 const ENTRY_POINT = fileURLToPath(new URL('./remotion/index.ts', import.meta.url));
+// The bundler resolves modules from its root, which defaults to the process's working directory. The worker and the
+// command-line tool start elsewhere, so the root is pinned to this package.
+const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url));
+const TIMEOUT_MS = 120_000;
 
 type Browser = Awaited<ReturnType<typeof openBrowser>>;
 type Composition = Awaited<ReturnType<typeof selectComposition>>;
@@ -37,7 +41,7 @@ async function withComposition<T>(inputProps: ReelProps, publicDir: string | nul
     const serveUrl = await bundle({ entryPoint: ENTRY_POINT, publicDir: publicDir ?? emptyPublic, outDir: join(work, 'bundle') });
     await ensureBrowser();
     browser = await openBrowser('chrome');
-    const composition = await selectComposition({ serveUrl, id: COMPOSITION_ID, inputProps, puppeteerInstance: browser });
+    const composition = await selectComposition({ serveUrl, id: COMPOSITION_ID, inputProps, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
     return await fn({ serveUrl, composition, browser });
   } finally {
     await browser?.close({ silent: true });
@@ -61,8 +65,8 @@ export async function renderReel(i: { storyboard: Storyboard; timings: LineTimin
   const inputProps: ReelProps = { storyboard: i.storyboard, timings: i.timings, audio: i.audioPath !== null };
 
   await withComposition(inputProps, publicDir, async ({ serveUrl, composition, browser }) => {
-    await renderMedia({ serveUrl, composition, inputProps, codec: 'h264', outputLocation: videoPath, puppeteerInstance: browser });
-    await renderStill({ serveUrl, composition, inputProps, frame: middle(timeline.scenes[0]!), output: posterPath, puppeteerInstance: browser });
+    await renderMedia({ serveUrl, composition, inputProps, codec: 'h264', outputLocation: videoPath, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
+    await renderStill({ serveUrl, composition, inputProps, frame: middle(timeline.scenes[0]!), output: posterPath, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
   });
   await writeFile(srtPath, toSrt(i.storyboard, i.timings, timeline.audioStartFrame / timeline.fps));
 
@@ -84,7 +88,7 @@ export async function renderStills(i: { storyboard: Storyboard; timings: LineTim
     const stills: { sceneId: string; path: string }[] = [];
     for (const [n, slot] of timeline.scenes.entries()) {
       const path = join(outDir, stillName(n, i.storyboard.scenes[n]!.type));
-      await renderStill({ serveUrl, composition, inputProps, frame: middle(slot), output: path, puppeteerInstance: browser });
+      await renderStill({ serveUrl, composition, inputProps, frame: middle(slot), output: path, puppeteerInstance: browser, timeoutInMilliseconds: TIMEOUT_MS });
       stills.push({ sceneId: slot.sceneId, path });
     }
     return stills;

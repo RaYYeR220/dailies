@@ -49,7 +49,7 @@ function minimalStoryboard(): Storyboard {
     facts: {},
     scenes: [
       { id: 'sc_title', type: 'title', lines: [], repo: 'acme/repo', windowLabel: 'today', sessionCount: 1, commitCount: 1 },
-      { id: 'sc_end', type: 'end', lines: [], repo: 'acme/repo', verified: 1, flagged: 0 },
+      { id: 'sc_end', type: 'end', lines: [], repo: 'acme/repo', verified: 1, flagged: 0, unverified: 0 },
     ],
   };
 }
