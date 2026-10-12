@@ -170,6 +170,24 @@ describe('script stage', () => {
     ]);
   });
 
+  it('script shows a silent command with no output, not the note the recorder leaves for it', async () => {
+    const base = twoSessions();
+    const quiet = session('quiet', [
+      { kind: 'user', text: 'check types' },
+      { kind: 'tool_call', toolName: 'Bash', toolUseId: 'a', command: 'npx tsc --noEmit', text: '{}' },
+      { kind: 'tool_result', toolUseId: 'a', text: '(Bash completed with no output)' },
+      { kind: 'assistant', text: 'Clean.' },
+    ]);
+    const h = harness({
+      artifacts: { ...artifacts({ claims: [] }), ingest: { ...base, sessions: [...base.sessions, quiet] } },
+      reply: () => json({ scenes: [{ type: 'terminal', steps: [{ entryId: 'quiet:1' }], lines: [{ text: 'The agent ran the type check.', evidence: [{ type: 'entry', entryId: 'quiet:1' }] }] }] }),
+    });
+
+    const { artifact } = await scriptStage(h.deps).run(h.ctx());
+
+    expect(ofType(artifact.storyboard.scenes, 'terminal')[0]!.steps).toMatchObject([{ entryId: 'quiet:1', ok: true, output: '' }]);
+  });
+
   it('script drops a narration line over the 18-word limit, removing a scene left with none', async () => {
     const over = Array.from({ length: 20 }, (_, i) => `w${i}`).join(' ');
     const reply = { scenes: [{ type: 'prompt', entryId: 's1:0', lines: [{ text: over, evidence: [{ type: 'entry', entryId: 's1:0' }] }] }, ...writerReply().scenes.slice(1)] };

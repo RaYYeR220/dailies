@@ -35,6 +35,7 @@ const STATS: [key: string, label: string][] = [
   ['duration.minutes', 'Minutes'],
 ];
 
+const NO_OUTPUT = /^\s*\(Bash completed with no output\)\s*$/;
 const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 const endsSentence = (text: string) => /[.!?]$/.test(text);
 
@@ -230,7 +231,9 @@ export function scriptStage(deps: StageDeps): Stage<ScriptArtifact> {
         if (run?.outcome === 'unknown') return null;
         const ok = run ? run.outcome === 'pass' : !(result.isError ?? false);
         const headline = run ? headlineFor(run.cls, result.text) ?? undefined : undefined;
-        return { command: cut(flat(call.command), ON_SCREEN.command), output: tail(result.text, ON_SCREEN.output), ok, entryId: call.id, headline };
+        // What Claude Code records for a command that printed nothing is a note, not output: on screen the step just reads as its verdict.
+        const printed = NO_OUTPUT.test(result.text) ? '' : result.text;
+        return { command: cut(flat(call.command), ON_SCREEN.command), output: tail(printed, ON_SCREEN.output), ok, entryId: call.id, headline };
       };
 
       /** The scene the writer pointed at, filled from the record; or the reason there is nothing there to show. */
