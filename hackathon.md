@@ -146,7 +146,7 @@ An automated review of the second change found four ways it now verified too eas
 
 *The first run on someone else's repository* (a public one from this hackathon, twelve sessions, captions only, not published) went through, and the review stage earned its place twice. It found a stats frame that read `-1 Minutes`: one session's recorded end was before its recorded start, and the sum went negative. And on the next server run of this repository it found a frame that shows `40 passed` under a line that says 37; the budget could not pay for another cut, so the cut was kept and the finding went to the approver, as the change above intends.
 
-*The demo video* is made the way the product makes reels: a timeline in data, narration from Gemini text-to-speech, composed with Remotion in the reel's own look. Its footage is the product's pages recorded with Playwright, the demonstration reel with its own sound, and screenshots of the three tools. 2 minutes 37 seconds.
+*The demo video* is made the way the product makes reels: a timeline in data, narration from Gemini text-to-speech, composed with Remotion in the reel's own look. Its footage is the product's pages recorded with Playwright, the demonstration reel with its own sound, and screenshots of the three tools. 2 minutes 38 seconds.
 
 *neatlogs.* Two detections added through the MCP server: a run that ends blocked, and a verify stage that found a contradicted claim. The second fires on the demonstration run.
 
@@ -180,7 +180,7 @@ What the hackathon asks for, and where it is:
 | Asked for | Where |
 |---|---|
 | A public repository with commits dated during the hackathon | This repository; first commit 11 October, 21:26 CEST |
-| A demo video that covers neatlogs, Entire and cfo.ai | `evidence/video/dailies-demo.mp4`, 2 min 37 s; also linked from the submission post |
+| A demo video that covers neatlogs, Entire and cfo.ai | `evidence/video/dailies-demo.mp4`, 2 min 38 s; also linked from the submission post |
 | A run before a change and a run after it | `PROOF.md`, section 1 |
 | neatlogs traces | `PROOF.md`, section 2 |
 | Entire checkpoints, with an accessible link and its ID | `PROOF.md`, section 3 |
