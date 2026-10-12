@@ -23,12 +23,18 @@ importers:
 
   apps/web:
     dependencies:
+      '@dailies/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
       '@dailies/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@dailies/pipeline':
         specifier: workspace:*
         version: link:../../packages/pipeline
+      '@dailies/voice':
+        specifier: workspace:*
+        version: link:../../packages/voice
       better-sqlite3:
         specifier: latest
         version: 13.0.3

@@ -15,7 +15,9 @@
     "next": "16.4.0",
     "better-sqlite3": "latest",
     "@dailies/core": "workspace:*",
-    "@dailies/pipeline": "workspace:*"
+    "@dailies/agent": "workspace:*",
+    "@dailies/pipeline": "workspace:*",
+    "@dailies/voice": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -29,10 +29,16 @@ function everyRole(req: MockRequest): ChatMessage {
 }
 
 describe('buildStages', () => {
-  it('buildStages returns the eight stages in pipeline order, leaving review to be inserted before the gate', () => {
+  it('buildStages returns all nine stages in pipeline order, review immediately before the gate', () => {
     const h = harness();
 
-    expect(buildStages(h.deps).map((s) => s.name)).toEqual(['ingest', 'edit', 'verify', 'script', 'ground', 'voice', 'render', 'gate']);
+    expect(buildStages(h.deps).map((s) => s.name)).toEqual(['ingest', 'edit', 'verify', 'script', 'ground', 'voice', 'render', 'review', 'gate']);
+  });
+
+  it('buildStages leaves review out when deps.noReview is set, with gate immediately after render', () => {
+    const h = harness();
+
+    expect(buildStages({ ...h.deps, noReview: true }).map((s) => s.name)).toEqual(['ingest', 'edit', 'verify', 'script', 'ground', 'voice', 'render', 'gate']);
   });
 
   it('buildStages records what a stage spent on the model against the run', async () => {
@@ -89,8 +95,9 @@ describe('buildStages', () => {
   it('the stages compose through the runner: one flag, grounded lines, four passing checks, spend on the run', async () => {
     const h = harness({ reply: everyRole, costPerCall: 0.01 });
     const ingest: Stage<IngestArtifact> = { name: 'ingest', maxAttempts: 1, run: async () => ({ artifact: twoSessions() }) };
-    // the real ingest needs a repository and the real render a browser; both have their own tests
-    const stages = [ingest, ...buildStages(h.deps).filter((s) => s.name !== 'ingest' && s.name !== 'render')];
+    // the real ingest needs a repository, the real render a browser, and review needs the render it would have
+    // produced; all three have their own tests
+    const stages = [ingest, ...buildStages(h.deps).filter((s) => s.name !== 'ingest' && s.name !== 'render' && s.name !== 'review')];
 
     const status = await runPipeline(h.db, h.runId, stages, { dataDir: h.dataDir, sleep: async () => {} });
 

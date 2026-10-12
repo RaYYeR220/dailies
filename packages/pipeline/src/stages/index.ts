@@ -1,4 +1,4 @@
-import type { CostMeter, ModelClient } from '@dailies/agent';
+import type { CostMeter, ModelClient, NeatlogsMcp } from '@dailies/agent';
 import type { TtsProvider } from '@dailies/voice';
 import { addCost } from '../store';
 import type { Database, Stage } from '../types';
@@ -7,6 +7,7 @@ import { gateStage } from './gate';
 import { groundStage } from './ground';
 import { ingestStage } from './ingest';
 import { renderStage } from './render';
+import { reviewStage } from './review';
 import { scriptStage } from './script';
 import { verifyStage } from './verify';
 import { voiceStage } from './voice';
@@ -17,8 +18,9 @@ export type { ScriptArtifact } from './script';
 export type { GroundArtifact } from './ground';
 export type { VoiceArtifact } from './voice';
 export type { GateArtifact } from './gate';
+export { reviewStage } from './review';
 
-export interface StageDeps { db: Database; client: ModelClient; meter: CostMeter; tts: TtsProvider | null; voice: string; maxSessions?: number }
+export interface StageDeps { db: Database; client: ModelClient; meter: CostMeter; tts: TtsProvider | null; voice: string; maxSessions?: number; mcp?: NeatlogsMcp | null; noReview?: boolean }
 
 /**
  * The stage, with whatever it adds to the meter recorded against the run. A failed attempt is recorded too:
@@ -39,8 +41,10 @@ export function recordSpend<T>(deps: Pick<StageDeps, 'db' | 'meter'>, stage: Sta
   };
 }
 
-/** ingest, edit, verify, script, ground, voice, render, gate. The review stage is built apart and goes before the gate. */
+/** ingest, edit, verify, script, ground, voice, render, review, gate — review left out when `deps.noReview` is set. */
 export function buildStages(deps: StageDeps): Stage[] {
-  const stages: Stage[] = [ingestStage(deps), editStage(deps), verifyStage(deps), scriptStage(deps), groundStage(deps), voiceStage(deps), renderStage(), gateStage(deps)];
+  const stages: Stage[] = [ingestStage(deps), editStage(deps), verifyStage(deps), scriptStage(deps), groundStage(deps), voiceStage(deps), renderStage()];
+  if (!deps.noReview) stages.push(reviewStage(deps));
+  stages.push(gateStage(deps));
   return stages.map((stage) => recordSpend(deps, stage));
 }
