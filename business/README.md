@@ -37,7 +37,7 @@ Gross margin on the Solo plan is 59.3% at $0.59 a reel. To keep 55%, a reel may 
 
 ## Where the plan meets the product
 
-The cost ceiling is not only a number on a page. Every run carries a budget, and the default budget for one reel is the Solo ceiling from [`plan.json`](plan.json). The pipeline meters what each model call cost from the gateway's own response header, checks the total after every stage, and stops a run that goes over; the publish gate also refuses a finished reel that cost more than the ceiling. A reel that would lose money on the cheapest plan is not published.
+The cost ceiling is not only a number on a page. Every run carries a budget, and the default budget for one reel is the Solo ceiling from [`plan.json`](plan.json). The pipeline meters what each model call cost from the gateway's own response header, checks the total after every stage, and stops a run that goes over; the publish gate also refuses a finished reel that cost more than the ceiling. The review stage may send a cut back to be made again, and does so only when the budget can pay for another cut. A reel that would lose money on the cheapest plan is not published.
 
 [`plan-vs-actual.md`](plan-vs-actual.md) compares the plan's $0.59 with what recorded runs actually cost.
 

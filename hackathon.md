@@ -105,7 +105,7 @@ Committed by hand after sessions ended early (two sessions started a long comman
 |---|---|---|
 | Cost | $1.79 | $0.10 |
 | Agent steps | 12 | 4 |
-| Time | 84 s | about 30 s |
+| Time | 84 s | 35 s |
 | Run outcome | blocked: budget | reached the gate |
 
 neatlogs traces: `51f16cf87d19e7d4ae42af05352493cc` (before), run `run_95ebd6104a1e` (after).
@@ -147,6 +147,8 @@ An automated review of the second change found four ways it now verified too eas
 *The first run on someone else's repository* (a public one from this hackathon, twelve sessions, captions only, not published) went through, and the review stage earned its place twice. It found a stats frame that read `-1 Minutes`: one session's recorded end was before its recorded start, and the sum went negative. And on the next server run of this repository it found a frame that shows `40 passed` under a line that says 37; the budget could not pay for another cut, so the cut was kept and the finding went to the approver, as the change above intends.
 
 *The demo video* is made the way the product makes reels: a timeline in data, narration from Gemini text-to-speech, composed with Remotion in the reel's own look. Its footage is the product's pages recorded with Playwright, the demonstration reel with its own sound, and screenshots of the three tools. 2 minutes 38 seconds.
+
+*The benchmarks were run again with the final rules.* Mutation: 222 of 236 verdicts flipped and 14 moved to `unverifiable`, where it had been 235 of 235 the day before. The difference is the three places where the rules now decline to judge; none of the 14 is a wrong verdict.
 
 *neatlogs.* Two detections added through the MCP server: a run that ends blocked, and a verify stage that found a contradicted claim. The second fires on the demonstration run.
 

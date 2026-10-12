@@ -75,6 +75,7 @@ function main() {
       : `${r.status}${r.reason ? `: ${r.reason}` : ''}`;
     out.push(`| \`${r.id}\` | ${r.repo} | ${r.sessions ?? ''} | ${reel} | ${usd(r.cost)} | ${against} | ${outcome} |`);
   }
+  out.push('', 'Notes:', '', '- `run_09dd4040d76f` is the before run of `PROOF.md`, section 1. It was stopped by its budget at $1.79 in the edit stage, and later resumed to check that a stopped run can go on; the cost here is both.', '- The runs with no reel were made while the stages after them were still being built.');
   console.log(out.join('\n'));
 }
 main();

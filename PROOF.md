@@ -22,6 +22,8 @@ What the trace showed: the editor read whole transcripts through its tools, and 
 
 The change (commits `a0882e0` to `4089db6`, the main one is `155ea6e`): the editor now starts from a short outline of each session made by code, its tools return bounded excerpts, it runs on a cheaper model, and the stage has a share of the run's budget with a fallback made by code when the share is spent. [The trace after](evidence/neatlogs/after-edit-trace-end.png).
 
+The before run was later resumed to check that a stopped run can go on, and reached the gate; the $2.20 against its ID in the cost report is the $1.79 above plus that.
+
 The first full reel after the change, on the same twelve sessions: 247 seconds from URL to MP4, $0.54 (`run_93b5533e0440`, trace `1738dca8f8d1354308500fcf50f9e740`).
 
 ## 2. neatlogs traces
@@ -36,7 +38,7 @@ How neatlogs is used, in the order the video goes through it:
 
 - **Architecture.** A run is one trace. The runner opens a span for the run and one for every stage attempt (`packages/pipeline/src/runner.ts`); the model client and the agent's tool loop open the spans inside (`packages/agent/src/`). The grounding gate and the publish gate are guardrail spans.
 - **Implementation.** The neatlogs TypeScript SDK wraps the OpenAI-compatible client that talks to the hackathon gateway. Coding sessions that built this repository are traced by the `@neatlogs/claude-code` hooks.
-- **Runtime.** Before the editor starts, the agent asks the neatlogs MCP server for earlier runs of the same repository (`search_traces`) and puts what it finds into the editor's and the writer's prompts as history (`packages/pipeline/src/memory.ts`). The line `[edit] memory: 1 earlier runs, 0 with failures` in a run's log is that call.
+- **Runtime.** Before the editor starts, the agent asks the neatlogs MCP server for earlier runs of the same repository (`search_traces`) and puts what it finds into the editor's and the writer's prompts as history (`packages/pipeline/src/memory.ts`). In the demonstration run (`run_d11ca83125b4`) the log line is `[edit] memory: 2 earlier runs, 1 with failures`, and the run's `edit.json` keeps what came back: `"memory": {"status": "used", "previousRuns": 2, "notes": ["2026-10-12T02:30:08Z: error, 3 failed spans, …"]}`. The note is the run whose render had failed half an hour earlier (section 5). It was put under the heading "History from earlier runs of this repository" in the editor's prompt, marked as a record and not an instruction.
 - **Reasoning.** The before trace is the reason the edit stage was rebuilt. Without it the only fact was "the run was blocked".
 - **Result.** $1.79 to $0.10 for the stage. Two detections were added to the project through the same MCP server: "Reel blocked" (a run that ends blocked) and "Claim contradicted by the record" (the verify stage found a contradicted claim). The second one fires on the demonstration run and is visible next to the verify stage in [this wider screenshot](evidence/neatlogs/after-trace-stages.png).
 
@@ -58,8 +60,6 @@ How Entire is used:
 - **Result.** On the demonstration repository: 14 claims, 11 verified, 1 contradicted, 2 unverifiable. Every claim on the evidence page carries the session and entry it came from. On the 394 public sessions the rules flag three statements, and all three were read by hand: [`eval/results/2026-10-12-field-sample.md`](eval/results/2026-10-12-field-sample.md).
 
 Found while building: a short `sk-` key written as a bare value in a prompt is not redacted in checkpoint transcripts. Reported with a reproduction as [entireio/cli#2728](https://github.com/entireio/cli/issues/2728).
-
-`entire graph stats` on this repository, for completeness: 18 sessions, 3 graph calls, 1,018 exploration calls. The build sessions did not use the graph.
 
 ## 4. A business plan
 
@@ -102,6 +102,6 @@ The hand-written checkpoint exists because the real agent would not produce the 
 
 ## Benchmarks
 
-- **Mutation.** Take real recorded test, build and type-check runs, replace the recorded result with its opposite, and check that the verdict follows. On 236 runs from two public repositories the verdict flipped for 222. The other 14 moved to `unverifiable`, none to a wrong verdict: 7 are a build on a command line shared with the tests, where an error cannot be pinned on the build; 4 come after a CI result was read; 3 are a claim whose count matches the run. Those are the three places where the rules decline to judge. [`eval/results/2026-10-12-scorecard.md`](eval/results/2026-10-12-scorecard.md); the first version of this benchmark, which measured the wrong thing, is kept next to it.
-- **Grounding.** 20 of 20 fabricated narration lines rejected by the gate, 20 of 20 genuine lines accepted.
+- **Mutation.** Take real recorded test, build and type-check runs, replace the recorded result with its opposite, and check that the verdict follows. With the final rules: 236 runs from two public repositories, 222 flipped, and the other 14 moved to `unverifiable`, the places where the rules decline to judge. None went to a wrong verdict. With the rules of 11 October the same benchmark gave 235 of 235; the rules have since learned three reasons to hold back. [`eval/results/2026-10-12-scorecard.md`](eval/results/2026-10-12-scorecard.md). The first version of this benchmark, which measured the wrong thing, is kept next to it.
+- **Grounding.** 20 fabricated narration lines of six kinds (a wrong number, an entry that does not exist, a quote that is not in the entry, a statistic that does not exist, a banned phrase, two sentences in one line): 20 rejected by the code gate. 20 genuine lines: 20 accepted. A line that changes the meaning without changing a number or a quoted word is not what this measures; that case is left to the model check that follows the code gate, and to the review stage.
 - **Field sample.** The rules on 394 public sessions, five versions, every remaining flag read by hand: [`eval/results/2026-10-12-field-sample.md`](eval/results/2026-10-12-field-sample.md).

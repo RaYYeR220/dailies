@@ -1,6 +1,6 @@
 # Plan against actual
 
-Generated 2026-10-12 03:43 UTC by `eval/src/plan-vs-actual.ts` from the run rows in `business/runs-laptop.json` and `business/runs-server.json`. Every run on either machine is listed, including the ones made while the pipeline was still being built; nothing is left out.
+Generated 2026-10-12 04:04 UTC by `eval/src/plan-vs-actual.ts` from the run rows in `business/runs-laptop.json` and `business/runs-server.json`. Every run on either machine is listed, including the ones made while the pipeline was still being built; nothing is left out.
 
 | | Plan | Actual |
 |---|---|---|
@@ -24,3 +24,8 @@ Generated 2026-10-12 03:43 UTC by `eval/src/plan-vs-actual.ts` from the run rows
 | `run_76fbb02bc391` | RaYYeR220/dailies | 12 | 71 s | $0.70 | over by $0.049 | refused at the gate: over the ceiling |
 | `run_ddc0645c6ad0` | a public repository | 12 | 36 s | $0.52 | 79.2% of it | passed the gate, awaiting approval |
 | `run_205eb7784f22` | RaYYeR220/dailies | 12 | 80 s | $0.58 | 88.5% of it | passed the gate, awaiting approval |
+
+Notes:
+
+- `run_09dd4040d76f` is the before run of `PROOF.md`, section 1. It was stopped by its budget at $1.79 in the edit stage, and later resumed to check that a stopped run can go on; the cost here is both.
+- The runs with no reel were made while the stages after them were still being built.
